@@ -74,6 +74,8 @@ repo = 'Yggdroot/indentLine'
 [[plugins]]
 repo = 'easymotion/vim-easymotion'
 
+[[plugins]]
+repo = 'basyura/twibill.vim'
 
 # ColorScheme
 [[plugins]]

@@ -45,3 +45,7 @@ on_ft = ['perl']
 repo = 'cespare/vim-toml'
 on_ft = ['toml']
 
+[[plugins]]
+repo = 'basyura/TweetVim'
+on_cmd = ['TweetVimHomeTimeline']
+

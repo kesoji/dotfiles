@@ -49,6 +49,11 @@ if has('win32') || has('win64')
   let plugin_scrnmode_disable  = 1
   "$VIM/plugins/kaoriya/plugin/verifyenc.vim
   "let plugin_verifyenc_disable = 1
+elseif has('mac')
+" Mac {{{1
+  set directory=/tmp
+  set backupdir=/tmp
+  set undodir=~/.vim/undo
 endif
 
 
@@ -165,6 +170,9 @@ for n in range(1, 9)
 endfor
 
 " Mapping {{{1
+let mapleader = ','
+noremap \ ,
+
 " <C-u>は、範囲指定(数字入力)を削除
 nnoremap <Space>w :<C-u>w<CR>
 nnoremap <Space>W :<C-u>wq<CR>
