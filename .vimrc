@@ -6,15 +6,17 @@ endif
 
 set encoding=utf-8
 set fileencoding=utf-8
-set undodir=$HOME/.vimfiles/undo
 
 if has('vim_starting')
     " ^= 先頭, += 末尾 に追加
     set fileencodings+=cp932
 
-    " 初回起動時のみruntimepathにneobundleのパスを追加する
+    " 初回起動時のみruntimepathにdeinのパスを追加する
     if has('win32') || has('win64')
+        " $HOMEがネットワーク上にあったとしてもローカルを指定する
         set runtimepath^=$USERPROFILE/.cache/dein/repos/github.com/Shougo/dein.vim
+    else
+        set runtimepath^=~/.cache/dein/repos/github.com/Shougo/dein.vim
     endif
 endif
 
@@ -22,7 +24,7 @@ endif
 if has('win32') || has('win64')
   set directory=$TMP
   set backupdir=$TMP
-  set undodir=$HOME/vimfiles/undo
+  set undodir=$HOME/vim/undo
   source $HOME/.vim/mswin.vim
 
   " Disable mswin.vim's C-V mapping
@@ -49,17 +51,20 @@ if has('win32') || has('win64')
   let plugin_scrnmode_disable  = 1
   "$VIM/plugins/kaoriya/plugin/verifyenc.vim
   "let plugin_verifyenc_disable = 1
-elseif has('mac')
-" Mac {{{1
-  set directory=/tmp
-  set backupdir=/tmp
+else
+" Mac or Linux {{{1
+  set directory=~/.vim/swp
+  set backupdir=~/.vim/backup
   set undodir=~/.vim/undo
 endif
 
-
 "<<<Plugin>>> dein {{{1
 " プラグインが実際にインストールされるディレクトリ
-let s:dein_dir = '~/.cache/dein'
+if has('win32') || has('win64')
+    let s:dein_dir = $USERPROFILE . '/.cache/dein'
+else
+    let s:dein_dir = '~/.cache/dein'
+endif
 " dein.vim本体
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
@@ -131,7 +136,7 @@ autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
 " Style {{{1
 set background=dark
-colorscheme hybrid "※gvimrcで上書きされる
+colorscheme desert "※gvimrcで上書きされる
 
 " Tab {{{1
 " Anywhere SID.
@@ -481,7 +486,7 @@ let g:syntastic_enable_perl_checker = 1
 let g:syntastic_perl_checkers = ['perl', 'podchecker']
 
 "<<<Plugin>>> indentLine {{{1
-let g:indentLine_faster = 1
+" let g:indentLine_faster = 1
 
 "<<<Plugin>>> vim-easymotion {{{1
 let g:EasyMotion_do_mapping = 0
