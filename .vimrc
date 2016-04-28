@@ -113,6 +113,7 @@ set history=1000
 set tabstop=4
 set expandtab
 set textwidth=0
+" set nowrap
 set shiftwidth=4
 set number
 set autoindent
@@ -166,13 +167,6 @@ endfunction "}}}
 let &tabline = '%!'. s:SID_PREFIX() . 'my_tabline()'
 set showtabline=2 " 常にタブラインを表示
 
-" The prefix key.
-nnoremap    [Tag]   <Nop>
-nmap        t       [Tag]
-" Tab jump
-for n in range(1, 9)
-  execute 'nnoremap <silent> [Tag]'.n  ':<C-u>tabnext'.n.'<CR>'
-endfor
 
 " Mapping {{{1
 let mapleader = ','
@@ -228,6 +222,9 @@ nnoremap sN :<C-u>bn<CR>
 nnoremap sP :<C-u>bp<CR>
 nnoremap sn gt
 nnoremap sp gT
+for n in range(1, 9)
+  execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
+endfor
 nnoremap st :<C-u>tabnew<CR>
 nnoremap sx :<C-u>tabclose<CR>
 nnoremap sT :<C-u>Unite tab<CR>
@@ -451,6 +448,10 @@ let g:vimfiler_edit_action = 'tabopen'
 let g:vimfiler_enable_auto_cd = 1
 
 "<<<Plugin>>> vim-session {{{1
+if has('win32') || has('win64')
+    let g:session_directory = $HOME . '/.vim/sessions'
+endif
+
 " 現在のディレクトリ直下の .vimsessions/ を取得 
 let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
 " 存在すれば

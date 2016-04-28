@@ -92,3 +92,5 @@ repo = 'w0ng/vim-hybrid'
 
 [[plugins]]
 repo = 'altercation/vim-colors-solarized'
+
+
