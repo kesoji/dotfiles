@@ -103,7 +103,10 @@ endif
 " 基本設定 {{{1
 filetype plugin indent on
 syntax enable
-call singleton#enable()
+
+if has('clientserver')
+    call singleton#enable()
+endif
 
 set modeline
 set modelines=2
@@ -513,3 +516,6 @@ nmap <Space>s <Plug>(easymotion-s2)
 xmap <Space>s <Plug>(easymotion-s2)
 " surround.vimと被らないように
 omap z <Plug>(easymotion-s2)
+
+"<<<Plugin>>> tweetvim {{{1
+nnoremap <silent> <Leader>t  :TweetVimListStatuses list<CR>

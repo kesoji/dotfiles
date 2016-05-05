@@ -4,7 +4,7 @@ scriptencoding utf-8
 " An example for a Japanese version gvimrc file.
 " 日本語版のデフォルトGUI設定ファイル(gvimrc) - Vim7用試作
 "
-" Last Change: 14-Jan-2016.
+" Last Change: 30-Apr-2016.
 " Maintainer:  MURAOKA Taro <koron.kaoriya@gmail.com>
 "
 " 解説:
@@ -112,6 +112,8 @@ if has('multi_byte_ime') || has('xim')
   " 挿入モードでのIME状態を記憶させない場合、次行のコメントを解除
   "inoremap <silent> <ESC> <ESC>:set iminsert=0<CR>
 endif
+
+set imdisable
 
 "---------------------------------------------------------------------------
 " マウスに関する設定:
