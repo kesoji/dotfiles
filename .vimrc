@@ -519,3 +519,7 @@ omap z <Plug>(easymotion-s2)
 
 "<<<Plugin>>> tweetvim {{{1
 nnoremap <silent> <Leader>t  :TweetVimListStatuses list<CR>
+
+"<<<Plugin>>> expand-region {{{1
+vmap v <Plug>(expand_region_expand)
+vmap <C-v> <Plug>(expand_region_shrink)
