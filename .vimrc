@@ -121,7 +121,12 @@ set shiftwidth=4
 set number
 set autoindent
 set smartindent
-set showmatch               "対応する括弧に一瞬ジャンプする
+" http://itchyny.hatenablog.com/entry/2014/12/25/090000
+set display=lastline
+set pumheight=10
+set showmatch
+set matchtime=1
+
 " set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
 set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
 set clipboard+=autoselect,unnamed
@@ -201,8 +206,6 @@ nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
 nnoremap <Space>l $
 
-inoremap \\r <ESC>:QuickRun<CR>
-
 nnoremap s <Nop>
 nnoremap sj <C-w>j
 nnoremap sk <C-w>k
@@ -230,19 +233,16 @@ for n in range(1, 9)
 endfor
 nnoremap st :<C-u>tabnew<CR>
 nnoremap sx :<C-u>tabclose<CR>
-nnoremap sT :<C-u>Unite tab<CR>
 nnoremap ss :<C-u>sp<CR>
 nnoremap sv :<C-u>vs<CR>
 nnoremap sq :<C-u>q<CR>
 nnoremap sQ :<C-u>bd<CR>
-nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>
-nnoremap sB :<C-u>Unite buffer -buffer-name=file<CR>
 
-nnoremap <C-g> :Gtags 
-nnoremap <C-h> :Gtags -f %<CR>
-nnoremap <C-j> :GtagsCursor<CR>
-nnoremap <C-n> :cn<CR>
-nnoremap <C-p> :cp<CR>
+" http://itchyny.hatenablog.com/entry/2014/12/25/090000
+nnoremap Y y$
+nnoremap + <C-a>
+nnoremap - <C-x>
+
 "User Defined Command {{{1
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
 command! JsonFormat :execute '%!python -m json.tool'
@@ -261,7 +261,6 @@ function! s:Jq(...)
 endfunction
 
 
-
 "<<<Plugin>>> quickrun {{{1
 let g:quickrun_config = {
 \   "_" : {
@@ -272,6 +271,7 @@ let g:quickrun_config = {
 \   },
 \}
 
+inoremap \\r <ESC>:QuickRun<CR>
 " <C-c> で実行を強制終了させる
 " quickrun.vim が実行していない場合には <C-c> を呼び出す
 nnoremap <expr><silent> <C-c> quickrun#is_running() ? quickrun#sweep_sessions() : "\<C-c>"
@@ -387,6 +387,8 @@ let g:unite_source_file_mru_filename_format = ''
 "現在開いているファイルのディレクトリ下のファイル一覧。
 "開いていない場合はカレントディレクトリ
 nnoremap <silent> [unite]f :<C-u>UniteWithBufferDir -buffer-name=files file<CR>
+"カスタムsubstitute用
+nnoremap <silent> [unite]d :<C-u>Unite -buffer-name=file file<CR>
 "バッファ一覧
 nnoremap <silent> [unite]b :<C-u>Unite buffer<CR>
 "レジスタ一覧
@@ -397,6 +399,10 @@ nnoremap <silent> [unite]m :<C-u>Unite file_mru<CR>
 nnoremap <silent> [unite]c :<C-u>Unite bookmark<CR>
 "ブックマークに追加
 nnoremap <silent> [unite]a :<C-u>UniteBookmarkAdd<CR>
+
+nnoremap sT :<C-u>Unite tab<CR>
+nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>
+nnoremap sB :<C-u>Unite buffer -buffer-name=file<CR>
 
 "uniteを開いている間のキーマッピング
 augroup vimrc
@@ -419,6 +425,13 @@ function! s:unite_my_settings()
   nnoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
   inoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
 endfunction
+
+" http://thinca.hatenablog.com/entry/20101027/1288190498
+call unite#custom#substitute('file', '[^~.]\zs/', '*/*', 20)
+call unite#custom#substitute('file', '/\ze[^*]', '/*', 10)
+call unite#custom#substitute('file', '^@@', '\=fnamemodify(expand("#"), ":p:h")."/*"', 2)
+call unite#custom#substitute('file', '^@', '\=getcwd()."/*"', 1)
+call unite#custom#substitute('file', '\*\*\+', '*', -1)
 
 " Markdown {{{1
 
@@ -523,3 +536,10 @@ nnoremap <silent> <Leader>t  :TweetVimListStatuses list<CR>
 "<<<Plugin>>> expand-region {{{1
 vmap v <Plug>(expand_region_expand)
 vmap <C-v> <Plug>(expand_region_shrink)
+
+"<<<Plugin>>> Gtags {{{1
+nnoremap <C-g> :Gtags 
+nnoremap <C-h> :Gtags -f %<CR>
+nnoremap <C-j> :GtagsCursor<CR>
+nnoremap <C-n> :cn<CR>
+nnoremap <C-p> :cp<CR>
