@@ -94,7 +94,15 @@ set lines=999
 set cmdheight=2
 " カラースキーム(GUI使用時)
 set background=dark
-colorscheme hybrid
+try
+  colorscheme hybrid
+catch
+  try
+    colorscheme molokai
+  catch
+    colorscheme desert
+  endtry
+endtry
 
 "---------------------------------------------------------------------------
 " 日本語入力に関する設定:

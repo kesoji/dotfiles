@@ -17,9 +17,6 @@ hook_post_update = '''
 '''
 
 [[plugins]]
-repo = 'Shougo/unite.vim'
-
-[[plugins]]
 repo = 'thinca/vim-quickrun'
 
 [[plugins]]
@@ -83,6 +80,13 @@ repo = 'basyura/twibill.vim'
 [[plugins]]
 repo = 'terryma/vim-expand-region'
 
+[[plugins]]
+repo = 'sgur/unite-everything'
+if = '''! has('win32') || has('win64') '''
+
+[[plugins]]
+repo = 'Konfekt/FastFold'
+
 # ColorScheme
 [[plugins]]
 repo = 'tomasr/molokai'
@@ -98,5 +102,4 @@ repo = 'w0ng/vim-hybrid'
 
 [[plugins]]
 repo = 'altercation/vim-colors-solarized'
-
 

@@ -1,7 +1,7 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 
 if !&compatible
-  set nocompatible
+    set nocompatible
 endif
 
 set encoding=utf-8
@@ -22,40 +22,40 @@ endif
 
 " Windows {{{1
 if has('win32') || has('win64')
-  set directory=$TMP
-  set backupdir=$TMP
-  set undodir=$HOME/vim/undo
-  source $HOME/.vim/mswin.vim
+    set directory=$TMP
+    set backupdir=$TMP
+    set undodir=$HOME/vim/undo
+    source $HOME/.vim/mswin.vim
 
-  " Disable mswin.vim's C-V mapping
-  " imap <C-V> <C-V>
-  cmap <C-V> <C-V>
+    " Disable mswin.vim's C-V mapping
+    " imap <C-V> <C-V>
+    cmap <C-V> <C-V>
 
-  """"""""""""""""""""""""""""""
-  " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/kaoriya-trouble#plugin
-  "
-  " Kaoriya版に添付されているプラグインの無効化
-  " 問題があるものもあるので一律に無効化します。
-  " ファイルを参照(コメント部分で gf を実行)した上で、必要なプラグインは
-  " let plugin_..._disableの設定行をコメント化(削除)して有効にして下さい。
-  """"""""""""""""""""""""""""""
-  "$VIM/plugins/kaoriya/plugin/autodate.vim
-  let plugin_autodate_disable  = 1
-  "$VIM/plugins/kaoriya/plugin/cmdex.vim
-  let plugin_cmdex_disable     = 1
-  "$VIM/plugins/kaoriya/plugin/dicwin.vim
-  let plugin_dicwin_disable    = 1
-  "$VIM/plugins/kaoriya/plugin/hz_ja.vim
-  "let plugin_hz_ja_disable     = 1
-  "$VIM/plugins/kaoriya/plugin/scrnmode.vim
-  let plugin_scrnmode_disable  = 1
-  "$VIM/plugins/kaoriya/plugin/verifyenc.vim
-  "let plugin_verifyenc_disable = 1
+    """"""""""""""""""""""""""""""
+    " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/kaoriya-trouble#plugin
+    "
+    " Kaoriya版に添付されているプラグインの無効化
+    " 問題があるものもあるので一律に無効化します。
+    " ファイルを参照(コメント部分で gf を実行)した上で、必要なプラグインは
+    " let plugin_..._disableの設定行をコメント化(削除)して有効にして下さい。
+    """"""""""""""""""""""""""""""
+    "$VIM/plugins/kaoriya/plugin/autodate.vim
+    let plugin_autodate_disable  = 1
+    "$VIM/plugins/kaoriya/plugin/cmdex.vim
+    let plugin_cmdex_disable     = 1
+    "$VIM/plugins/kaoriya/plugin/dicwin.vim
+    let plugin_dicwin_disable    = 1
+    "$VIM/plugins/kaoriya/plugin/hz_ja.vim
+    "let plugin_hz_ja_disable     = 1
+    "$VIM/plugins/kaoriya/plugin/scrnmode.vim
+    let plugin_scrnmode_disable  = 1
+    "$VIM/plugins/kaoriya/plugin/verifyenc.vim
+    "let plugin_verifyenc_disable = 1
 else
-" Mac or Linux {{{1
-  set directory=~/.vim/swp
-  set backupdir=~/.vim/backup
-  set undodir=~/.vim/undo
+    " Mac or Linux {{{1
+    set directory=~/.vim/swp
+    set backupdir=~/.vim/backup
+    set undodir=~/.vim/undo
 endif
 
 "<<<Plugin>>> dein {{{1
@@ -70,10 +70,10 @@ let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 " dein.vim がなければ github から落としてくる
 if &runtimepath !~# '/dein.vim'
-  if !isdirectory(s:dein_repo_dir)
-    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-  endif
-  execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+    if !isdirectory(s:dein_repo_dir)
+        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+    endif
+    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
 endif
 
 " プラグインリストを収めた TOML ファイル
@@ -83,17 +83,17 @@ let s:lazy_toml = '~/.vim/rc/dein_lazy.toml'
 let $MYDEINL = s:lazy_toml
 
 if dein#load_state(s:dein_dir)
-  " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
-  call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
-  call dein#load_toml(s:toml,      {'lazy': 0})
-  call dein#load_toml(s:lazy_toml, {'lazy': 1})
-  call dein#end()
-  call dein#save_state()
+    " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
+    call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
+    call dein#load_toml(s:toml,      {'lazy': 0})
+    call dein#load_toml(s:lazy_toml, {'lazy': 1})
+    call dein#end()
+    call dein#save_state()
 endif
 
 " もし、未インストールものものがあったらインストール
 if dein#check_install()
-  call dein#install()
+    call dein#install()
 endif
 
 " Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
@@ -101,8 +101,8 @@ endif
 " runtime! userautoload/*.vim
 
 " 基本設定 {{{1
-filetype plugin indent on
 syntax enable
+filetype plugin indent on
 
 if has('clientserver')
     call singleton#enable()
@@ -145,32 +145,41 @@ autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
 " Style {{{1
 set background=dark
-colorscheme desert "※gvimrcで上書きされる
+" these setting are overridden by .gvimrc.
+try
+    colorscheme hybrid
+catch
+    try
+        colorscheme molokai
+    catch
+        colorscheme desert
+    endtry
+endtry
 
 " Tab {{{1
 " Anywhere SID.
 function! s:SID_PREFIX()
-  return matchstr(expand('<sfile>'), '<SNR>\d\+_\zeSID_PREFIX$')
+    return matchstr(expand('<sfile>'), '<SNR>\d\+_\zeSID_PREFIX$')
 endfunction
 
 " Set tabline.
 function! s:my_tabline()  "{{{
-  let s = ''
-  for i in range(1, tabpagenr('$'))
-    let bufnrs = tabpagebuflist(i)
-    let bufnr = bufnrs[tabpagewinnr(i) - 1]  " first window, first appears
-    let no = i  " display 0-origin tabpagenr.
-    let mod = getbufvar(bufnr, '&modified') ? '!' : ' '
-    let title = fnamemodify(bufname(bufnr), ':t')
-    let title = '[' . title . ']'
-    let s .= '%'.i.'T'
-    let s .= '%#' . (i == tabpagenr() ? 'TabLineSel' : 'TabLine') . '#'
-    let s .= no . ':' . title
-    let s .= mod
-    let s .= '%#TabLineFill# '
-  endfor
-  let s .= '%#TabLineFill#%T%=%#TabLine#'
-  return s
+    let s = ''
+    for i in range(1, tabpagenr('$'))
+        let bufnrs = tabpagebuflist(i)
+        let bufnr = bufnrs[tabpagewinnr(i) - 1]  " first window, first appears
+        let no = i  " display 0-origin tabpagenr.
+        let mod = getbufvar(bufnr, '&modified') ? '!' : ' '
+        let title = fnamemodify(bufname(bufnr), ':t')
+        let title = '[' . title . ']'
+        let s .= '%'.i.'T'
+        let s .= '%#' . (i == tabpagenr() ? 'TabLineSel' : 'TabLine') . '#'
+        let s .= no . ':' . title
+        let s .= mod
+        let s .= '%#TabLineFill# '
+    endfor
+    let s .= '%#TabLineFill#%T%=%#TabLine#'
+    return s
 endfunction "}}}
 let &tabline = '%!'. s:SID_PREFIX() . 'my_tabline()'
 set showtabline=2 " 常にタブラインを表示
@@ -202,6 +211,9 @@ cmap s/ s/\v
 nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
 vnoremap gs :s/\v//g<Left><Left><Left>
 
+" tagsジャンプの時に複数ある時は一覧表示
+nnoremap <C-]> g<C-]>
+
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
 nnoremap <Space>l $
@@ -229,7 +241,7 @@ nnoremap sP :<C-u>bp<CR>
 nnoremap sn gt
 nnoremap sp gT
 for n in range(1, 9)
-  execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
+    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
 endfor
 nnoremap st :<C-u>tabnew<CR>
 nnoremap sx :<C-u>tabclose<CR>
@@ -263,13 +275,13 @@ endfunction
 
 "<<<Plugin>>> quickrun {{{1
 let g:quickrun_config = {
-\   "_" : {
-\       "runner" : "vimproc",
-\       "runner/vimproc/updatetime" : 60,
-\       "outputter/buffer/close_on_empty" : 1,
-\       "hook/output_encode/encoding" : "cp932",
-\   },
-\}
+            \   "_" : {
+            \       "runner" : "vimproc",
+            \       "runner/vimproc/updatetime" : 60,
+            \       "outputter/buffer/close_on_empty" : 1,
+            \       "hook/output_encode/encoding" : "utf-8",
+            \   },
+            \}
 
 inoremap \\r <ESC>:QuickRun<CR>
 " <C-c> で実行を強制終了させる
@@ -291,10 +303,10 @@ let g:neocomplete#lock_buffer_name_pattern = '\*ku\*'
 
 " Define dictionary.
 let g:neocomplete#sources#dictionary#dictionaries = {
-    \ 'default' : '',
-    \ 'vimshell' : $HOME.'/.vimshell_hist',
-    \ 'scheme' : $HOME.'/.gosh_completions'
-    \ }
+            \ 'default' : '',
+            \ 'vimshell' : $HOME.'/.vimshell_hist',
+            \ 'scheme' : $HOME.'/.gosh_completions'
+            \ }
 
 " Define keyword.
 if !exists('g:neocomplete#keyword_patterns')
@@ -311,9 +323,9 @@ inoremap <expr><C-l>     neocomplete#complete_common_string()
 " <CR>: close popup and save indent.
 inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
 function! s:my_cr_function()
-  return (pumvisible() ? "\<C-y>" : "" ) . "\<CR>"
-  " For no inserting <CR> key.
-  "return pumvisible() ? "\<C-y>" : "\<CR>"
+    return (pumvisible() ? "\<C-y>" : "" ) . "\<CR>"
+    " For no inserting <CR> key.
+    "return pumvisible() ? "\<C-y>" : "\<CR>"
 endfunction
 " <TAB>: completion.
 "inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
@@ -343,7 +355,7 @@ autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
 
 " Enable heavy omni completion.
 if !exists('g:neocomplete#sources#omni#input_patterns')
-  let g:neocomplete#sources#omni#input_patterns = {}
+    let g:neocomplete#sources#omni#input_patterns = {}
 endif
 "let g:neocomplete#sources#omni#input_patterns.php = '[^. \t]->\h\w*\|\h\w*::'
 "let g:neocomplete#sources#omni#input_patterns.c = '[^.[:digit:] *\t]\%(\.\|->\)'
@@ -368,10 +380,10 @@ imap <expr><TAB> pumvisible() ? "\<C-n>"
 
 smap <expr><TAB> neosnippet#expandable_or_jumpable() ? "\<Plug>(neosnippet_expand_or_jump)"
             \ : "\<TAB>"
- 
+
 " For snippet_complete marker.
 if has('conceal')
-  set conceallevel=2 concealcursor=i
+    set conceallevel=2 concealcursor=i
 endif
 
 "<<<Plugin>>> Unite {{{1
@@ -396,9 +408,11 @@ nnoremap <silent> [unite]r :<C-u>Unite -buffer-name=register register<CR>
 "最近使用したファイルと一覧
 nnoremap <silent> [unite]m :<C-u>Unite file_mru<CR>
 "ブックマーク一覧
-nnoremap <silent> [unite]c :<C-u>Unite bookmark<CR>
+nnoremap <silent> [unite]e :<C-u>Unite bookmark<CR>
 "ブックマークに追加
 nnoremap <silent> [unite]a :<C-u>UniteBookmarkAdd<CR>
+"VimFilerで絞り込み
+nnoremap <silent> 0 :<C-u>Unite file -default-action=vimfiler<CR>
 
 nnoremap sT :<C-u>Unite tab<CR>
 nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>
@@ -406,32 +420,31 @@ nnoremap sB :<C-u>Unite buffer -buffer-name=file<CR>
 
 "uniteを開いている間のキーマッピング
 augroup vimrc
-  autocmd FileType unite call s:unite_my_settings()
+    autocmd FileType unite call s:unite_my_settings()
 augroup END
 function! s:unite_my_settings()
-  "ESCでuniteを終了
-  nmap <buffer> <ESC> <Plug>(unite_exit)
-  "入力モードのときjjでノーマルモードに移動
-  imap <buffer> jj <Plug>(unite_insert_leave)
-  "入力モードのときctrl+wでバックスラッシュも削除
-  imap <buffer> <C-w> <Plug>(unite_delete_backward_path)
-  "sでsplit
-  nnoremap <silent><buffer><expr> s unite#smart_map('s', unite#do_action('split'))
-  inoremap <silent><buffer><expr> s unite#smart_map('s', unite#do_action('split'))
-  "vでvsplit
-  nnoremap <silent><buffer><expr> v unite#smart_map('v', unite#do_action('vsplit'))
-  inoremap <silent><buffer><expr> v unite#smart_map('v', unite#do_action('vsplit'))
-  "fでvimfiler
-  nnoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
-  inoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
+    "ESCでuniteを終了
+    nmap <buffer> <ESC> <Plug>(unite_exit)
+    "入力モードのときjjでノーマルモードに移動
+    imap <buffer> jj <Plug>(unite_insert_leave)
+    "入力モードのときctrl+wでバックスラッシュも削除
+    imap <buffer> <C-w> <Plug>(unite_delete_backward_path)
+    "sでsplit
+    nnoremap <silent><buffer><expr> s unite#smart_map('s', unite#do_action('split'))
+    inoremap <silent><buffer><expr> s unite#smart_map('s', unite#do_action('split'))
+    "vでvsplit
+    nnoremap <silent><buffer><expr> v unite#smart_map('v', unite#do_action('vsplit'))
+    inoremap <silent><buffer><expr> v unite#smart_map('v', unite#do_action('vsplit'))
+    "fでvimfiler
+    nnoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
+    inoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
+    " http://thinca.hatenablog.com/entry/20101027/1288190498
+    call unite#custom#substitute('file', '[^~.]\zs/', '*/*', 20)
+    call unite#custom#substitute('file', '/\ze[^*]', '/*', 10)
+    call unite#custom#substitute('file', '^@@', '\=fnamemodify(expand("#"), ":p:h")."/*"', 2)
+    call unite#custom#substitute('file', '^@', '\=getcwd()."/*"', 1)
+    call unite#custom#substitute('file', '\*\*\+', '*', -1)
 endfunction
-
-" http://thinca.hatenablog.com/entry/20101027/1288190498
-call unite#custom#substitute('file', '[^~.]\zs/', '*/*', 20)
-call unite#custom#substitute('file', '/\ze[^*]', '/*', 10)
-call unite#custom#substitute('file', '^@@', '\=fnamemodify(expand("#"), ":p:h")."/*"', 2)
-call unite#custom#substitute('file', '^@', '\=getcwd()."/*"', 1)
-call unite#custom#substitute('file', '\*\*\+', '*', -1)
 
 " Markdown {{{1
 
@@ -472,17 +485,17 @@ endif
 let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
 " 存在すれば
 if isdirectory(s:local_session_directory)
-  " session保存ディレクトリをそのディレクトリの設定
-  let g:session_directory = s:local_session_directory
-  " vimを辞める時に自動保存
-  let g:session_autosave = 'yes'
-  " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
-  let g:session_autoload = 'yes'
-  " 1分間に1回自動保存
-  let g:session_autosave_periodic = 1
+    " session保存ディレクトリをそのディレクトリの設定
+    let g:session_directory = s:local_session_directory
+    " vimを辞める時に自動保存
+    let g:session_autosave = 'yes'
+    " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
+    let g:session_autoload = 'yes'
+    " 1分間に1回自動保存
+    let g:session_autosave_periodic = 1
 else
-  let g:session_autosave = 'no'
-  let g:session_autoload = 'no'
+    let g:session_autosave = 'no'
+    let g:session_autoload = 'no'
 endif
 unlet s:local_session_directory
 
@@ -543,3 +556,15 @@ nnoremap <C-h> :Gtags -f %<CR>
 nnoremap <C-j> :GtagsCursor<CR>
 nnoremap <C-n> :cn<CR>
 nnoremap <C-p> :cp<CR>
+
+"<<<Plugin>>> unite-everything {{{1
+if has('win32') || has('win64')
+    let g:unite_source_everything_limit = 100
+    let g:unite_source_everything_full_path_search = 0
+    let g:unite_source_everything_posix_regexp_search = 0
+    let g:unite_source_everything_sort_by_full_path = 0
+    let g:unite_source_everything_case_sensitive_search = 0
+    let g:unite_source_everything_cmd_path = 'es.exe'
+    let g:unite_source_everything_async_minimum_length = 3
+endif
+
