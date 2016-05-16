@@ -87,6 +87,12 @@ if = '''! has('win32') || has('win64') '''
 [[plugins]]
 repo = 'Konfekt/FastFold'
 
+[[plugins]]
+repo = 'thinca/vim-visualstar'
+
+[[plugins]]
+repo = 'rking/ag.vim'
+
 # ColorScheme
 [[plugins]]
 repo = 'tomasr/molokai'

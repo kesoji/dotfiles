@@ -446,6 +446,13 @@ function! s:unite_my_settings()
     call unite#custom#substitute('file', '\*\*\+', '*', -1)
 endfunction
 
+" [agでvimの検索関連を高速化 - Qiita](http://qiita.com/0829/items/7053b6e3371592e4fbe6)
+if executable('ag')
+  let g:unite_source_grep_command = 'ag'
+  let g:unite_source_grep_default_opts = '--nogroup --nocolor --column'
+  let g:unite_source_grep_recursive_opt = ''
+endif
+
 " Markdown {{{1
 
 "<<<Plugin>>> Vim-Markdown [plasticboy/vim-markdown](https://github.com/plasticboy/vim-markdown){{{2
