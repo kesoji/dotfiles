@@ -24,7 +24,7 @@ if has('vim_starting')
 endif
 
 " deinがなければ落としてくる
-if !isdirectory(s:dein_repo_dir)
+if !isdirectory(fnamemodify(s:dein_repo_dir, ':p'))
     execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
 endif
 
