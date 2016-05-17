@@ -17,6 +17,18 @@ hook_post_update = '''
 '''
 
 [[plugins]]
+repo = 'Shougo/unite.vim'
+
+[[plugins]]
+repo = 'Shougo/neomru.vim'
+
+[[plugins]]
+repo = 'ujihisa/unite-colorscheme'
+
+[[plugins]]
+repo = 'zhaocai/unite-scriptnames'
+
+[[plugins]]
 repo = 'thinca/vim-quickrun'
 
 [[plugins]]

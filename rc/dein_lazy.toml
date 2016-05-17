@@ -1,19 +1,4 @@
 [[plugins]]
-repo = 'Shougo/unite.vim'
-
-[[plugins]]
-repo = 'Shougo/neomru.vim'
-on_source = ['unite.vim']
-
-[[plugins]]
-repo = 'ujihisa/unite-colorscheme'
-on_source = ['unite.vim']
-
-[[plugins]]
-repo = 'zhaocai/unite-scriptnames'
-on_source = ['unite.vim']
-
-[[plugins]]
 repo = 'Shougo/vimfiler'
 on_cmd = ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab']
 
