@@ -3,6 +3,10 @@ repo = 'Shougo/vimfiler'
 on_cmd = ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab']
 
 [[plugins]]
+repo = 'zhaocai/unite-scriptnames'
+on_cmd = ['Unite scriptnames']
+
+[[plugins]]
 repo = 'Shougo/neocomplete.vim'
 on_i = 1
 

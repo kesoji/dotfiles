@@ -26,9 +26,6 @@ repo = 'Shougo/neomru.vim'
 repo = 'ujihisa/unite-colorscheme'
 
 [[plugins]]
-repo = 'zhaocai/unite-scriptnames'
-
-[[plugins]]
 repo = 'thinca/vim-quickrun'
 
 [[plugins]]
