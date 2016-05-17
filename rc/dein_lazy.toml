@@ -4,7 +4,7 @@ on_cmd = ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer',
 
 [[plugins]]
 repo = 'zhaocai/unite-scriptnames'
-on_cmd = ['Unite scriptnames']
+on_cmd = ['UniteScriptnamesEnable']
 
 [[plugins]]
 repo = 'Shougo/neocomplete.vim'
