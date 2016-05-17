@@ -3,21 +3,48 @@
 if !&compatible
     set nocompatible
 endif
-
 set encoding=utf-8
 set fileencoding=utf-8
+if has('vim_starting')
+    set fileencodings+=cp932
+endif
+
+" Plugin Manager Settings {{{
+if has('win32') || has('win64')
+    let s:dein_dir = $USERPROFILE . '/.cache/dein'
+else
+    let s:dein_dir = '~/.cache/dein'
+endif
+" dein.vim本体
+let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 if has('vim_starting')
-    " ^= 先頭, += 末尾 に追加
-    set fileencodings+=cp932
+    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+endif
 
-    " 初回起動時のみruntimepathにdeinのパスを追加する
-    if has('win32') || has('win64')
-        " $HOMEがネットワーク上にあったとしてもローカルを指定する
-        set runtimepath^=$USERPROFILE/.cache/dein/repos/github.com/Shougo/dein.vim
-    else
-        set runtimepath^=~/.cache/dein/repos/github.com/Shougo/dein.vim
-    endif
+" deinがなければ落としてくる
+if !isdirectory(s:dein_repo_dir)
+    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+endif
+
+" プラグインリストを収めた TOML ファイル
+let s:toml      = '~/.vim/rc/dein.toml'
+let $MYDEIN = s:toml
+let s:lazy_toml = '~/.vim/rc/dein_lazy.toml'
+let $MYDEINL = s:lazy_toml
+
+if dein#load_state(s:dein_dir)
+    " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
+    call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
+    call dein#load_toml(s:toml,      {'lazy': 0})
+    call dein#load_toml(s:lazy_toml, {'lazy': 1})
+    call dein#end()
+    call dein#save_state()
+endif
+
+" もし、未インストールものものがあったらインストール
+if dein#check_install()
+    call dein#install()
 endif
 
 " Windows {{{1
@@ -58,43 +85,6 @@ else
     set undodir=~/.vim/undo
 endif
 
-"<<<Plugin>>> dein {{{1
-" プラグインが実際にインストールされるディレクトリ
-if has('win32') || has('win64')
-    let s:dein_dir = $USERPROFILE . '/.cache/dein'
-else
-    let s:dein_dir = '~/.cache/dein'
-endif
-" dein.vim本体
-let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
-
-" dein.vim がなければ github から落としてくる
-if &runtimepath !~# '/dein.vim'
-    if !isdirectory(s:dein_repo_dir)
-        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-    endif
-    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
-endif
-
-" プラグインリストを収めた TOML ファイル
-let s:toml      = '~/.vim/rc/dein.toml'
-let $MYDEIN = s:toml
-let s:lazy_toml = '~/.vim/rc/dein_lazy.toml'
-let $MYDEINL = s:lazy_toml
-
-if dein#load_state(s:dein_dir)
-    " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
-    call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
-    call dein#load_toml(s:toml,      {'lazy': 0})
-    call dein#load_toml(s:lazy_toml, {'lazy': 1})
-    call dein#end()
-    call dein#save_state()
-endif
-
-" もし、未インストールものものがあったらインストール
-if dein#check_install()
-    call dein#install()
-endif
 
 " Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
 " set runtimepath+=~/.vim/
@@ -449,9 +439,11 @@ endfunction
 " [agでvimの検索関連を高速化 - Qiita](http://qiita.com/0829/items/7053b6e3371592e4fbe6)
 if executable('ag')
   let g:unite_source_grep_command = 'ag'
-  let g:unite_source_grep_default_opts = '--nogroup --nocolor --column'
+  let g:unite_source_grep_default_opts = '--nogroup --nocolor'
   let g:unite_source_grep_recursive_opt = ''
 endif
+
+vnoremap /g y:Unite grep::-iHRn:<C-R>=escape(@", '\\.*$^[]')<CR><CR>
 
 " Markdown {{{1
 
