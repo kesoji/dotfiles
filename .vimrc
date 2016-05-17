@@ -10,16 +10,17 @@ if has('vim_starting')
 endif
 
 " Plugin Manager Settings {{{
+" dein.vim本体
 if has('win32') || has('win64')
-    let s:dein_dir = $USERPROFILE . '/.cache/dein'
+    let s:dein_dir = $USERPROFILE . '\.cache\dein'
 else
     let s:dein_dir = '~/.cache/dein'
 endif
-" dein.vim本体
+
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 if has('vim_starting')
-    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')[0:-2]
 endif
 
 " deinがなければ落としてくる
