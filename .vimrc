@@ -442,16 +442,22 @@ if executable('pt')
     let g:unite_source_grep_command = 'pt'
     let g:unite_source_grep_default_opts = '--nogroup --nocolor'
     let g:unite_source_grep_recursive_opt = ''
+    let g:unite_source_grep_encoding = 'utf-8'
+    let g:ag_prg="pt --vimgrep --smart-case"
 elseif executable('ag')
     let g:unite_source_grep_command = 'ag'
     let g:unite_source_grep_default_opts = '--nogroup --nocolor'
     let g:unite_source_grep_recursive_opt = ''
+    let g:unite_source_grep_encoding = 'utf-8'
+    let g:ag_prg="ag --vimgrep --smart-case"
 endif
 
 nnoremap <silent> ,g :<C-u>Unite grep:. -buffer-name=search-buffer<CR>
 nnoremap <silent> ,cg :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
 nnoremap <silent> ,r  :<C-u>UniteResume search-buffer<CR>
 vnoremap ,g y:Unite grep::-iHRn:<C-R>=escape(@", '\\.*$^[]')<CR><CR>
+
+
 
 " Markdown {{{1
 
