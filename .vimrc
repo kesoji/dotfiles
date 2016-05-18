@@ -454,7 +454,7 @@ endif
 
 nnoremap <silent> ,g :<C-u>Unite grep:. -buffer-name=search-buffer<CR>
 nnoremap <silent> ,cg :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
-nnoremap <silent> ,r  :<C-u>UniteResume search-buffer<CR>
+nnoremap <silent> ,sg  :<C-u>UniteResume search-buffer<CR>
 vnoremap ,g y:Unite grep::-iHRn:<C-R>=escape(@", '\\.*$^[]')<CR><CR>
 
 
