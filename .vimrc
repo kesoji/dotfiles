@@ -483,7 +483,15 @@ vmap <C-l> <Plug>(openbrowser-smart-search)
 "<<<Plugin>>> lightline {{{1
 set laststatus=2
 
+"<<<Plugin>>> session {{{1
+command! -nargs=* -complete=command OS OpenSession
+command! -nargs=* -complete=command SS SaveSession
+
 "<<<Plugin>>> VimFiler {{{1
+command! V VimFiler
+command! VB VimFilerBufferDir
+command! VC VimFilerCurrentDir
+command! VT VimFilerTab
 nnoremap <F2> :VimFiler -buffer-name=explorer -split -simple -winwidth=40 -toggle -no-quit<CR>
 let g:vimfiler_as_default_explorer = 1
 let g:vimfiler_edit_action = 'tabopen'
