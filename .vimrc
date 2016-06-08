@@ -265,11 +265,16 @@ endfunction
 
 
 "<<<Plugin>>> quickrun {{{1
+"[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
 let g:quickrun_config = {
             \   "_" : {
             \       "runner" : "vimproc",
-            \       "runner/vimproc/updatetime" : 60,
+            \       "runner/vimproc/updatetime" : 100,
+            \       "outputter/buffer/split" : ":rightbelow vertical",
             \       "outputter/buffer/close_on_empty" : 1,
+            \       "outputter" : "error",
+            \       "outputter/error/success" : "buffer",
+            \       "outputter/error/error" : "quickfix",
             \       "hook/output_encode/encoding" : "utf-8",
             \   },
             \}
