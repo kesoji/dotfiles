@@ -7,3 +7,4 @@ ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.gvimrc ~/.gvimrc
 ln -sf ~/dotfiles/rc ~/.vim
 ln -sf ~/dotfiles/snippets ~/.vim
+ln -sf ~/dotfiles/after ~/.vim
