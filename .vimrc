@@ -192,6 +192,10 @@ nnoremap : ;
 vnoremap ; :
 vnoremap : ;
 
+" Tab mapping
+nnoremap <S-Tab> <<
+inoremap <S-Tab> <C-d>
+
 inoremap jk <ESC>
 
 nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
