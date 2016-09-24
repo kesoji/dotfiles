@@ -15,3 +15,5 @@
 	br = branch
 	gr = log --graph --date=short --decorate=short --pretty=format:'%Cgreen%h %Creset%cd %Cblue%cn %Cred%d %Creset%s'
 	hist = log --pretty=format:\\\"%h %ad | %s%d [%an]\\\" --graph --date=short
+[push]
+	default = simple
