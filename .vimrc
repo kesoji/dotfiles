@@ -52,7 +52,7 @@ endif
 if has('win32') || has('win64')
     set directory=$TMP
     set backupdir=$TMP
-    set undodir=$HOME/vim/undo
+    set undodir=$HOME/.vim/undo
     source $HOME/.vim/mswin.vim
 
     " Disable mswin.vim's C-V mapping
