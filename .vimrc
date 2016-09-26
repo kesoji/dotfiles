@@ -117,6 +117,7 @@ set display=lastline
 set pumheight=10
 set showmatch
 set matchtime=1
+set breakindent
 
 " set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
 set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
@@ -279,6 +280,11 @@ augroup BinaryXXD
   autocmd BufWritePost * if &binary | silent %!xxd -g 1
   autocmd BufWritePost * set nomod | endif
 augroup END
+
+"<<<Plugin>>> jedi-vim {{{1
+let g:jedi#auto_initialization = 1
+let g:jedi#rename_command = "<leader>R"
+let g:jedi#popup_on_dot = 1
 
 "<<<Plugin>>> quickrun {{{1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
