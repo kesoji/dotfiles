@@ -117,6 +117,7 @@ set display=lastline
 set pumheight=10
 set showmatch
 set matchtime=1
+" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
 set breakindent
 
 " set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
@@ -251,6 +252,10 @@ nnoremap Y y$
 nnoremap + <C-a>
 nnoremap - <C-x>
 
+" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
+cnoremap <C-n> <C-g>
+cnoremap <C-p> <C-t>
+
 "User Defined Command {{{1
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
 command! JsonFormat :execute '%!python -m json.tool'
@@ -289,17 +294,21 @@ let g:jedi#popup_on_dot = 1
 "<<<Plugin>>> quickrun {{{1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
 let g:quickrun_config = {
-            \   "_" : {
-            \       "runner" : "vimproc",
-            \       "runner/vimproc/updatetime" : 100,
-            \       "outputter/buffer/split" : ":rightbelow vertical",
-            \       "outputter/buffer/close_on_empty" : 1,
-            \       "outputter" : "error",
-            \       "outputter/error/success" : "buffer",
-            \       "outputter/error/error" : "quickfix",
-            \       "hook/output_encode/encoding" : "utf-8",
-            \   },
-            \}
+\   "_" : {
+\       "runner" : "vimproc",
+\       "runner/vimproc/updatetime" : 100,
+\       "outputter/buffer/split" : ":rightbelow vertical",
+\       "outputter/buffer/close_on_empty" : 1,
+\       "outputter" : "error",
+\       "outputter/error/success" : "buffer",
+\       "outputter/error/error" : "quickfix",
+\       "hook/output_encode/encoding" : "utf-8",
+\   },
+\   "python": {
+\       "hook/output_encode/encoding" : "sjis",
+\   },
+\}
+            
 
 inoremap \\r <ESC>:QuickRun<CR>
 " <C-c> で実行を強制終了させる
