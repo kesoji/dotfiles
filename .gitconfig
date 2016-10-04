@@ -4,7 +4,7 @@
 	status = auto
 	branch = auto
 [core]
-	excludesfile = ~/.gitignore_global
+	excludesfile = /Users/kesoji/.gitignore_global
 	quotepath = false
 [alias]
 	ci = commit
@@ -19,9 +19,10 @@
 	default = simple
 [difftool "sourcetree"]
 	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-	path =-
+	path = 
 [mergetool "sourcetree"]
 	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
 	trustExitCode = true
 [include]
     path = ~/.gitconfig.local
+
