@@ -43,10 +43,6 @@ repo = 'basyura/TweetVim'
 on_cmd = ['TweetVimHomeTimeline']
 
 [[plugins]]
-repo = 'tpope/vim-fugitive'
-on_cmd = ['Gstatus', 'Glog']
-
-[[plugins]]
 repo = 'myhere/vim-nodejs-complete'
 on_ft = ['javascript']
 

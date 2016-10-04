@@ -102,6 +102,9 @@ repo = 'thinca/vim-visualstar'
 [[plugins]]
 repo = 'rking/ag.vim'
 
+[[plugins]]
+repo = 'tpope/vim-fugitive'
+
 # ColorScheme
 [[plugins]]
 repo = 'tomasr/molokai'
