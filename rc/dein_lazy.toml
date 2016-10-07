@@ -39,6 +39,10 @@ repo = 'davidhalter/jedi-vim'
 on_ft = 'python'
 
 [[plugins]]
+repo = 'xolox/vim-lua-ftplugin'
+on_ft = 'lua'
+
+[[plugins]]
 repo = 'basyura/TweetVim'
 on_cmd = ['TweetVimHomeTimeline']
 
