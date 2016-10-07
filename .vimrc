@@ -198,6 +198,7 @@ vnoremap : ;
 nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
+inoremap jj <ESC>
 inoremap jk <ESC>
 
 nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
@@ -214,6 +215,8 @@ nnoremap <C-]> g<C-]>
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
 nnoremap <Space>l $
+
+inoremap <silent> jk <ESC>
 
 nnoremap s <Nop>
 nnoremap sj <C-w>j
@@ -454,6 +457,7 @@ function! s:unite_my_settings()
     nmap <buffer> <ESC> <Plug>(unite_exit)
     "入力モードのときjjでノーマルモードに移動
     imap <buffer> jj <Plug>(unite_insert_leave)
+    imap <buffer> jk <Plug>(unite_insert_leave)
     "入力モードのときctrl+wでバックスラッシュも削除
     imap <buffer> <C-w> <Plug>(unite_delete_backward_path)
     "sでsplit
