@@ -132,7 +132,7 @@ set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
 
-set wildmode=longest,list "command-line-modeのリスト表示
+set wildmode=list,full "command-line-modeのリスト表示
 
 autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
