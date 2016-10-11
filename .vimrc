@@ -132,7 +132,7 @@ set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
 
-set wildmode=longest:list "command-line-modeのリスト表示
+set wildmode=longest,list "command-line-modeのリスト表示
 
 autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
@@ -198,8 +198,8 @@ vnoremap : ;
 nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
-inoremap jj <ESC>
-inoremap jk <ESC>
+inoremap <silent>jj <ESC>
+inoremap <silent>jk <ESC>
 
 nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
@@ -215,8 +215,6 @@ nnoremap <C-]> g<C-]>
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
 nnoremap <Space>l $
-
-inoremap <silent> jk <ESC>
 
 nnoremap s <Nop>
 nnoremap sj <C-w>j
