@@ -48,7 +48,8 @@ repo = 'itchyny/lightline.vim'
 repo = 'open-browser.vim'
 
 [[plugins]]
-repo = 'kannokanno/previm'
+repo = 'iamcco/markdown-preview.vim'
+#on_ft = ['markdown']
 
 [[plugins]]
 repo = 'Townk/vim-autoclose'

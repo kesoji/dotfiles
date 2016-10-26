@@ -9,6 +9,9 @@ if has('vim_starting')
     set fileencodings+=cp932
 endif
 
+" workaround for long long line.
+set synmaxcol=200
+
 " Plugin Manager Settings {{{
 " dein.vim本体
 if has('win32') || has('win64')
@@ -122,6 +125,7 @@ set breakindent
 
 " set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
 set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
+set backspace=indent,eol,start
 set clipboard+=autoselect,unnamed
 
 set incsearch
@@ -132,7 +136,7 @@ set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
 
-set wildmode=list,full "command-line-modeのリスト表示
+set wildmode=list,longest,full "command-line-modeのリスト表示
 
 autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
@@ -256,6 +260,8 @@ nnoremap - <C-x>
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
 cnoremap <C-n> <C-g>
 cnoremap <C-p> <C-t>
+
+inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 
 "User Defined Command {{{1
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>

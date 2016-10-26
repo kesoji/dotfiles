@@ -22,6 +22,14 @@ on_i = 1
 repo = 'plasticboy/vim-markdown'
 on_ft = ['markdown']
 
+#[[plugins]]
+#repo = 'gabrielelana/vim-markdown'
+#on_ft = ['markdown']
+
+#[[plugins]]
+#repo = 'kannokanno/previm'
+#on_ft = ['markdown']
+
 [[plugins]]
 repo = 'mattn/emmet-vim'
 on_ft = ['html', 'css']
