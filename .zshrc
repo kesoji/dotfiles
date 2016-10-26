@@ -1,3 +1,7 @@
+if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
+    zcompile ~/.zshrc
+fi
+
 export XDG_CONFIG_HOME=$HOME/.config
 
 # 補完機能を有効にする

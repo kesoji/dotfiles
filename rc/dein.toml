@@ -29,6 +29,9 @@ repo = 'ujihisa/unite-colorscheme'
 repo = 'thinca/vim-quickrun'
 
 [[plugins]]
+repo = 'gregsexton/MatchTag'
+
+[[plugins]]
 repo = 'xolox/vim-session'
 depends = ['vim-misc']
 
