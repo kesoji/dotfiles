@@ -1,26 +1,28 @@
 [color]
-	ui = true
-	diff = auto
-	status = auto
-	branch = auto
+    ui = true
+    diff = auto
+    status = auto
+    branch = auto
 [core]
-	excludesfile = /Users/kesoji/.gitignore_global
-	quotepath = false
+    excludesfile = ~/.gitignore_global
+    quotepath = false
 [alias]
-	ci = commit
-	st = status
-	co = checkout
-	br = branch
-	gr = log --graph --date=short --decorate=short --pretty=format:'%Cgreen%h %Creset%cd %Cblue%cn %Cred%d %Creset%s'
-	hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+    ci = commit
+    st = status
+    co = checkout
+    br = branch
+    gr = log --graph --date=short --decorate=short --pretty=format:'%Cgreen%h %Creset%cd %Cblue%cn %Cred%d %Creset%s'
+    hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
 [gui]
-	encoding = utf-8
+    encoding = utf-8
 [difftool "sourcetree"]
-	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-	path = 
+    cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+    path = 
 [mergetool "sourcetree"]
-	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
-	trustExitCode = true
+    cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+    trustExitCode = true
+[url "https://"]
+    insteadOf = git://
 [include]
     path = ~/.gitconfig.local
 
