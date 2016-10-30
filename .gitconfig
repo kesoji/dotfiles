@@ -15,8 +15,6 @@
 	hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
 [gui]
 	encoding = utf-8
-[push]
-	default = simple
 [difftool "sourcetree"]
 	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
 	path = 
