@@ -16,6 +16,12 @@ setopt list_packed
 # 補完候補一覧をカラー表示
 zstyle ':completion:*' list-colors ''
 
+# PROMPT
+autoload -U promptinit
+autoload -Uz colors && colors
+PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
+%# "
+
 setopt correct
 setopt no_beep
 
