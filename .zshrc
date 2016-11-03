@@ -1,4 +1,9 @@
 export XDG_CONFIG_HOME=$HOME/.config
+if [ `which pyenv 2>/dev/null 1>2` ]; then
+    export PYENV_ROOT="${HOME}/.pyenv"
+    export PATH=${PYENV_ROOT}/bin:$PATH
+    eval "$(pyenv init -)"
+fi
 
 # 補完機能を有効にする
 autoload -Uz compinit && compinit -u

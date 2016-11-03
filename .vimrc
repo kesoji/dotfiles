@@ -8,6 +8,7 @@ set fileencoding=utf-8
 if has('vim_starting')
     set fileencodings+=cp932
 endif
+scriptencoding utf-8
 
 " Plugin Manager Settings {{{
 " dein.vim本体
@@ -113,6 +114,7 @@ set number
 set autoindent
 set smartindent
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
+source $VIMRUNTIME/macros/matchit.vim
 set display=lastline
 set pumheight=10
 set showmatch
