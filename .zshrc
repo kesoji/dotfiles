@@ -7,13 +7,17 @@ export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
-export HTTP_PROXY="http://localhost:12222"
-export HTTPS_PROXY="http://localhost:12222"
+if [ "$(uname)" = 'Darwin' ] ; then
+    export HTTP_PROXY=""
+    export HTTPS_PROXY=""
+fi
 export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
 export LESS="-R -M -g -i -x4"
 export LESSGLOBALTAGS=global
-if [ `which pyenv 2>/dev/null 1>2` ]; then
+
+which pyenv 2>/dev/null 1>&2
+if [ $? -eq 0 ]; then
     export PYENV_ROOT="${HOME}/.pyenv"
     export PATH=${PYENV_ROOT}/bin:$PATH
     eval "$(pyenv init -)"
@@ -57,6 +61,12 @@ alias la='ls -la'
 alias cp='cp -i'
 alias mv='mv -i'
 alias vi='vim'
+
+if [ "$(uname)" = 'Darwin' ] ; then
+    alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
+    alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
+    alias ls='ls -G'
+fi
 
 # ディレクトリ移動関連
 setopt auto_cd
