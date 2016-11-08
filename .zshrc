@@ -61,6 +61,7 @@ alias la='ls -la'
 alias cp='cp -i'
 alias mv='mv -i'
 alias vi='vim'
+alias tmux='tmux -2'
 
 if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
