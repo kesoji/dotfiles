@@ -1,6 +1,7 @@
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
+set -o vi
 
 #export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
@@ -49,7 +50,7 @@ zstyle ':completion:*' list-colors ''
 autoload -U promptinit
 autoload -Uz colors && colors
 PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
-%# "
+$ "
 
 setopt correct
 setopt no_beep
