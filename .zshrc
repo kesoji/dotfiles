@@ -16,7 +16,7 @@ if [ "$(uname)" = 'Darwin' ] ; then
 fi
 export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
-export LESS="-R -M -g -i -x4"
+export LESS="-R -M -g -i -W -x4"
 export LESSGLOBALTAGS=global
 
 which pyenv 2>/dev/null 1>&2
