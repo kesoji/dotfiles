@@ -109,6 +109,9 @@ repo = 'rking/ag.vim'
 [[plugins]]
 repo = 'tpope/vim-fugitive'
 
+[[plugins]]
+repo = 'AnsiEsc.vim'
+
 # ColorScheme
 [[plugins]]
 repo = 'tomasr/molokai'
