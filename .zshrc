@@ -44,8 +44,8 @@ export PATH=$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 if [ "$(uname)" = 'Darwin' ] ; then
-    export HTTP_PROXY=""
-    export HTTPS_PROXY=""
+    export http_proxy=""
+    export https_proxy=""
 fi
 export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
