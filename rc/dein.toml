@@ -113,6 +113,9 @@ repo = 'tpope/vim-fugitive'
 repo = 'AnsiEsc.vim'
 
 [[plugins]]
+repo = 'thinca/vim-fontzoom'
+
+[[plugins]]
 repo = 'DirDiff.vim'
 
 # ColorScheme
