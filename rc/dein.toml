@@ -112,6 +112,9 @@ repo = 'tpope/vim-fugitive'
 [[plugins]]
 repo = 'AnsiEsc.vim'
 
+[[plugins]]
+repo = 'DirDiff.vim'
+
 # ColorScheme
 [[plugins]]
 repo = 'tomasr/molokai'
