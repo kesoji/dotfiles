@@ -52,8 +52,7 @@ export LSCOLORS=DxGxcxdxCxegedabagacad
 export LESS="-R -M -g -i -W -x4"
 export LESSGLOBALTAGS=global
 
-which pyenv 2>/dev/null 1>&2
-if [ $? -eq 0 ]; then
+if [ -d ${HOME}/.pyenv ]; then
     export PYENV_ROOT="${HOME}/.pyenv"
     export PATH=${PYENV_ROOT}/bin:$PATH
     eval "$(pyenv init -)"
