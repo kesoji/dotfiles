@@ -44,13 +44,18 @@ export PATH=$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 if [ "$(uname)" = 'Darwin' ] ; then
-    export HTTP_PROXY=""
-    export HTTPS_PROXY=""
+    export http_proxy=""
+    export https_proxy=""
 fi
 export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
+# LESS
+# [あなたの知らない less の世界 \- Qiita](http://qiita.com/delphinus/items/b04752bb5b64e6cc4ea9)
 export LESS="-R -M -g -i -W -x4"
 export LESSGLOBALTAGS=global
+if which lesspipe.sh > /dev/null; then
+    export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
+fi
 
 if [ -d ${HOME}/.pyenv ]; then
     export PYENV_ROOT="${HOME}/.pyenv"
