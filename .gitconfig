@@ -4,6 +4,7 @@
     status = auto
     branch = auto
 [core]
+    editor = vim
     excludesfile = ~/.gitignore_global
     quotepath = false
 [alias]
