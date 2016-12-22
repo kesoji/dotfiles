@@ -21,9 +21,6 @@ else
     cdpath=(.. ~)
     # 補完機能を有効にする
     autoload -Uz compinit && compinit -u
-    if [ -e /usr/local/share/zsh-completions ]; then
-        fpath=(/usr/local/share/zsh-completions $fpath)
-    fi
     # 補完で小文字でも大文字にマッチさせる
     zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
     # 補完候補を詰めて表示
@@ -62,6 +59,21 @@ if [ -d ${HOME}/.pyenv ]; then
     export PATH=${PYENV_ROOT}/bin:$PATH
     eval "$(pyenv init -)"
 fi
+
+
+if [ -e /usr/share/zsh/site-functions/ ]; then
+    fpath=($fpath /usr/share/zsh/sites-functions)
+fi
+
+## zsh-completions
+#if [ -e /usr/local/share/zsh-completions ]; then
+#    fpath=(/usr/local/share/zsh-completions $fpath)
+#elif [ -e ${ZDOTDIR:-$HOME}/.zsh-completions ]; then
+#    fpath=(${ZDOTDIR:-$HOME}/.zsh-completions $fpath)
+#else
+#    git clone https://github.com/zsh-users/zsh-completions ${ZDOTDIR:-$HOME}/.zsh-completions
+#    fpath=(${ZDOTDIR:-$HOME}/.zsh-completions $fpath)
+#fi
 
 
 # GTAGS補完
