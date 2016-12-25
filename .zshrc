@@ -77,7 +77,10 @@ fi
 setopt correct
 setopt no_beep
 
-# alias
+# Completion
+compdef sshrc=ssh
+
+# Alias
 alias ls='ls -F --color'
 alias ll='ls -l'
 alias la='ls -la'

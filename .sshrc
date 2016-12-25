@@ -1,0 +1,5 @@
+alias ls='ls -F --color'
+alias ll='ls -l'
+alias la='ls -la'
+alias sudo='sudo '
+#alias sudo='sudo -E '
