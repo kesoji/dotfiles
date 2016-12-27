@@ -35,6 +35,10 @@ else
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
 
+# bash-completion someday...
+#autoload -U +X bashcompinit && bashcompinit
+#source /usr/share/bash-completion/completions/firewall-cmd
+
 #export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$HOME/my/bin:$PATH
@@ -62,7 +66,7 @@ fi
 
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
-    fpath=($fpath /usr/share/zsh/sites-functions)
+    fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
 
 ## zsh-completions
