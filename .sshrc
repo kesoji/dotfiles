@@ -16,3 +16,6 @@ alias ll='ls -l'
 alias la='ls -la'
 alias sudo='sudo ' # to enable alias by sudo
 #alias sudo='sudo -E '
+
+# Conglaturations
+echo "Yeah! sshrc is working!"
