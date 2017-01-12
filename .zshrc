@@ -109,5 +109,17 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ls='ls -G'
 fi
 
+# SSHRC
+which sshrc 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "---------------------------------------------------------------------"
+    echo "Hey! you don't have sshrc. You should download it from"
+    echo "https://github.com/Russell91/sshrc"
+    echo '$ wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc'
+    echo '$ chmod +x sshrc'
+    echo '$ sudo move sshrc /usr/local/bin #or anywhere else'
+    echo "---------------------------------------------------------------------"
+fi
+
 # disable STOP (Ctrl+S)
 [ -t 0 ] && stty stop undef
