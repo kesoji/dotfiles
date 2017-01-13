@@ -18,7 +18,7 @@ alias sudo='sudo ' # to enable alias by sudo
 #alias sudo='sudo -E '
 
 # vim
-export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/.vimrc' | source \$MYVIMRC"
+export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/vimrc_sshrc' | source \$MYVIMRC"
 
 # Conglaturations
 echo "Yeah! sshrc is working!"

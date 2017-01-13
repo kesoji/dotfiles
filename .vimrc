@@ -144,7 +144,9 @@ set pumheight=10
 set showmatch
 set matchtime=1
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
-set breakindent
+if version >= 800
+    set breakindent
+endif
 
 " set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
 set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
