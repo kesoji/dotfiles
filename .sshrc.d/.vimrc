@@ -9,6 +9,55 @@ if has('vim_starting')
     set fileencodings+=cp932
 endif
 scriptencoding utf-8
+
+" 基本設定 {{{1
+syntax enable
+filetype plugin indent on
+
+if has('clientserver')
+    call singleton#enable()
+endif
+
+set modeline
+set modelines=2
+
+set cursorline
+set history=1000
+set tabstop=4
+set expandtab
+set textwidth=0
+" set nowrap
+set shiftwidth=4
+set number
+set autoindent
+set smartindent
+" http://itchyny.hatenablog.com/entry/2014/12/25/090000
+source $VIMRUNTIME/macros/matchit.vim
+set display=lastline
+set pumheight=10
+set showmatch
+set matchtime=1
+" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
+set breakindent
+
+" set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
+set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
+set backspace=indent,eol,start
+set clipboard+=autoselect,unnamed
+
+set incsearch
+set hlsearch
+set ignorecase
+
+set list
+" set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
+set listchars=tab:>-,trail:-
+
+set wildmode=list,longest,full "command-line-modeのリスト表示
+
+autocmd BufRead,BufNewFile *.vim    setfiletype vim
+
+" Style {{{1
 set background=dark
 " these setting are overridden by .gvimrc.
 try
