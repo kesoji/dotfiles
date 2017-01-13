@@ -119,8 +119,6 @@ if [[ $? -ne 0 ]] ; then
     echo '$ chmod +x sshrc'
     echo '$ sudo move sshrc /usr/local/bin #or anywhere else'
     echo "---------------------------------------------------------------------"
-else
-    alias ssh='sshrc'
 fi
 
 # disable STOP (Ctrl+S)
