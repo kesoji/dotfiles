@@ -123,3 +123,5 @@ fi
 
 # disable STOP (Ctrl+S)
 [ -t 0 ] && stty stop undef
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
