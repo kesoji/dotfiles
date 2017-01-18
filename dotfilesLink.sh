@@ -15,6 +15,7 @@ ln -sf ~/dotfiles/.sshrc ~/.sshrc
 ln -sf ~/dotfiles/rc ~/.vim
 ln -sf ~/dotfiles/snippets ~/.vim
 ln -sf ~/dotfiles/after ~/.vim
+ln -sf ~/dotfiles/.sshrc.d ~/
 
 # zplezto
 [ -d ~/.zprezto ] || git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
