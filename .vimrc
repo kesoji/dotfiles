@@ -9,6 +9,9 @@ if has('vim_starting')
     set fileencodings+=cp932
 endif
 scriptencoding utf-8
+
+set guifont=Rcty_Diminished:h12:cSHIFTJIS:qDRAFT
+
 " workaround for long long line.
 set synmaxcol=200
 
