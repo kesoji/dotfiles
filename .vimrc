@@ -38,43 +38,102 @@ if has("vim_starting") && !has('gui_running') && has('vertsplit')
 endif
 
 " Plugin Manager Settings {{{
-" dein.vim本体
-if has('win32') || has('win64')
-    let s:dein_dir = $USERPROFILE . '\.cache\dein'
-else
-    let s:dein_dir = '~/.cache/dein'
-endif
+let g:vimproc#download_windows_dll = 1
+call plug#begin('~/.vim/plugged')
 
-let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
+Plug 'Shougo/vimproc.vim', { 'do': 'make' }
+Plug 'Shougo/unite.vim'
+Plug 'Shougo/neomru.vim'
+Plug 'ujihisa/unite-colorscheme'
+Plug 'thinca/vim-quickrun'
+Plug 'gregsexton/MatchTag'
+Plug 'xolox/vim-session'
+Plug 'xolox/vim-misc'
+Plug 'godlygeek/tabular'
+Plug 'Shougo/vimshell'
+Plug 'itchyny/lightline.vim'
+Plug 'open-browser.vim'
+Plug 'iamcco/markdown-preview.vim'
+Plug 'Townk/vim-autoclose'
+Plug 'tpope/vim-surround'
+Plug 'elzr/vim-json', { 'on', ['javascript', 'json'] }
+Plug 'thinca/vim-singleton'
+Plug 'tyru/restart.vim'
+Plug 'cisco.vim'
+Plug 'bbchung/gtags.vim'
+Plug 'scrooloose/syntastic'
+Plug 'Yggdroot/indentLine'
+Plug 'easymotion/vim-easymotion'
+Plug 'basyura/twibill.vim'
+Plug 'terryma/vim-expand-region'
+Plug 'sgur/unite-everything'
+Plug 'Konfekt/FastFold'
+Plug 'thinca/vim-visualstar'
+Plug 'rking/ag.vim'
+Plug 'tpope/vim-fugitive'
+Plug 'AnsiEsc.vim'
+Plug 'thinca/vim-fontzoom'
+Plug 'DirDiff.vim'
+Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
+Plug 'zhaocai/unite-scriptnames'
+Plug 'Shougo/neocomplete.vim'
+Plug 'Shougo/neosnippet'
+Plug 'Shougo/neosnippet-snippets'
+Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
+Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
+Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
+Plug 'cespare/vim-toml', { 'for': ['toml'] }
+Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
+Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
+Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
+Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
+" Clolor Scheme
+Plug 'tomasr/molokai'
+Plug 'sjl/badwolf'
+Plug 'nanotech/jellybeans.vim'
+Plug 'w0ng/vim-hybrid'
+Plug 'altercation/vim-colors-solarized'
 
-if has('vim_starting')
-    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')[0:-2]
-endif
+call plug#end()
 
-" deinがなければ落としてくる
-if !isdirectory(fnamemodify(s:dein_repo_dir, ':p'))
-    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-endif
+"" dein.vim本体
+"if has('win32') || has('win64')
+"    let s:dein_dir = $USERPROFILE . '\.cache\dein'
+"else
 
-" プラグインリストを収めた TOML ファイル
-let s:toml      = '~/.vim/rc/dein.toml'
-let $MYDEIN = s:toml
-let s:lazy_toml = '~/.vim/rc/dein_lazy.toml'
-let $MYDEINL = s:lazy_toml
-
-if dein#load_state(s:dein_dir)
-    " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
-    call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
-    call dein#load_toml(s:toml,      {'lazy': 0})
-    call dein#load_toml(s:lazy_toml, {'lazy': 1})
-    call dein#end()
-    call dein#save_state()
-endif
-
-" もし、未インストールものものがあったらインストール
-if dein#check_install()
-    call dein#install()
-endif
+"    let s:dein_dir = '~/.cache/dein'
+"endif
+"
+"let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
+"
+"if has('vim_starting')
+"    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')[0:-2]
+"endif
+"
+"" deinがなければ落としてくる
+"if !isdirectory(fnamemodify(s:dein_repo_dir, ':p'))
+"    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+"endif
+"
+"" プラグインリストを収めた TOML ファイル
+"let s:toml      = '~/.vim/rc/dein.toml'
+"let $MYDEIN = s:toml
+"let s:lazy_toml = '~/.vim/rc/dein_lazy.toml'
+"let $MYDEINL = s:lazy_toml
+"
+"if dein#load_state(s:dein_dir)
+"    " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
+"    call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
+"    call dein#load_toml(s:toml,      {'lazy': 0})
+"    call dein#load_toml(s:lazy_toml, {'lazy': 1})
+"    call dein#end()
+"    call dein#save_state()
+"endif
+"
+"" もし、未インストールものものがあったらインストール
+"if dein#check_install()
+"    call dein#install()
+"endif
 
 " Windows {{{1
 if has('win32') || has('win64')
