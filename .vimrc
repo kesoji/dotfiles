@@ -15,6 +15,45 @@ set guifont=Rcty_Diminished:h12:cSHIFTJIS:qDRAFT
 " workaround for long long line.
 set synmaxcol=200
 
+" Windows or Mac/Linux? {{{1
+if has('win32') || has('win64')
+    set directory=$TMP
+    set backupdir=$TMP
+    set undodir=$HOME/.vim/undo
+    set runtimepath^=$HOME/.vim
+    source $HOME/.vim/mswin.vim
+
+    " Disable mswin.vim's C-V mapping
+    " imap <C-V> <C-V>
+    cmap <C-V> <C-V>
+
+    """"""""""""""""""""""""""""""
+    " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/kaoriya-trouble#plugin
+    "
+    " Kaoriya版に添付されているプラグインの無効化
+    " 問題があるものもあるので一律に無効化します。
+    " ファイルを参照(コメント部分で gf を実行)した上で、必要なプラグインは
+    " let plugin_..._disableの設定行をコメント化(削除)して有効にして下さい。
+    """"""""""""""""""""""""""""""
+    "$VIM/plugins/kaoriya/plugin/autodate.vim
+    let plugin_autodate_disable  = 1
+    "$VIM/plugins/kaoriya/plugin/cmdex.vim
+    let plugin_cmdex_disable     = 1
+    "$VIM/plugins/kaoriya/plugin/dicwin.vim
+    let plugin_dicwin_disable    = 1
+    "$VIM/plugins/kaoriya/plugin/hz_ja.vim
+    "let plugin_hz_ja_disable     = 1
+    "$VIM/plugins/kaoriya/plugin/scrnmode.vim
+    let plugin_scrnmode_disable  = 1
+    "$VIM/plugins/kaoriya/plugin/verifyenc.vim
+    "let plugin_verifyenc_disable = 1
+else
+    " Mac or Linux
+    set directory=~/.vim/swp
+    set backupdir=~/.vim/backup
+    set undodir=~/.vim/undo
+endif
+
 " Use vsplit mode
 " http://qiita.com/kefir_/items/c725731d33de4d8fb096
 if has("vim_starting") && !has('gui_running') && has('vertsplit')
@@ -135,43 +174,6 @@ call plug#end()
 "    call dein#install()
 "endif
 
-" Windows {{{1
-if has('win32') || has('win64')
-    set directory=$TMP
-    set backupdir=$TMP
-    set undodir=$HOME/.vim/undo
-    source $HOME/.vim/mswin.vim
-
-    " Disable mswin.vim's C-V mapping
-    " imap <C-V> <C-V>
-    cmap <C-V> <C-V>
-
-    """"""""""""""""""""""""""""""
-    " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/kaoriya-trouble#plugin
-    "
-    " Kaoriya版に添付されているプラグインの無効化
-    " 問題があるものもあるので一律に無効化します。
-    " ファイルを参照(コメント部分で gf を実行)した上で、必要なプラグインは
-    " let plugin_..._disableの設定行をコメント化(削除)して有効にして下さい。
-    """"""""""""""""""""""""""""""
-    "$VIM/plugins/kaoriya/plugin/autodate.vim
-    let plugin_autodate_disable  = 1
-    "$VIM/plugins/kaoriya/plugin/cmdex.vim
-    let plugin_cmdex_disable     = 1
-    "$VIM/plugins/kaoriya/plugin/dicwin.vim
-    let plugin_dicwin_disable    = 1
-    "$VIM/plugins/kaoriya/plugin/hz_ja.vim
-    "let plugin_hz_ja_disable     = 1
-    "$VIM/plugins/kaoriya/plugin/scrnmode.vim
-    let plugin_scrnmode_disable  = 1
-    "$VIM/plugins/kaoriya/plugin/verifyenc.vim
-    "let plugin_verifyenc_disable = 1
-else
-    " Mac or Linux {{{1
-    set directory=~/.vim/swp
-    set backupdir=~/.vim/backup
-    set undodir=~/.vim/undo
-endif
 
 
 " Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
