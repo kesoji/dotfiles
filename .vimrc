@@ -95,7 +95,7 @@ Plug 'open-browser.vim'
 Plug 'iamcco/markdown-preview.vim'
 Plug 'Townk/vim-autoclose'
 Plug 'tpope/vim-surround'
-Plug 'elzr/vim-json', { 'on': ['javascript', 'json'] }
+Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
 Plug 'thinca/vim-singleton'
 Plug 'tyru/restart.vim'
 Plug 'cisco.vim'
