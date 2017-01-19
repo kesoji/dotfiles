@@ -76,7 +76,7 @@ if has("vim_starting") && !has('gui_running') && has('vertsplit')
   let &t_RV .= "\e[?6;69h\e[1;3s\e[3;9H\e[6n\e[0;0s\e[?6;69l"
 endif
 
-" Plugin Manager Settings {{{
+" Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
 
@@ -113,6 +113,7 @@ Plug 'tpope/vim-fugitive'
 Plug 'AnsiEsc.vim'
 Plug 'thinca/vim-fontzoom'
 Plug 'DirDiff.vim'
+
 Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
 Plug 'zhaocai/unite-scriptnames'
 Plug 'Shougo/neocomplete.vim'
@@ -126,6 +127,13 @@ Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
 Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
+if has('mac')
+    " fzf shoud be installed by Homebrew
+    Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
+elseif !has('win32') && !has('win64')
+    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+    Plug 'junegunn/fzf.vim'
+endif
 " Clolor Scheme
 Plug 'tomasr/molokai'
 Plug 'sjl/badwolf'
