@@ -112,16 +112,31 @@ fi
 # SSHRC
 which sshrc 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "Hey! you don't have sshrc. You should download it from"
-    echo "https://github.com/Russell91/sshrc"
-    echo '$ wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc'
-    echo '$ chmod +x sshrc'
-    echo '$ sudo move sshrc /usr/local/bin #or anywhere else'
-    echo "---------------------------------------------------------------------"
+    cat << EOS
+-----------------------------------------------------------------------------
+    Hey! you don't have sshrc. You should download it from
+      https://github.com/Russell91/sshrc"
+    \$ wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc
+    \$ chmod +x sshrc
+    \$ sudo mv sshrc /usr/local/bin #or anywhere else
+-----------------------------------------------------------------------------
+EOS
+fi
+
+# fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+which fzf 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    cat << EOS
+-----------------------------------------------------------------------------
+    Hey! you don't have fzf. You should download it from
+      https://github.com/junegunn/fzf
+    \$ git clone https://github.com/junegunn/fzf.git ~/.fzf
+    \$ ~/.fzf/install
+-----------------------------------------------------------------------------
+EOS
 fi
 
 # disable STOP (Ctrl+S)
 [ -t 0 ] && stty stop undef
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
