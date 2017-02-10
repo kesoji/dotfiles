@@ -388,6 +388,17 @@ function! s:Jq(...)
     execute "%!jq " . l:arg
 endfunction
 
+"" VO - insert output of vim command in current buffer
+command! -narg=+ VO :call ViewOutput(<q-args>)
+function! ViewOutput(cmd)
+    let save_reg=@a
+    redir @a
+    silent exec a:cmd
+    redir END
+    put a
+    let @a=save_reg
+endfunction
+
 " AutoGroup {{{1
 " バイナリ編集(xxd)モード（vim -b での起動、もしくは *.bin ファイルを開くと発動します）
 " http://d.hatena.ne.jp/rdera/20081022/1224682665
