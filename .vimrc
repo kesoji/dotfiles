@@ -10,7 +10,11 @@ if has('vim_starting')
 endif
 scriptencoding utf-8
 
-set guifont=Rcty_Diminished:h12:cSHIFTJIS:qDRAFT
+try
+    set guifont=Ricty Discord Regular:h12
+catch
+    echomsg string("selected font was not found... using default")
+endtry
 
 " workaround for long long line.
 set synmaxcol=200
