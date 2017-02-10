@@ -367,10 +367,15 @@ cnoremap <C-p> <C-t>
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 
 "User Defined Command {{{1
+"" EditVIMRC - edit $MYVIMRC file
+command! EditVIMRC e $MYVIMRC
+"" Capture - view command result in QuickRun window
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
+"" JsonFormat - format json
 command! JsonFormat :execute '%!python -m json.tool'
             \ | :execute '%!python -c "import re,sys;chr=__builtins__.__dict__.get(\"unichr\",chr);sys.stdout.write(re.sub(r''\\u[0-9a-f]{4}'', lambda x: chr(int(\"0x\" + x.group(0)[2:], 16)).encode(\"utf-8\"), sys.stdin.read()))"'
             \ | :set filetype=json | :1
+"" Jq - use system jq in vim
 command! -nargs=? Jq call s:Jq(<f-args>)
             \ | :set filetype=json
 function! s:Jq(...)
