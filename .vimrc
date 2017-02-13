@@ -13,7 +13,7 @@ scriptencoding utf-8
 try
     set guifont=Ricty Discord Regular:h12
 catch
-    echomsg string("selected font was not found... using default")
+    " nothing to do
 endtry
 
 " workaround for long long line.
