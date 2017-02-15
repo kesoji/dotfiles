@@ -323,6 +323,7 @@ nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
 nnoremap <Space>l $
 
+" Window and Tab operation
 nnoremap s <Nop>
 nnoremap sj <C-w>j
 nnoremap sk <C-w>k
@@ -364,6 +365,7 @@ nnoremap - <C-x>
 cnoremap <C-n> <C-g>
 cnoremap <C-p> <C-t>
 
+" Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 
 "User Defined Command {{{1
