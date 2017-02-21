@@ -14,6 +14,7 @@ fi
 alias ls='ls -F --color'
 alias ll='ls -l'
 alias la='ls -la'
+alias c='clear'
 alias sudo='sudo ' # to enable alias by sudo
 #alias sudo='sudo -E '
 
