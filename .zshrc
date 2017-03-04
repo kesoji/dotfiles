@@ -101,6 +101,7 @@ alias ls='ls -F --color'
 alias ll='ls -l'
 alias la='ls -la'
 alias vi='vim'
+alias c='clear'
 alias tmux='tmux -2'
 
 if [ "$(uname)" = 'Darwin' ] ; then

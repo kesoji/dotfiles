@@ -10,7 +10,11 @@ if has('vim_starting')
 endif
 scriptencoding utf-8
 
-set guifont=Rcty_Diminished:h12:cSHIFTJIS:qDRAFT
+try
+    set guifont=Ricty Discord Regular:h12
+catch
+    " nothing to do
+endtry
 
 " workaround for long long line.
 set synmaxcol=200
@@ -319,6 +323,7 @@ nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
 nnoremap <Space>l $
 
+" Window and Tab operation
 nnoremap s <Nop>
 nnoremap sj <C-w>j
 nnoremap sk <C-w>k
@@ -360,13 +365,19 @@ nnoremap - <C-x>
 cnoremap <C-n> <C-g>
 cnoremap <C-p> <C-t>
 
+" Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 
 "User Defined Command {{{1
+"" EditVIMRC - edit $MYVIMRC file
+command! EditVIMRC e $MYVIMRC
+"" Capture - view command result in QuickRun window
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
+"" JsonFormat - format json
 command! JsonFormat :execute '%!python -m json.tool'
             \ | :execute '%!python -c "import re,sys;chr=__builtins__.__dict__.get(\"unichr\",chr);sys.stdout.write(re.sub(r''\\u[0-9a-f]{4}'', lambda x: chr(int(\"0x\" + x.group(0)[2:], 16)).encode(\"utf-8\"), sys.stdin.read()))"'
             \ | :set filetype=json | :1
+"" Jq - use system jq in vim
 command! -nargs=? Jq call s:Jq(<f-args>)
             \ | :set filetype=json
 function! s:Jq(...)
@@ -377,6 +388,17 @@ function! s:Jq(...)
     endif
     " execute "%! jq 95fe1a73-e2e2-4737-bea1-a44257c50fc8quot;" . l:arg . "95fe1a73-e2e2-4737-bea1-a44257c50fc8quot;"
     execute "%!jq " . l:arg
+endfunction
+
+"" VO - insert output of vim command in current buffer
+command! -narg=+ VO :call ViewOutput(<q-args>)
+function! ViewOutput(cmd)
+    let save_reg=@a
+    redir @a
+    silent exec a:cmd
+    redir END
+    put a
+    let @a=save_reg
 endfunction
 
 " AutoGroup {{{1
