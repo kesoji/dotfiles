@@ -39,7 +39,7 @@ fi
 #autoload -U +X bashcompinit && bashcompinit
 #source /usr/share/bash-completion/completions/firewall-cmd
 
-#export TERM=xterm-256color
+export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
