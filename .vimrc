@@ -117,6 +117,8 @@ Plug 'tpope/vim-fugitive'
 Plug 'AnsiEsc.vim'
 Plug 'thinca/vim-fontzoom'
 Plug 'DirDiff.vim'
+Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
+Plug 'Rykka/riv.vim', { 'for': ['rst'] }
 
 Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
 Plug 'zhaocai/unite-scriptnames'
