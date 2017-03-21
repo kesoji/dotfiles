@@ -371,6 +371,8 @@ cnoremap <C-p> <C-t>
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 
 "User Defined Command {{{1
+"" DiffOrig - how did I edit this file?
+command DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
 "" EditVIMRC - edit $MYVIMRC file
 command! EditVIMRC e $MYVIMRC
 "" Capture - view command result in QuickRun window
