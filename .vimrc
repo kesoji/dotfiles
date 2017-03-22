@@ -358,6 +358,9 @@ nnoremap sv :<C-u>vs<CR>
 nnoremap sq :<C-u>q<CR>
 nnoremap sQ :<C-u>bd<CR>
 
+nnoremap <leader>ev :vsplit $MYVIMRC<CR>
+nnoremap <leader>sv :source $MYVIMRC<CR>
+
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
 nnoremap Y y$
 nnoremap + <C-a>
@@ -372,9 +375,7 @@ inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 
 "User Defined Command {{{1
 "" DiffOrig - how did I edit this file?
-command DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
-"" EditVIMRC - edit $MYVIMRC file
-command! EditVIMRC e $MYVIMRC
+command! DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
 "" Capture - view command result in QuickRun window
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
 "" JsonFormat - format json
