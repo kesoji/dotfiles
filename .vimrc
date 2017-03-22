@@ -372,6 +372,7 @@ cnoremap <C-p> <C-t>
 
 " Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
+set pastetoggle=<F12>
 
 "User Defined Command {{{1
 "" DiffOrig - how did I edit this file?
