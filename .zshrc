@@ -47,6 +47,7 @@ export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 if [ "$(uname)" = 'Darwin' ] ; then
     export http_proxy=""
     export https_proxy=""
+    export PATH=/usr/local/opt/openssl/bin:$PATH
 fi
 export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
