@@ -628,7 +628,8 @@ nnoremap <silent> ,cg :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W
 nnoremap <silent> ,sg  :<C-u>UniteResume search-buffer<CR>
 vnoremap ,g y:Unite grep::-iHRn:<C-R>=escape(@", '\\.*$^[]')<CR><CR>
 
-
+"<<<Plugin>>> VimFiler {{{1
+let g:vimfiler_ignore_pattern='\(desktop.ini\)'
 
 " Markdown {{{1
 
