@@ -87,6 +87,7 @@ call plug#begin('~/.vim/plugged')
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
+Plug 'scrooloose/nerdcommenter'
 Plug 'ujihisa/unite-colorscheme'
 Plug 'thinca/vim-quickrun'
 Plug 'gregsexton/MatchTag'
