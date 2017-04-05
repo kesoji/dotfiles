@@ -89,6 +89,7 @@ Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'ujihisa/unite-colorscheme'
+Plug 'Shougo/unite-help'
 Plug 'thinca/vim-quickrun'
 Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
@@ -628,6 +629,11 @@ nnoremap <silent> ,g :<C-u>Unite grep:. -buffer-name=search-buffer<CR>
 nnoremap <silent> ,cg :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
 nnoremap <silent> ,sg  :<C-u>UniteResume search-buffer<CR>
 vnoremap ,g y:Unite grep::-iHRn:<C-R>=escape(@", '\\.*$^[]')<CR><CR>
+
+"<<<Plugin>>> unite-help {{{2
+nnoremap ,h :<C-u>Unite -start-insert help<CR>
+nnoremap <silent> g,h :<C-u>UniteWithCursorWord help<CR>
+
 
 "<<<Plugin>>> VimFiler {{{1
 let g:vimfiler_ignore_pattern='\(desktop.ini\)'
