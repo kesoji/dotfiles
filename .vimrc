@@ -376,6 +376,12 @@ cnoremap <C-p> <C-t>
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 set pastetoggle=<F12>
 
+"Ex Mode Editing{{{1
+:cabbrev ga2 g/^/ if (line(".") % 2 == 1) <BAR>
+:cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
+:cabbrev ga4 g/^/ if (line(".") % 4 == 1) <BAR>
+:cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>
+
 "User Defined Command {{{1
 "" DiffOrig - how did I edit this file?
 command! DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
