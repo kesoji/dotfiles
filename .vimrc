@@ -305,6 +305,11 @@ nnoremap : ;
 vnoremap ; :
 vnoremap : ;
 
+noremap j gj
+noremap k gk
+noremap gj j
+noremap gk k
+
 " Tab mapping
 nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
@@ -376,7 +381,7 @@ cnoremap <C-p> <C-t>
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 set pastetoggle=<F12>
 
-"Ex Mode Editing{{{1
+"Command Mode Editing{{{1
 :cabbrev ga2 g/^/ if (line(".") % 2 == 1) <BAR>
 :cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
 :cabbrev ga4 g/^/ if (line(".") % 4 == 1) <BAR>
