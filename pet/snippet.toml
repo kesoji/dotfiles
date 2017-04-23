@@ -7,3 +7,18 @@
   description = "List firewall"
   command = "firewall-cmd --list-services --zone=public --permanent"
   output = ""
+
+[[snippets]]
+  description = "Perl oneliner: 改行をカンマに変換"
+  command = "perl -pe 's/\\n/,/g'"
+  output = ""
+
+[[snippets]]
+  description = "Export ssh public key from private key"
+  command = "ssh-keygen -y -f ~/.ssh/id_rsa"
+  output = ""
+
+[[snippets]]
+  description = "SMTP AUTH Parameter"
+  command = "perl -MMIME::Base64 -e 'print encode_base64(\"\\000user\\@examle.com\\000password\")'"
+  output = ""
