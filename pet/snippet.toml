@@ -22,3 +22,8 @@
   description = "SMTP AUTH Parameter"
   command = "perl -MMIME::Base64 -e 'print encode_base64(\"\\000user\\@examle.com\\000password\")'"
   output = ""
+
+[[snippets]]
+  description = "mastodon update"
+  command = "docker-compose build && docker-compose run --rm web rails db:migrate && docker-compose run --rm web rails assets:precompile && docker-compose stop && docker-compose up -d"
+  output = ""
