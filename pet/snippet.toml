@@ -27,3 +27,8 @@
   description = "mastodon update"
   command = "docker-compose build && docker-compose run --rm web rails db:migrate && docker-compose run --rm web rails assets:precompile && docker-compose stop && docker-compose up -d"
   output = ""
+
+[[snippets]]
+  description = "Show iptables line numbers"
+  command = "iptables -L --line-numbers"
+  output = ""
