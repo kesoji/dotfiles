@@ -100,6 +100,7 @@ fi
 
 setopt correct
 setopt no_beep
+setopt hist_no_store
 
 # Completion
 compdef sshrc=ssh
