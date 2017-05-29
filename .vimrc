@@ -5,6 +5,8 @@ if !&compatible
 endif
 set encoding=utf-8
 set fileencoding=utf-8
+set fileformats=unix,dos,mac
+
 if has('vim_starting')
     set fileencodings+=cp932
 endif
@@ -100,7 +102,6 @@ Plug 'itchyny/lightline.vim'
 Plug 'open-browser.vim'
 Plug 'iamcco/markdown-preview.vim'
 Plug 'Townk/vim-autoclose'
-Plug 'tpope/vim-surround'
 Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
 Plug 'thinca/vim-singleton'
 Plug 'tyru/restart.vim'
@@ -127,6 +128,12 @@ Plug 'zhaocai/unite-scriptnames'
 Plug 'Shougo/neocomplete.vim'
 Plug 'Shougo/neosnippet'
 Plug 'Shougo/neosnippet-snippets'
+Plug 'rhysd/vim-operator-surround'
+Plug 'kana/vim-operator-user'
+Plug 'kana/vim-textobj-user'
+Plug 'kana/vim-operator-replace'
+Plug 'kana/vim-textobj-indent'
+Plug 'bps/vim-textobj-python'
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
 Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }

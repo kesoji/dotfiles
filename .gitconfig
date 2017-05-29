@@ -7,7 +7,7 @@
     editor = vim
     excludesfile = ~/.gitignore_global
     quotepath = false
-	autocrlf = true
+	autocrlf = false
 [alias]
     s = status
     st = status
