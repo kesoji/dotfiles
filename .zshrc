@@ -148,14 +148,16 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # pet
-function prev() {
-  PREV=$(fc -lrn | head -n 1)
-  sh -c "pet new `printf %q "$PREV"`"
-}
-function pet-select() {
-  BUFFER=$(pet search --query "$LBUFFER")
-  CURSOR=$#BUFFER
-  zle redisplay
-}
-zle -N pet-select
-bindkey '^s' pet-select
+if `which pet 2>/dev/null 1>&2` ; then
+    function prev() {
+      PREV=$(fc -lrn | head -n 1)
+      sh -c "pet new `printf %q "$PREV"`"
+    }
+    function pet-select() {
+      BUFFER=$(pet search --query "$LBUFFER")
+      CURSOR=$#BUFFER
+      zle redisplay
+    }
+    zle -N pet-select
+    bindkey '^s' pet-select
+fi
