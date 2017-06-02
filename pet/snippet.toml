@@ -32,3 +32,8 @@
   description = "Show iptables line numbers"
   command = "iptables -L --line-numbers"
   output = ""
+
+[[snippets]]
+  description = "Show hand-builded programs"
+  command = "porg -a"
+  output = ""
