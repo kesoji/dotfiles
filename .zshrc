@@ -4,6 +4,18 @@ fi
 
 set -o vi
 
+if [[ -e ~/.zplug/init.zsh ]]; then
+    source ~/.zplug/init.zsh
+else
+    cat << EOS
+-----------------------------------------------------------------------------
+    Hey! you don't have zplug.
+      https://github.com/zplug/zplug
+    \$ curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh
+-----------------------------------------------------------------------------
+EOS
+fi
+
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
