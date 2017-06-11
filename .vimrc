@@ -139,6 +139,7 @@ Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
 Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
 Plug 'cespare/vim-toml', { 'for': ['toml'] }
 Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
+Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
 Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
@@ -439,6 +440,11 @@ augroup BinaryXXD
   autocmd BufWritePost * if &binary | silent %!xxd -g 1
   autocmd BufWritePost * set nomod | endif
 augroup END
+
+"<<<Plugin>>> vim-operator-surround {{{1
+map <silent>sa <Plug>(operator-surround-append)
+map <silent>sd <Plug>(operator-surround-delete)
+map <silent>sr <Plug>(operator-surround-replace)
 
 "<<<Plugin>>> jedi-vim {{{1
 let g:jedi#auto_initialization = 1
