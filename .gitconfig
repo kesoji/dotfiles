@@ -8,6 +8,8 @@
     excludesfile = ~/.gitignore_global
     quotepath = false
 	autocrlf = false
+[commit]
+    verbose = true
 [alias]
     s = status
     st = status
