@@ -56,6 +56,8 @@ export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
+export LDFLAGS="-L$HOME/my/lib $LDFLAGS"
+export CPPFLAGS="-I$HOME/my/include $CPPFLAGS"
 if [ "$(uname)" = 'Darwin' ] ; then
     export http_proxy=""
     export https_proxy=""
@@ -123,6 +125,22 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
     alias ls='ls -G'
 fi
+
+# Global Alias
+alias -g L='| less'
+alias -g H='| head'
+alias -g G='| grep'
+alias -g GI='| grep -ri'
+## auto expand
+globalias() {
+    if [[ $LBUFFER =~ ' [A-Z0-9]+$' ]]; then
+      zle _expand_alias
+    fi
+    zle self-insert
+}
+zle -N globalias
+bindkey " " globalias
+
 
 # SSHRC
 which sshrc 2>/dev/null 1>&2
