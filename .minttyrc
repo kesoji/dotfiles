@@ -17,3 +17,7 @@ BoldMagenta=237,157,185
 BoldCyan=64,255,255
 BoldWhite=255,255,25
 BackgroundColour=0,0,0
+Font=Consolas
+Locale=ja_JP
+Charset=UTF-8
+FontSmoothing=full
