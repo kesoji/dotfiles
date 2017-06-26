@@ -123,7 +123,7 @@ Plug 'thinca/vim-fontzoom'
 Plug 'vim-scripts/DirDiff.vim'
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
-
+Plug 'glidenote/memolist.vim'
 Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
 Plug 'zhaocai/unite-scriptnames'
 Plug 'Shougo/neocomplete.vim'
@@ -794,4 +794,10 @@ if has('win32') || has('win64')
     let g:unite_source_everything_cmd_path = 'es.exe'
     let g:unite_source_everything_async_minimum_length = 3
 endif
+
+"<<<Plugin>>> memolist {{{1
+let g:memolist_path = "$HOME/.vim/memo"
+let g:memolist_unite = 1
+let g:memolist_unite_source = "file_rec"
+let g:memolist_unite_option = "-auto-preview -start-insert"
 
