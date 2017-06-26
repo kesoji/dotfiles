@@ -299,8 +299,6 @@ set showtabline=2 " 常にタブラインを表示
 " Mapping {{{1
 let mapleader = ','
 noremap \ ,
-" Enter command-line mode
-noremap <CR> :
 
 " <C-u>は、範囲指定(数字入力)を削除
 nnoremap <Space>w :<C-u>w<CR>
