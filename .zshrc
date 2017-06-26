@@ -58,6 +58,7 @@ export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 export LDFLAGS="-L$HOME/my/lib $LDFLAGS"
 export CPPFLAGS="-I$HOME/my/include $CPPFLAGS"
+export DISPLAY=:0.0
 if [ "$(uname)" = 'Darwin' ] ; then
     export http_proxy=""
     export https_proxy=""
