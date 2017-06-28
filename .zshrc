@@ -4,6 +4,16 @@ fi
 
 set -o vi
 
+HISTFILE=~/.zsh_history
+HISTSIZE=20000
+SAVEHIST=20000
+setopt share_history
+setopt histignorealldups
+# fzfがあれば上書きされると思う
+bindkey '^r' history-incremental-pattern-search-backward
+bindkey '^s' history-incremental-pattern-search-forward
+
+
 if [[ -e ~/.zplug/init.zsh ]]; then
     source ~/.zplug/init.zsh
 else
