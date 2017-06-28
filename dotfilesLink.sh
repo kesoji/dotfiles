@@ -17,6 +17,7 @@ ln -sf ~/dotfiles/.tigrc ~/.tigrc
 ln -sf ~/dotfiles/rc ~/.vim
 ln -sf ~/dotfiles/snippets ~/.vim
 ln -sf ~/dotfiles/after ~/.vim
+ln -sf ~/dotfiles/memo ~/.vim
 ln -sf ~/dotfiles/.sshrc.d ~/
 
 # zplezto
