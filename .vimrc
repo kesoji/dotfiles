@@ -9,6 +9,8 @@ set fileformats=unix,dos,mac
 
 if has('vim_starting')
     set fileencodings+=cp932
+    let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
+    let $PATH = expand("~/.plenv/shims") . ":" . $PATH
 endif
 scriptencoding utf-8
 
@@ -253,7 +255,6 @@ set listchars=tab:>-,trail:-
 
 set wildmode=list,longest,full "command-line-modeのリスト表示
 
-autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
 " Style {{{1
 set background=dark
@@ -441,6 +442,17 @@ augroup BinaryXXD
   autocmd BufWritePost * set nomod | endif
 augroup END
 
+augroup vimrc_loading
+    autocmd!
+    autocmd BufRead,BufNewFile *.vim    setfiletype vim
+    autocmd BufNewFile *.pl 0r $HOME/.vim/template/perl-script.txt
+    autocmd BufNewFile *.t  0r $HOME/.vim/template/perl-test.txt
+augroup END
+
+" Perl {{{1
+noremap ,pt <Esc>:%! perltidy -se<CR>
+noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
+
 "<<<Plugin>>> vim-operator-surround {{{1
 map <silent>sa <Plug>(operator-surround-append)
 map <silent>sd <Plug>(operator-surround-delete)
@@ -534,11 +546,14 @@ inoremap <expr><Space> pumvisible() ? "\<C-y>" : "\<Space>"
 "inoremap <expr><TAB>  pumvisible() ? "\<Down>" : "\<C-x>\<C-u>"
 
 " Enable omni completion.
-autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
-autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
-autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
-autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
-autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
+augroup neocomplete
+    autocmd!
+    autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
+    autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
+    autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
+    autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
+    autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
+augroup END
 
 " Enable heavy omni completion.
 if !exists('g:neocomplete#sources#omni#input_patterns')

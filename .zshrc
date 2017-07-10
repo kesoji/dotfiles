@@ -84,16 +84,24 @@ if which lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
 fi
 
+# Plenv
+if [ -e "${HOME}/.plenv" ]; then
+  export PATH="$HOME/.plenv/bin:$PATH"
+  #export PATH="$HOME/.plenv/bin:$HOME/.plenv/shims:$PATH"
+  eval "$(plenv init -)"
+fi
+
 # Pyenv
 if [ -e "${HOME}/.pyenv" ]; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init -)"
 fi
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
-    fpath=(/usr/share/zsh/sites-functions $fpath)
+  fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
+
 
 ## zsh-completions
 #if [ -e /usr/local/share/zsh-completions ]; then
