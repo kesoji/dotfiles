@@ -9,11 +9,14 @@ set fileformats=unix,dos,mac
 
 if has('vim_starting')
     set fileencodings+=cp932
+    let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
+    let $PATH = expand("~/.plenv/shims") . ":" . $PATH
 endif
 scriptencoding utf-8
 
 try
     set guifont=Ricty Discord Regular:h12
+    set rop=type:directx,gamma:1.6,contrast:0.24,level:0.75,geom:1,renmode:5,taamode:3
 catch
     " nothing to do
 endtry
@@ -114,6 +117,7 @@ Plug 'basyura/twibill.vim'
 Plug 'terryma/vim-expand-region'
 Plug 'sgur/unite-everything'
 Plug 'Konfekt/FastFold'
+Plug 'nathanaelkane/vim-indent-guides'
 Plug 'thinca/vim-visualstar'
 Plug 'rking/ag.vim'
 Plug 'tpope/vim-fugitive'
@@ -122,12 +126,13 @@ Plug 'thinca/vim-fontzoom'
 Plug 'vim-scripts/DirDiff.vim'
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
-
+Plug 'glidenote/memolist.vim'
 Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
 Plug 'zhaocai/unite-scriptnames'
 Plug 'Shougo/neocomplete.vim'
 Plug 'Shougo/neosnippet'
 Plug 'Shougo/neosnippet-snippets'
+Plug 'Shougo/vinarise'
 Plug 'rhysd/vim-operator-surround'
 Plug 'kana/vim-operator-user'
 Plug 'kana/vim-textobj-user'
@@ -251,7 +256,6 @@ set listchars=tab:>-,trail:-
 
 set wildmode=list,longest,full "command-line-modeのリスト表示
 
-autocmd BufRead,BufNewFile *.vim    setfiletype vim
 
 " Style {{{1
 set background=dark
@@ -298,8 +302,6 @@ set showtabline=2 " 常にタブラインを表示
 " Mapping {{{1
 let mapleader = ','
 noremap \ ,
-" Enter command-line mode
-noremap <CR> :
 
 " <C-u>は、範囲指定(数字入力)を削除
 nnoremap <Space>w :<C-u>w<CR>
@@ -441,6 +443,17 @@ augroup BinaryXXD
   autocmd BufWritePost * set nomod | endif
 augroup END
 
+augroup vimrc_loading
+    autocmd!
+    autocmd BufRead,BufNewFile *.vim    setfiletype vim
+    autocmd BufNewFile *.pl 0r $HOME/.vim/template/perl-script.txt
+    autocmd BufNewFile *.t  0r $HOME/.vim/template/perl-test.txt
+augroup END
+
+" Perl {{{1
+noremap ,pt <Esc>:%! perltidy -se<CR>
+noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
+
 "<<<Plugin>>> vim-operator-surround {{{1
 map <silent>sa <Plug>(operator-surround-append)
 map <silent>sd <Plug>(operator-surround-delete)
@@ -534,11 +547,14 @@ inoremap <expr><Space> pumvisible() ? "\<C-y>" : "\<Space>"
 "inoremap <expr><TAB>  pumvisible() ? "\<Down>" : "\<C-x>\<C-u>"
 
 " Enable omni completion.
-autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
-autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
-autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
-autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
-autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
+augroup neocomplete
+    autocmd!
+    autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
+    autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
+    autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
+    autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
+    autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
+augroup END
 
 " Enable heavy omni completion.
 if !exists('g:neocomplete#sources#omni#input_patterns')
@@ -793,4 +809,10 @@ if has('win32') || has('win64')
     let g:unite_source_everything_cmd_path = 'es.exe'
     let g:unite_source_everything_async_minimum_length = 3
 endif
+
+"<<<Plugin>>> memolist {{{1
+let g:memolist_path = "$HOME/.vim/memo"
+let g:memolist_unite = 1
+let g:memolist_unite_source = "file_rec"
+let g:memolist_unite_option = "-auto-preview -start-insert"
 

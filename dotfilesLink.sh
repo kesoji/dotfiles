@@ -10,6 +10,7 @@ ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
 ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
 ln -sf ~/dotfiles/.gitignore_global ~/.gitignore_global
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
+ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.sshrc ~/.sshrc
 ln -sf ~/dotfiles/.tigrc ~/.tigrc
 
@@ -17,6 +18,8 @@ ln -sf ~/dotfiles/.tigrc ~/.tigrc
 ln -sf ~/dotfiles/rc ~/.vim
 ln -sf ~/dotfiles/snippets ~/.vim
 ln -sf ~/dotfiles/after ~/.vim
+ln -sf ~/dotfiles/memo ~/.vim
+ln -sf ~/dotfiles/template ~/.vim
 ln -sf ~/dotfiles/.sshrc.d ~/
 
 # zplezto

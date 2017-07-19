@@ -4,6 +4,16 @@ fi
 
 set -o vi
 
+HISTFILE=~/.zsh_history
+HISTSIZE=20000
+SAVEHIST=20000
+setopt share_history
+setopt histignorealldups
+# fzfがあれば上書きされると思う
+bindkey '^r' history-incremental-pattern-search-backward
+bindkey '^s' history-incremental-pattern-search-forward
+
+
 if [[ -e ~/.zplug/init.zsh ]]; then
     source ~/.zplug/init.zsh
 else
@@ -56,6 +66,9 @@ export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
+export LDFLAGS="-L$HOME/my/lib $LDFLAGS"
+export CPPFLAGS="-I$HOME/my/include $CPPFLAGS"
+export DISPLAY=:0.0
 if [ "$(uname)" = 'Darwin' ] ; then
     export http_proxy=""
     export https_proxy=""
@@ -71,16 +84,24 @@ if which lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
 fi
 
+# Plenv
+if [ -e "${HOME}/.plenv" ]; then
+  export PATH="$HOME/.plenv/bin:$PATH"
+  #export PATH="$HOME/.plenv/bin:$HOME/.plenv/shims:$PATH"
+  eval "$(plenv init -)"
+fi
+
 # Pyenv
 if [ -e "${HOME}/.pyenv" ]; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init -)"
 fi
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
-    fpath=(/usr/share/zsh/sites-functions $fpath)
+  fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
+
 
 ## zsh-completions
 #if [ -e /usr/local/share/zsh-completions ]; then
@@ -123,6 +144,22 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
     alias ls='ls -G'
 fi
+
+# Global Alias
+alias -g L='| less'
+alias -g H='| head'
+alias -g G='| grep'
+alias -g GI='| grep -ri'
+## auto expand
+globalias() {
+    if [[ $LBUFFER =~ ' [A-Z0-9]+$' ]]; then
+      zle _expand_alias
+    fi
+    zle self-insert
+}
+zle -N globalias
+bindkey " " globalias
+
 
 # SSHRC
 which sshrc 2>/dev/null 1>&2
