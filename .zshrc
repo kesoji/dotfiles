@@ -63,7 +63,7 @@ fi
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export PATH=$HOME/my/bin:$PATH
+export PATH=$HOME/my/sbin:$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 export LDFLAGS="-L$HOME/my/lib $LDFLAGS"
