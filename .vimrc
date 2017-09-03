@@ -812,7 +812,7 @@ if has('win32') || has('win64')
 endif
 
 "<<<Plugin>>> memolist {{{1
-let g:memolist_path = "$HOME/.vim/memo"
+let g:memolist_path = "~/.vim/memo"
 let g:memolist_unite = 1
 let g:memolist_unite_source = "file_rec"
 let g:memolist_unite_option = "-auto-preview -start-insert"
