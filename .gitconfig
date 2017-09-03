@@ -40,7 +40,5 @@
     trustExitCode = true
 [url "https://"]
     insteadOf = git://
-[credential]
-    helper = cache --timeout 259200
 [include]
     path = ~/.gitconfig.local
