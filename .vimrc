@@ -30,6 +30,7 @@ if has('win32') || has('win64')
     set backupdir=$TMP
     set undodir=$HOME/.vim/undo
     set runtimepath^=$HOME/.vim,$HOME/.vim/after
+    set viminfo+=n$HOME/.viminfo
     source $HOME/.vim/mswin.vim
 
     " Disable mswin.vim's C-V mapping
