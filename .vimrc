@@ -222,7 +222,8 @@ endif
 set modeline
 set modelines=2
 
-set cursorline
+""" cursorline is slow..
+" set cursorline
 set history=1000
 set tabstop=4
 set expandtab
