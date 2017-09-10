@@ -93,6 +93,7 @@ call plug#begin('~/.vim/plugged')
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
+Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'ujihisa/unite-colorscheme'
 Plug 'Shougo/unite-help'
@@ -221,7 +222,8 @@ endif
 set modeline
 set modelines=2
 
-set cursorline
+""" cursorline is slow..
+" set cursorline
 set history=1000
 set tabstop=4
 set expandtab
