@@ -31,6 +31,7 @@ if has('win32') || has('win64')
     set undodir=$HOME/.vim/undo
     set runtimepath^=$HOME/.vim,$HOME/.vim/after
     set viminfo+=n$HOME/.viminfo
+
     source $HOME/.vim/mswin.vim
 
     " Disable mswin.vim's C-V mapping
@@ -165,47 +166,6 @@ Plug 'w0ng/vim-hybrid'
 Plug 'altercation/vim-colors-solarized'
 
 call plug#end()
-
-"" dein.vim本体
-"if has('win32') || has('win64')
-"    let s:dein_dir = $USERPROFILE . '\.cache\dein'
-"else
-
-"    let s:dein_dir = '~/.cache/dein'
-"endif
-"
-"let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
-"
-"if has('vim_starting')
-"    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')[0:-2]
-"endif
-"
-"" deinがなければ落としてくる
-"if !isdirectory(fnamemodify(s:dein_repo_dir, ':p'))
-"    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-"endif
-"
-"" プラグインリストを収めた TOML ファイル
-"let s:toml      = '~/.vim/rc/dein.toml'
-"let $MYDEIN = s:toml
-"let s:lazy_toml = '~/.vim/rc/dein_lazy.toml'
-"let $MYDEINL = s:lazy_toml
-"
-"if dein#load_state(s:dein_dir)
-"    " TOMLを変更してからdein#clear_state()しなくてもよくなる、らしい。
-"    call dein#begin(s:dein_dir, [$MYVIMRC, s:toml, s:lazy_toml]) 
-"    call dein#load_toml(s:toml,      {'lazy': 0})
-"    call dein#load_toml(s:lazy_toml, {'lazy': 1})
-"    call dein#end()
-"    call dein#save_state()
-"endif
-"
-"" もし、未インストールものものがあったらインストール
-"if dein#check_install()
-"    call dein#install()
-"endif
-
-
 
 " Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
 " set runtimepath+=~/.vim/
