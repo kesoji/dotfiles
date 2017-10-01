@@ -28,6 +28,7 @@
     drag = pull --rebase
     f = "!git ls-files | grep -i"
     d  = diff
+    dc = diff --cached
     d1 = diff HEAD~
     d2 = diff HEAD~2
     d3 = diff HEAD~3

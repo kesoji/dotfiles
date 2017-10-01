@@ -138,6 +138,7 @@ alias la='ls -la'
 alias vi='vim'
 alias c='clear'
 alias tmux='tmux -2'
+alias ap='ansible-playbook'
 
 if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
