@@ -138,6 +138,7 @@ alias la='ls -la'
 alias vi='vim'
 alias c='clear'
 alias tmux='tmux -2'
+alias tma='tmux -2 a'
 alias ap='ansible-playbook'
 
 if [ "$(uname)" = 'Darwin' ] ; then
