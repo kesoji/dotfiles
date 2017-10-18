@@ -139,14 +139,19 @@ alias vi='vim'
 alias c='clear'
 alias tmux='tmux -2'
 alias ap='ansible-playbook'
-
 if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
     alias ls='ls -G'
 fi
 
-# Global Alias
+## Git
+alias gst='git status'
+alias ga='git add'
+alias gp='git push'
+alias gpl='git pull'
+
+## Global Alias
 alias -g L='| less'
 alias -g H='| head'
 alias -g G='| grep'
