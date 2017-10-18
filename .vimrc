@@ -142,6 +142,7 @@ Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-operator-replace'
 Plug 'kana/vim-textobj-indent'
 Plug 'bps/vim-textobj-python'
+Plug 'fatih/vim-go', { 'for': ['go'] }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
 Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
