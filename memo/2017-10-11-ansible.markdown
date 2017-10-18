@@ -1,0 +1,10 @@
+title: Ansible
+==========
+date: 2017-10-11 14:44
+tags: []
+categories: []
+- - -
+
+## あるhostがどのグループに属するか
+`ansible -m debug -i hosts -a "var=group_names" {host}`
+
