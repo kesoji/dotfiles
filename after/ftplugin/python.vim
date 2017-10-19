@@ -29,3 +29,23 @@ omap <buffer> ac <Plug>(textobj-python-class-a)
 xmap <buffer> ic <Plug>(textobj-python-class-i)
 omap <buffer> ic <Plug>(textobj-python-class-i)
 
+
+if exists('b:current_after_syntax')
+    finish
+endif
+
+let s:cpo_save = &cpo
+set cpo&vim
+
+" FIXME 効いていない..どこかで上書きされている..？
+syn match pythonOperator "\(+\|=\|-\|\^\|\*\)"
+syn match pythonDelimiter "\(,\|\.\|:\)"
+syn keyword pythonSpecialWord self
+
+hi link pythonSpecialWord   Special
+hi link pythonDelimiter     Special
+
+let b:current_after_syntax = 'python'
+
+let &cpo = s:cpo_save
+unlet s:cpo_save

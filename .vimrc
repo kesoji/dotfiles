@@ -183,7 +183,9 @@ set modelines=2
 set history=1000
 set tabstop=4
 set expandtab
+set smarttab
 set textwidth=0
+set virtualedit=block "can edit virtual area!
 " set nowrap
 set shiftwidth=4
 set number
@@ -208,11 +210,16 @@ set clipboard+=autoselect,unnamed
 set incsearch
 set hlsearch
 set ignorecase
+set smartcase
+set wrapscan    "default
+
+set ambiwidth=double
 
 set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
 
+set wildmenu
 set wildmode=list,longest,full "command-line-modeのリスト表示
 
 
