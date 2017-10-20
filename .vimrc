@@ -14,13 +14,6 @@ if has('vim_starting')
 endif
 scriptencoding utf-8
 
-try
-    set guifont=Ricty Discord Regular:h12
-    set rop=type:directx,gamma:1.6,contrast:0.24,level:0.75,geom:1,renmode:5,taamode:3
-catch
-    " nothing to do
-endtry
-
 " workaround for long long line.
 set synmaxcol=200
 
@@ -180,6 +173,8 @@ if has('clientserver')
     call singleton#enable()
 endif
 
+set hidden
+
 set modeline
 set modelines=2
 
@@ -260,8 +255,6 @@ function! s:my_tabline()  "{{{
     return s
 endfunction "}}}
 let &tabline = '%!'. s:SID_PREFIX() . 'my_tabline()'
-set showtabline=2 " 常にタブラインを表示
-
 
 " Mapping {{{1
 let mapleader = ','
