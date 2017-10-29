@@ -129,7 +129,8 @@ Plug 'Shougo/neocomplete.vim'
 Plug 'Shougo/neosnippet'
 Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
-Plug 'rhysd/vim-operator-surround'
+"Plug 'rhysd/vim-operator-surround'
+Plug 'tpope/vim-surround'
 Plug 'kana/vim-operator-user'
 Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-operator-replace'
@@ -341,6 +342,8 @@ nnoremap sQ :<C-u>bd<CR>
 
 nnoremap <leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <leader>sv :source $MYVIMRC<CR>
+nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
+nnoremap <leader>sgv :source $MYGVIMRC<CR>
 
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
 nnoremap Y y$
@@ -418,10 +421,10 @@ augroup END
 noremap ,pt <Esc>:%! perltidy -se<CR>
 noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
 
-"<<<Plugin>>> vim-operator-surround {{{1
-map <silent>sa <Plug>(operator-surround-append)
-map <silent>sd <Plug>(operator-surround-delete)
-map <silent>sr <Plug>(operator-surround-replace)
+""<<<Plugin>>> vim-operator-surround {{{1
+"map <silent>sa <Plug>(operator-surround-append)
+"map <silent>sd <Plug>(operator-surround-delete)
+"map <silent>sr <Plug>(operator-surround-replace)
 
 "<<<Plugin>>> jedi-vim {{{1
 let g:jedi#auto_initialization = 1
