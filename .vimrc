@@ -135,6 +135,7 @@ Plug 'kana/vim-operator-user'
 Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-operator-replace'
 Plug 'kana/vim-textobj-indent'
+Plug 'haya14busa/vim-operator-flashy'
 Plug 'bps/vim-textobj-python'
 Plug 'fatih/vim-go', { 'for': ['go'] }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
@@ -178,6 +179,9 @@ set hidden
 
 set modeline
 set modelines=2
+
+set spell
+set spelllang=en,cjk
 
 """ cursorline is slow..
 " set cursorline
@@ -264,7 +268,7 @@ function! s:my_tabline()  "{{{
 endfunction "}}}
 let &tabline = '%!'. s:SID_PREFIX() . 'my_tabline()'
 
-" Mapping {{{1
+" Mapping {{{1{{{
 let mapleader = ','
 noremap \ ,
 
@@ -346,9 +350,12 @@ nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <leader>sgv :source $MYGVIMRC<CR>
 
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
-nnoremap Y y$
+"nnoremap Y y$
 nnoremap + <C-a>
 nnoremap - <C-x>
+
+map y <Plug>(operator-flashy)
+nmap Y <Plug>(operator-flashy)$
 
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
 cnoremap <C-n> <C-g>
@@ -357,7 +364,7 @@ cnoremap <C-p> <C-t>
 " Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 set pastetoggle=<F12>
-
+"}}}
 "Command Mode Editing{{{1
 :cabbrev ga2 g/^/ if (line(".") % 2 == 1) <BAR>
 :cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
