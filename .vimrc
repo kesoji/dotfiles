@@ -542,6 +542,7 @@ endif
 " For perlomni.vim setting.
 " https://github.com/c9s/perlomni.vim
 let g:neocomplete#sources#omni#input_patterns.perl = '\h\w*->\h\w*\|\h\w*::'
+let g:neocomplete#sources#omni#input_patterns.go = '\h\w\.\w*'
 
 "<<<Plugin>>> NeoSnippets"{{{1
 let g:neosnippet#snippets_directory='~/.vim/snippets'
@@ -790,4 +791,10 @@ let g:memolist_path = "~/.vim/memo"
 let g:memolist_unite = 1
 let g:memolist_unite_source = "file_rec"
 let g:memolist_unite_option = "-auto-preview -start-insert"
+
+"<<<Plugin>>> vim-go {{{1
+let g:go_highlight_functions = 1
+let g:go_highlight_methods = 1
+let g:go_highlight_structs = 1
+
 
