@@ -142,6 +142,7 @@ Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
 Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
 Plug 'petdance/vim-perl', { 'for': ['perl'] }
+Plug 'c9s/perlomni.vim', { 'for': ['perl'] }
 Plug 'cespare/vim-toml', { 'for': ['toml'] }
 Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
 Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
