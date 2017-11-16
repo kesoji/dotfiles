@@ -120,6 +120,7 @@ Plug 'tpope/vim-fugitive'
 Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'thinca/vim-fontzoom'
 Plug 'vim-scripts/DirDiff.vim'
+Plug 'haya14busa/vim-edgemotion'
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
 Plug 'glidenote/memolist.vim'
@@ -798,4 +799,6 @@ let g:go_highlight_functions = 1
 let g:go_highlight_methods = 1
 let g:go_highlight_structs = 1
 
-
+"<<<Plugin>>> vim-edgemotion {{{1
+map ej <Plug>(edgemotion-j)
+map ek <Plug>(edgemotion-k)
