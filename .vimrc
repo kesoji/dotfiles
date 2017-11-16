@@ -126,9 +126,11 @@ Plug 'Rykka/riv.vim', { 'for': ['rst'] }
 Plug 'glidenote/memolist.vim'
 Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
 Plug 'zhaocai/unite-scriptnames'
+Plug 'SirVer/ultisnips'
+Plug 'honza/vim-snippets'
 Plug 'Shougo/neocomplete.vim'
-Plug 'Shougo/neosnippet'
-Plug 'Shougo/neosnippet-snippets'
+"Plug 'Shougo/neosnippet'
+"Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
 "Plug 'rhysd/vim-operator-surround'
 Plug 'tpope/vim-surround'
@@ -547,25 +549,32 @@ let g:neocomplete#sources#omni#input_patterns.perl = '\h\w*->\h\w*\|\h\w*::'
 let g:neocomplete#sources#omni#input_patterns.go = '\h\w\.\w*'
 
 "<<<Plugin>>> NeoSnippets"{{{1
-let g:neosnippet#snippets_directory='~/.vim/snippets'
+"let g:neosnippet#snippets_directory='~/.vim/snippets'
+"
+"imap <C-k>     <Plug>(neosnippet_expand_or_jump)
+"smap <C-k>     <Plug>(neosnippet_expand_or_jump)
+"xmap <C-k>     <Plug>(neosnippet_expand_target)"
+"
+"" SuperTab like snippets behavior.
+"imap <expr><TAB> pumvisible() ? "\<C-n>"
+"            \ : neosnippet#expandable_or_jumpable() ?
+"            \ "\<Plug>(neosnippet_expand_or_jump)"
+"            \ : "\<TAB>"
+"
+"smap <expr><TAB> neosnippet#expandable_or_jumpable() ? "\<Plug>(neosnippet_expand_or_jump)"
+"            \ : "\<TAB>"
+"
+"" For snippet_complete marker.
+"if has('conceal')
+"    set conceallevel=2 concealcursor=i
+"endif
 
-imap <C-k>     <Plug>(neosnippet_expand_or_jump)
-smap <C-k>     <Plug>(neosnippet_expand_or_jump)
-xmap <C-k>     <Plug>(neosnippet_expand_target)"
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<c-b>"
+let g:UltiSnipsJumpBackwardTrigger="<c-z>"
 
-" SuperTab like snippets behavior.
-imap <expr><TAB> pumvisible() ? "\<C-n>"
-            \ : neosnippet#expandable_or_jumpable() ?
-            \ "\<Plug>(neosnippet_expand_or_jump)"
-            \ : "\<TAB>"
-
-smap <expr><TAB> neosnippet#expandable_or_jumpable() ? "\<Plug>(neosnippet_expand_or_jump)"
-            \ : "\<TAB>"
-
-" For snippet_complete marker.
-if has('conceal')
-    set conceallevel=2 concealcursor=i
-endif
+" If you want :UltiSnipsEdit to split your window.
+let g:UltiSnipsEditSplit="vertical"
 
 "<<<Plugin>>> Unite {{{1
 " set prefix
