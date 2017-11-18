@@ -140,7 +140,7 @@ Plug 'kana/vim-operator-replace'
 Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'bps/vim-textobj-python'
-Plug 'fatih/vim-go', { 'for': ['go'] }
+Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
 Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
@@ -165,6 +165,7 @@ Plug 'sjl/badwolf'
 Plug 'nanotech/jellybeans.vim'
 Plug 'w0ng/vim-hybrid'
 Plug 'altercation/vim-colors-solarized'
+Plug 'cocopon/iceberg.vim'
 
 call plug#end()
 
@@ -178,6 +179,7 @@ filetype plugin indent on
 
 if has('clientserver')
     call singleton#enable()
+    let g:singleton#opener = "edit"
 endif
 
 set hidden
@@ -353,6 +355,7 @@ nnoremap <leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <leader>sv :source $MYVIMRC<CR>
 nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <leader>sgv :source $MYGVIMRC<CR>
+nnoremap <leader>a :cclose<CR>
 
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
 "nnoremap Y y$
@@ -363,6 +366,7 @@ map y <Plug>(operator-flashy)
 nmap Y <Plug>(operator-flashy)$
 
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
+" Highlight during search without moving cursor
 cnoremap <C-n> <C-g>
 cnoremap <C-p> <C-t>
 
@@ -804,6 +808,11 @@ let g:memolist_unite_source = "file_rec"
 let g:memolist_unite_option = "-auto-preview -start-insert"
 
 "<<<Plugin>>> vim-go {{{1
+augroup VimGoMySettings
+    "autocmd!
+    "autocmd FileType go nnoremap <leader>b <Plug>(go-build)
+    "autocmd FileType go nnoremap <leader>r <Plug>(go-run)
+augroup END
 let g:go_highlight_functions = 1
 let g:go_highlight_methods = 1
 let g:go_highlight_structs = 1
