@@ -165,6 +165,7 @@ Plug 'sjl/badwolf'
 Plug 'nanotech/jellybeans.vim'
 Plug 'w0ng/vim-hybrid'
 Plug 'altercation/vim-colors-solarized'
+Plug 'morhetz/gruvbox'
 Plug 'cocopon/iceberg.vim'
 
 call plug#end()
@@ -239,7 +240,8 @@ set wildmode=list,longest,full "command-line-modeのリスト表示
 set background=dark
 " these setting are overridden by .gvimrc.
 try
-    colorscheme hybrid
+    colorscheme gruvbox
+    "colorscheme hybrid
 catch
     try
         colorscheme molokai

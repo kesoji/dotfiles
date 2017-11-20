@@ -95,7 +95,8 @@ set cmdheight=2
 " カラースキーム(GUI使用時)
 set background=dark
 try
-  colorscheme hybrid
+  colorscheme gruvbox
+  "colorscheme hybrid
 catch
   try
     colorscheme molokai
