@@ -1,0 +1,28 @@
+title: vim
+==========
+date: 2017-11-21 10:22
+tags: []
+categories: []
+- - -
+
+## Making Vim
+
+```
+echo "install vim"; make uninstall; make distclean; \
+LDFLAGS="-Wl,-rpath=${HOME}/.pyenv/versions/2.7.12/lib:${HOME}/.pyenv/versions/3.6.2/lib" ./configure \
+    --prefix=$HOME/my \
+    --enable-fail-if-missing \
+    --disable-selinux \
+    --enable-luainterp \
+    --enable-perlinterp \
+    --enable-pythoninterp \
+    --enable-python3interp \
+    --enable-rubyinterp=yes \
+    --enable-multibyte \
+    --enable-cscope \
+    --enable-fontset \
+    --with-features=huge \
+    --enable-terminal \
+    vi_cv_path_python3=~/.pyenv/versions/3.6.2/bin/python3.6;
+make; make install
+```
