@@ -188,7 +188,7 @@ endif
 
 try
     set guifont=Ricty_Diminished_Discord:h12,MS_Gothic:h12
-    set rop=type:directx,gamma:1.6,contrast:0.24,level:0.75,geom:1,renmode:5,taamode:3
+    "set rop=type:directx,gamma:1.6,contrast:0.24,level:0.75,geom:1,renmode:5,taamode:3
 catch
     " nothing to do
 endtry
