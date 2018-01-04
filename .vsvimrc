@@ -1,0 +1,143 @@
+" vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
+
+syntax enable
+filetype plugin indent on
+
+set hidden
+
+set modeline
+set modelines=2
+
+set spell
+set spelllang=en,cjk
+
+set history=1000
+set tabstop=4
+set expandtab
+set smarttab
+set textwidth=0
+set virtualedit=block "can edit virtual area!
+" set nowrap
+set shiftwidth=4
+set number
+set autoindent
+set smartindent
+set display=lastline
+set pumheight=10
+set showmatch
+set matchtime=1
+
+" set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
+set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
+set backspace=indent,eol,start
+set clipboard+=autoselect,unnamed
+
+set incsearch
+set hlsearch
+set ignorecase
+set smartcase
+set wrapscan    "default
+
+set ambiwidth=double
+
+set list
+" set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
+set listchars=tab:>-,trail:-
+
+set wildmenu
+set wildmode=list,longest,full "command-line-modeのリスト表示
+
+" Mapping {{{1{{{
+let mapleader = ','
+noremap \ ,
+
+" <C-u>は、範囲指定(数字入力)を削除
+nnoremap <Space>w :<C-u>w<CR>
+nnoremap <Space>W :<C-u>wq<CR>
+nnoremap <Space>q :<C-u>q<CR>
+nnoremap <Space><Space>q :<C-u>qa<CR>
+nnoremap <Space>Q :<C-u>q!<CR>
+
+nnoremap ; :
+nnoremap : ;
+vnoremap ; :
+vnoremap : ;
+
+noremap j gj
+noremap k gk
+noremap gj j
+noremap gk k
+
+" Tab mapping
+nnoremap <S-Tab> <<
+inoremap <S-Tab> <C-d>
+
+inoremap <silent>jj <ESC>
+inoremap <silent>jk <ESC>
+
+nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
+nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+
+nmap / /\v
+cmap s/ s/\v
+nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
+vnoremap gs :s/\v//g<Left><Left><Left>
+
+" tagsジャンプの時に複数ある時は一覧表示
+nnoremap <C-]> g<C-]>
+
+nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
+nnoremap <Space>h ^
+nnoremap <Space>l $
+
+" Window and Tab operation
+nnoremap s <Nop>
+nnoremap sj <C-w>j
+nnoremap sk <C-w>k
+nnoremap sl <C-w>l
+nnoremap sh <C-w>h
+nnoremap sJ <C-w>J
+nnoremap sK <C-w>K
+nnoremap sL <C-w>L
+nnoremap sH <C-w>H
+nnoremap sr <C-w>r
+nnoremap s= <C-w>=
+nnoremap sw <C-w>w
+nnoremap so <C-w>_<C-w>|
+nnoremap s> <C-w>>
+nnoremap s< <C-w><
+nnoremap s+ <C-w>+
+nnoremap s- <C-w>-
+nnoremap sO <C-w>=
+nnoremap sN :<C-u>bn<CR>
+nnoremap sP :<C-u>bp<CR>
+nnoremap sn gt
+nnoremap sp gT
+nnoremap st :<C-u>tabnew<CR>
+nnoremap sx :<C-u>tabclose<CR>
+nnoremap ss :<C-u>sp<CR>
+nnoremap sv :<C-u>vs<CR>
+nnoremap sq :<C-u>q<CR>
+nnoremap sQ :<C-u>bd<CR>
+
+nnoremap <leader>ev :vsplit $MYVIMRC<CR>
+nnoremap <leader>sv :source $MYVIMRC<CR>
+nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
+nnoremap <leader>sgv :source $MYGVIMRC<CR>
+nnoremap <leader>a :cclose<CR>
+
+" http://itchyny.hatenablog.com/entry/2014/12/25/090000
+"nnoremap Y y$
+nnoremap + <C-a>
+nnoremap - <C-x>
+
+" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
+" Highlight during search without moving cursor
+cnoremap <C-n> <C-g>
+cnoremap <C-p> <C-t>
+
+"Command Mode Editing{{{1
+:cabbrev ga2 g/^/ if (line(".") % 2 == 1) <BAR>
+:cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
+:cabbrev ga4 g/^/ if (line(".") % 4 == 1) <BAR>
+:cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>

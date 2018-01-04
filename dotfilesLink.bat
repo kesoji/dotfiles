@@ -10,6 +10,7 @@ IF NOT EXIST %USERPROFILE%"\.vim" (
 mklink %USERPROFILE%"\.vimrc" %USERPROFILE%"\dotfiles\.vimrc"
 mklink %USERPROFILE%"\.gvimrc" %USERPROFILE%"\dotfiles\.gvimrc"
 mklink %USERPROFILE%"\.ideavimrc" %USERPROFILE%"\dotfiles\.ideavimrc"
+mklink %USERPROFILE%"\.vsvimrc" %USERPROFILE%"\dotfiles\.vsvimrc"
 mklink %USERPROFILE%"\.tmux.conf" %USERPROFILE%"\dotfiles\.tmux.conf"
 mklink %USERPROFILE%"\.gitconfig" %USERPROFILE%"\dotfiles\.gitconfig"
 mklink %USERPROFILE%"\.gitignore_global" %USERPROFILE%"\dotfiles\.gitignore_global"
