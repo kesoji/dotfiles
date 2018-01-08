@@ -308,8 +308,17 @@ inoremap <silent>jk <ESC>
 nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
-nmap / /\v
-cmap s/ s/\v
+map y <Plug>(operator-flashy)
+"nnoremap Y y$
+nmap Y <Plug>(operator-flashy)$ 
+
+noremap n nzzzv
+noremap N Nzzzv
+nnoremap / /\v
+nnoremap ? ?\v
+cnoremap s// s//
+cnoremap g// g//
+cnoremap v// v//
 nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
 vnoremap gs :s/\v//g<Left><Left><Left>
 
@@ -359,13 +368,8 @@ nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <leader>sgv :source $MYGVIMRC<CR>
 nnoremap <leader>a :cclose<CR>
 
-" http://itchyny.hatenablog.com/entry/2014/12/25/090000
-"nnoremap Y y$
 nnoremap + <C-a>
 nnoremap - <C-x>
-
-map y <Plug>(operator-flashy)
-nmap Y <Plug>(operator-flashy)$
 
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
 " Highlight during search without moving cursor
