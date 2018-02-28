@@ -15,7 +15,7 @@ endif
 scriptencoding utf-8
 
 " workaround for long long line.
-set synmaxcol=200
+set synmaxcol=400
 
 " Windows or Mac/Linux? {{{1
 if has('win32') || has('win64')
@@ -30,27 +30,6 @@ if has('win32') || has('win64')
     " Disable mswin.vim's C-V mapping
     " imap <C-V> <C-V>
     cmap <C-V> <C-V>
-
-    """"""""""""""""""""""""""""""
-    " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/kaoriya-trouble#plugin
-    "
-    " Kaoriya版に添付されているプラグインの無効化
-    " 問題があるものもあるので一律に無効化します。
-    " ファイルを参照(コメント部分で gf を実行)した上で、必要なプラグインは
-    " let plugin_..._disableの設定行をコメント化(削除)して有効にして下さい。
-    """"""""""""""""""""""""""""""
-    "$VIM/plugins/kaoriya/plugin/autodate.vim
-    let plugin_autodate_disable  = 1
-    "$VIM/plugins/kaoriya/plugin/cmdex.vim
-    let plugin_cmdex_disable     = 1
-    "$VIM/plugins/kaoriya/plugin/dicwin.vim
-    let plugin_dicwin_disable    = 1
-    "$VIM/plugins/kaoriya/plugin/hz_ja.vim
-    "let plugin_hz_ja_disable     = 1
-    "$VIM/plugins/kaoriya/plugin/scrnmode.vim
-    let plugin_scrnmode_disable  = 1
-    "$VIM/plugins/kaoriya/plugin/verifyenc.vim
-    "let plugin_verifyenc_disable = 1
 else
     " Mac or Linux
     set directory=~/.vim/swp
@@ -83,7 +62,13 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
-
+if has('mac')
+    " fzf shoud be installed by Homebrew
+    Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
+elseif !has('win32') && !has('win64')
+    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+    Plug 'junegunn/fzf.vim'
+endif
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
@@ -152,13 +137,6 @@ Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
 Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
-if has('mac')
-    " fzf shoud be installed by Homebrew
-    Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
-elseif !has('win32') && !has('win64')
-    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-    Plug 'junegunn/fzf.vim'
-endif
 " Clolor Scheme
 Plug 'tomasr/molokai'
 Plug 'sjl/badwolf'
@@ -250,34 +228,7 @@ catch
     endtry
 endtry
 
-" Tab {{{1
-" Anywhere SID.
-function! s:SID_PREFIX()
-    return matchstr(expand('<sfile>'), '<SNR>\d\+_\zeSID_PREFIX$')
-endfunction
-
-" Set tabline.
-function! s:my_tabline()  "{{{
-    let s = ''
-    for i in range(1, tabpagenr('$'))
-        let bufnrs = tabpagebuflist(i)
-        let bufnr = bufnrs[tabpagewinnr(i) - 1]  " first window, first appears
-        let no = i  " display 0-origin tabpagenr.
-        let mod = getbufvar(bufnr, '&modified') ? '!' : ' '
-        let title = fnamemodify(bufname(bufnr), ':t')
-        let title = '[' . title . ']'
-        let s .= '%'.i.'T'
-        let s .= '%#' . (i == tabpagenr() ? 'TabLineSel' : 'TabLine') . '#'
-        let s .= no . ':' . title
-        let s .= mod
-        let s .= '%#TabLineFill# '
-    endfor
-    let s .= '%#TabLineFill#%T%=%#TabLine#'
-    return s
-endfunction "}}}
-let &tabline = '%!'. s:SID_PREFIX() . 'my_tabline()'
-
-" Mapping {{{1{{{
+" Mapping {{{1
 let mapleader = ','
 noremap \ ,
 
@@ -310,7 +261,7 @@ nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '')
 
 map y <Plug>(operator-flashy)
 "nnoremap Y y$
-nmap Y <Plug>(operator-flashy)$ 
+nmap Y <Plug>(operator-flashy)$
 
 noremap n nzzzv
 noremap N Nzzzv
