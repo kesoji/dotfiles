@@ -125,6 +125,10 @@ Plug 'kana/vim-operator-replace'
 Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'bps/vim-textobj-python'
+Plug 'prabirshrestha/async.vim'
+Plug 'prabirshrestha/vim-lsp'
+Plug 'prabirshrestha/asyncomplete.vim'
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
@@ -132,8 +136,8 @@ Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
 Plug 'petdance/vim-perl', { 'for': ['perl'] }
 Plug 'c9s/perlomni.vim', { 'for': ['perl'] }
 Plug 'cespare/vim-toml', { 'for': ['toml'] }
-Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
-Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
+"Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
+"Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
 Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
@@ -777,3 +781,19 @@ let g:go_highlight_structs = 1
 "<<<Plugin>>> vim-edgemotion {{{1
 map ej <Plug>(edgemotion-j)
 map ek <Plug>(edgemotion-k)
+
+"<<<Plugin>>> vim-lsp {{{1
+" Python {{{2
+if executable('pyls')
+    " pip install python-language-server
+    augroup LspPython
+        au!
+        autocmd User lsp_setup call lsp#register_server({
+                    \ 'name': 'pyls',
+                    \ 'cmd': {server_info->['pyls']},
+                    \ 'whitelist': ['python'],
+                    \ })
+        autocmd FileType python setlocal omnifunc=lsp#complete
+    augroup END
+endif
+
