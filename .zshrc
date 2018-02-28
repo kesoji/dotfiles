@@ -231,3 +231,8 @@ fi
 if [ -f $HOME/google-cloud-sdk/completion.zsh.inc ]; then
   source "$HOME/google-cloud-sdk/completion.zsh.inc"
 fi
+
+# AWS completion
+if [ -f $HOME/.local/bin/aws_zsh_completer.sh ]; then
+    source "$HOME/.local/bin/aws_zsh_completer.sh"
+fi

@@ -1,0 +1,18 @@
+title: curl
+==========
+date: 2018-02-27 13:16
+tags: []
+categories: []
+- - -
+
+SSLバージョン指定オプション
+- --sslv3
+- --tlsv1.2
+
+その他SSL便利オプション
+- -k : 危険な証明無視
+- -v : verbose
+- -s : silent
+
+その他よく使うオプション
+- -L : Redirectをfollow
