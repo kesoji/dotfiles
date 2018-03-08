@@ -213,6 +213,10 @@ set ambiwidth=double
 set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
+noremap <silent> <F3> :set list! number!<CR>
+noremap <silent> <F4> :IndentLinesToggle<CR>
+"autocmd InsertEnter * set list
+"autocmd InsertLeave * set nolist
 
 set wildmenu
 set wildmode=list,longest,full "command-line-modeのリスト表示
@@ -282,7 +286,9 @@ nnoremap <C-]> g<C-]>
 
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
 nnoremap <Space>h ^
+vnoremap <Space>h ^
 nnoremap <Space>l $
+vnoremap <Space>l $
 
 " Window and Tab operation
 nnoremap s <Nop>
@@ -797,3 +803,7 @@ if executable('pyls')
     augroup END
 endif
 
+"<<<Plugin>>> NerdCommenter {{{1
+nmap <C-_> <Plug>NERDCommenterToggle
+vmap <C-_> <Plug>NERDCommenterToggle
+imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
