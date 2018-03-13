@@ -26,6 +26,18 @@ else
 EOS
 fi
 
+if which git-secrets >/dev/null ;  then
+else
+    cat << EOS
+-----------------------------------------------------------------------------
+    You should >>>
+    git clone https://github.com/awslabs/git-secrets
+    cd git-secrets
+    sudo make install
+-----------------------------------------------------------------------------
+EOS
+fi
+
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
@@ -63,9 +75,9 @@ fi
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
-export PATH=$PATH:$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin
+export GOROOT=$HOME/go1.10
+export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
+export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 export LDFLAGS="-L$HOME/my/lib $LDFLAGS"
