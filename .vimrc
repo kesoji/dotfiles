@@ -428,7 +428,7 @@ let g:quickrun_config = {
             \       "hook/output_encode/encoding" : "utf-8",
             \   },
             \   "python": {
-            \       "hook/output_encode/encoding" : "sjis",
+            \       "hook/output_encode/encoding" : "utf-8",
             \   },
             \}
 
@@ -754,6 +754,7 @@ vmap <C-v> <Plug>(expand_region_shrink)
 nnoremap <C-g> :Gtags 
 nnoremap <C-h> :Gtags -f %<CR>
 nnoremap <C-j> :GtagsCursor<CR>
+nnoremap <C-k> :Gtags -r <C-r><C-w><CR><CR>
 nnoremap <C-n> :cn<CR>
 nnoremap <C-p> :cp<CR>
 
