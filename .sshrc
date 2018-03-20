@@ -16,7 +16,7 @@ alias ll='ls -l'
 alias la='ls -la'
 alias c='clear'
 alias sudo='sudo ' # to enable alias by sudo
-#alias sudo='sudo -E '
+alias sudoe='sudo -E '
 
 # vim
 export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/vimrc_sshrc' | source \$MYVIMRC"
