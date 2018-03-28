@@ -2,24 +2,35 @@
 set -o vi
 
 # env
+## colorize terminal
 export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
-export LESS="-R -M -g -i -W -x4"
+## LESS options
+## -R:  ANSI Color エスケープ
+## -M:  行数/%/ファイル名表示
+## -i:  vimでいうsmartcaseを有効化
+## -W:  画面移動したときに、 どこから新しく表示されたかをハイライト
+## -x4: タブの大きさを4にする
+export LESS="-R -M -i -W -x4"
 export LESSGLOBALTAGS=global
 if which lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
 fi
 
 # alias
-alias ls='ls -F --color'
+alias g='git'
+alias gst='git status'
+alias gd='git diff'
+alias gci='git commit'
+alias ls='ls -F --color' # -F:  ディレクトリに/, 実行ファイルに*などをつける
 alias ll='ls -l'
 alias la='ls -la'
 alias c='clear'
-alias sudo='sudo ' # to enable alias by sudo
-alias sudoe='sudo -E '
+alias sudo='sudo '       # sudoしたときにもaliasを機能させる設定
+alias sudoe='sudo -E '   # sudoしたときに.sshrcの設定を反映させる設定。 sudoe vim とかで使う。
 
 # vim
 export VIMINIT="let \$MYVIMRC='$SSHHOME/.sshrc.d/vimrc_sshrc' | source \$MYVIMRC"
 
-# Conglaturations
+# Congratulations
 echo "Yeah! sshrc is working!"

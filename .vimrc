@@ -278,7 +278,7 @@ nnoremap ? ?\v
 cnoremap s// s//
 cnoremap g// g//
 cnoremap v// v//
-nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
+nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left>
 
 " tagsジャンプの時に複数ある時は一覧表示
@@ -808,3 +808,16 @@ endif
 nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
+
+
+
+" Simple re-format for minified Javascript
+command! UnMinify call UnMinify()
+function! UnMinify()
+    %s/{\ze[^\r\n]/{\r/g
+    %s/){/) {/g
+    %s/};\?\ze[^\r\n]/\0\r/g
+    %s/;\ze[^\r\n]/;\r/g
+    %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
+    normal ggVG=
+endfunction
