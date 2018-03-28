@@ -1,5 +1,8 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 
+set runtimepath+=~/.vim/
+runtime! userautoload/*.vim
+
 if !&compatible
     set nocompatible
 endif
@@ -151,10 +154,6 @@ Plug 'morhetz/gruvbox'
 Plug 'cocopon/iceberg.vim'
 
 call plug#end()
-
-" Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
-" set runtimepath+=~/.vim/
-" runtime! userautoload/*.vim
 
 " 基本設定 {{{1
 syntax enable
