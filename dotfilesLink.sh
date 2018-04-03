@@ -25,8 +25,8 @@ ln -sf ~/dotfiles/template ~/.vim/
 
 # zplezto
 [ -d ~/.zprezto ] || git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
-for rcfile in ${ZDOTDIR:-$HOME}/.zprezto/runcoms/z*; do
-    filename=`basename $rcfile`
-    ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.$filename"
-done
+#for rcfile in ${ZDOTDIR:-$HOME}/.zprezto/runcoms/z*; do
+#    filename=`basename $rcfile`
+#    ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.$filename"
+#done
 ln -sf ~/dotfiles/zpreztorc ~/.zpreztorc
