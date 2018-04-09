@@ -233,15 +233,15 @@ catch
 endtry
 
 " Mapping {{{1
-let mapleader = ','
+let mapleader = '<Space>'
 noremap \ ,
 
 " <C-u>は、範囲指定(数字入力)を削除
-nnoremap <Space>w :<C-u>w<CR>
-nnoremap <Space>W :<C-u>wq<CR>
-nnoremap <Space>q :<C-u>q<CR>
-nnoremap <Space><Space>q :<C-u>qa<CR>
-nnoremap <Space>Q :<C-u>q!<CR>
+nnoremap <Leader>w :<C-u>w<CR>
+nnoremap <Leader>W :<C-u>wq<CR>
+nnoremap <Leader>q :<C-u>q<CR>
+nnoremap <Leader><Leader>q :<C-u>qa<CR>
+nnoremap <Leader>Q :<C-u>q!<CR>
 
 nnoremap ; :
 nnoremap : ;
@@ -260,8 +260,8 @@ inoremap <S-Tab> <C-d>
 inoremap <silent>jj <ESC>
 inoremap <silent>jk <ESC>
 
-nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
-nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
+nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
 map y <Plug>(operator-flashy)
 "nnoremap Y y$
@@ -281,10 +281,10 @@ vnoremap gs :s/\v//g<Left><Left><Left>
 nnoremap <C-]> g<C-]>
 
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <Space>h ^
-vnoremap <Space>h ^
-nnoremap <Space>l $
-vnoremap <Space>l $
+nnoremap <Leader>h ^
+vnoremap <Leader>h ^
+nnoremap <Leader>l $
+vnoremap <Leader>l $
 
 " Window and Tab operation
 nnoremap s <Nop>
@@ -319,11 +319,11 @@ nnoremap sv :<C-u>vs<CR>
 nnoremap sq :<C-u>q<CR>
 nnoremap sQ :<C-u>bd<CR>
 
-nnoremap <leader>ev :vsplit $MYVIMRC<CR>
-nnoremap <leader>sv :source $MYVIMRC<CR>
-nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
-nnoremap <leader>sgv :source $MYGVIMRC<CR>
-nnoremap <leader>a :cclose<CR>
+nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
+nnoremap <Leader>sv :source $MYVIMRC<CR>
+nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
+nnoremap <Leader>sgv :source $MYGVIMRC<CR>
+nnoremap <Leader>a :cclose<CR>
 
 nnoremap + <C-a>
 nnoremap - <C-x>

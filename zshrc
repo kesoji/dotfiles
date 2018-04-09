@@ -77,6 +77,7 @@ export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 export GOROOT=$HOME/go1.10
 export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
+export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
@@ -147,6 +148,7 @@ setopt hist_no_store
 compdef sshrc=ssh
 
 # Alias
+alias history='history -i'
 alias ls='ls -F --color'
 alias ll='ls -l'
 alias la='ls -la'
