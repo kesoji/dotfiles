@@ -17,6 +17,7 @@ scriptencoding utf-8
 " workaround for long long line.
 set synmaxcol=400
 
+
 " Windows or Mac/Linux? {{{1
 if has('win32') || has('win64')
     set directory=$TMP
@@ -233,8 +234,7 @@ catch
 endtry
 
 " Mapping {{{1
-let mapleader = '<Space>'
-noremap \ ,
+let mapleader = "\<Space>"
 
 " <C-u>は、範囲指定(数字入力)を削除
 nnoremap <Leader>w :<C-u>w<CR>
