@@ -3,7 +3,7 @@ set ignorecase
 " Enter the command-line mode
 noremap <CR> :
 " Reload .ideavimrc
-nnoremap <Space>vs :source ~/.ideavimrc<CR>
+nnoremap <Space>sv :<C-u>source ~/.ideavimrc<CR>
 
 " IDE actions
 nnoremap / :action Find<CR>
@@ -36,8 +36,8 @@ vnoremap : ;
 "nnoremap <S-Tab> <<
 "inoremap <S-Tab> <C-d>
 
-inoremap <silent>jj <ESC>
-inoremap <silent>jk <ESC>
+imap <silent>jj <ESC>
+imap <silent>jk <ESC>
 
 nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
