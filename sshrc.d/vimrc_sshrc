@@ -10,6 +10,8 @@ if has('vim_starting')
 endif
 scriptencoding utf-8
 
+set runtimepath+=$SSHHOME/.sshrc.d/vim/
+
 " 基本設定 {{{1
 syntax enable
 filetype plugin indent on
@@ -62,15 +64,16 @@ autocmd BufRead,BufNewFile *.vim    setfiletype vim
 " Style {{{1
 set background=dark
 " these setting are overridden by .gvimrc.
-try
-    colorscheme hybrid
-catch
-    try
-        colorscheme molokai
-    catch
-        colorscheme desert
-    endtry
-endtry
+colorscheme underflow
+"try
+"    colorscheme hybrid
+"catch
+"    try
+"        colorscheme molokai
+"    catch
+"        colorscheme desert
+"    endtry
+"endtry
 
 " Mapping {{{1
 let mapleader = ','

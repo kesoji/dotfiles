@@ -281,10 +281,9 @@ vnoremap gs :s/\v//g<Left><Left><Left>
 nnoremap <C-]> g<C-]>
 
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <Leader>h ^
-vnoremap <Leader>h ^
-nnoremap <Leader>l $
-vnoremap <Leader>l $
+noremap <Leader>h ^
+noremap <Leader>H 0
+noremap <Leader>l $
 
 " Window and Tab operation
 nnoremap s <Nop>
@@ -569,7 +568,7 @@ nnoremap <silent> [unite]e :<C-u>Unite bookmark<CR>
 "ブックマークに追加
 nnoremap <silent> [unite]a :<C-u>UniteBookmarkAdd<CR>
 "VimFilerで絞り込み
-nnoremap <silent> 0 :<C-u>Unite file -default-action=vimfiler<CR>
+nnoremap <silent> [unite]0 :<C-u>Unite file -default-action=vimfiler<CR>
 
 nnoremap sT :<C-u>Unite tab<CR>
 nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>

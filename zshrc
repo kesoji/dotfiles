@@ -246,3 +246,6 @@ if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then source $HOME/my/google-cl
 
 # The next line enables shell command completion for gcloud.
 if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then source $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
+
+# kubectl completion
+source <(kubectl completion zsh)
