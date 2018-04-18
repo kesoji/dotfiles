@@ -17,6 +17,7 @@ scriptencoding utf-8
 " workaround for long long line.
 set synmaxcol=400
 
+
 " Windows or Mac/Linux? {{{1
 if has('win32') || has('win64')
     set directory=$TMP
@@ -153,10 +154,6 @@ Plug 'cocopon/iceberg.vim'
 
 call plug#end()
 
-" Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
-" set runtimepath+=~/.vim/
-" runtime! userautoload/*.vim
-
 " 基本設定 {{{1
 syntax enable
 filetype plugin indent on
@@ -238,15 +235,14 @@ catch
 endtry
 
 " Mapping {{{1
-let mapleader = ','
-noremap \ ,
+let mapleader = "\<Space>"
 
 " <C-u>は、範囲指定(数字入力)を削除
-nnoremap <Space>w :<C-u>w<CR>
-nnoremap <Space>W :<C-u>wq<CR>
-nnoremap <Space>q :<C-u>q<CR>
-nnoremap <Space><Space>q :<C-u>qa<CR>
-nnoremap <Space>Q :<C-u>q!<CR>
+nnoremap <Leader>w :<C-u>w<CR>
+nnoremap <Leader>W :<C-u>wq<CR>
+nnoremap <Leader>q :<C-u>q<CR>
+nnoremap <Leader><Leader>q :<C-u>qa<CR>
+nnoremap <Leader>Q :<C-u>q!<CR>
 
 nnoremap ; :
 nnoremap : ;
@@ -265,8 +261,8 @@ inoremap <S-Tab> <C-d>
 inoremap <silent>jj <ESC>
 inoremap <silent>jk <ESC>
 
-nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
-nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
+nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
 map y <Plug>(operator-flashy)
 "nnoremap Y y$
@@ -279,17 +275,16 @@ nnoremap ? ?\v
 cnoremap s// s//
 cnoremap g// g//
 cnoremap v// v//
-nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
+nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left>
 
 " tagsジャンプの時に複数ある時は一覧表示
 nnoremap <C-]> g<C-]>
 
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <Space>h ^
-vnoremap <Space>h ^
-nnoremap <Space>l $
-vnoremap <Space>l $
+noremap <Leader>h ^
+noremap <Leader>H 0
+noremap <Leader>l $
 
 " Window and Tab operation
 nnoremap s <Nop>
@@ -324,11 +319,11 @@ nnoremap sv :<C-u>vs<CR>
 nnoremap sq :<C-u>q<CR>
 nnoremap sQ :<C-u>bd<CR>
 
-nnoremap <leader>ev :vsplit $MYVIMRC<CR>
-nnoremap <leader>sv :source $MYVIMRC<CR>
-nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
-nnoremap <leader>sgv :source $MYGVIMRC<CR>
-nnoremap <leader>a :cclose<CR>
+nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
+nnoremap <Leader>sv :source $MYVIMRC<CR>
+nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
+nnoremap <Leader>sgv :source $MYGVIMRC<CR>
+nnoremap <Leader>a :cclose<CR>
 
 nnoremap + <C-a>
 nnoremap - <C-x>
@@ -574,7 +569,7 @@ nnoremap <silent> [unite]e :<C-u>Unite bookmark<CR>
 "ブックマークに追加
 nnoremap <silent> [unite]a :<C-u>UniteBookmarkAdd<CR>
 "VimFilerで絞り込み
-nnoremap <silent> 0 :<C-u>Unite file -default-action=vimfiler<CR>
+nnoremap <silent> [unite]0 :<C-u>Unite file -default-action=vimfiler<CR>
 
 nnoremap sT :<C-u>Unite tab<CR>
 nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>
@@ -809,3 +804,16 @@ endif
 nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
+
+
+
+" Simple re-format for minified Javascript
+command! UnMinify call UnMinify()
+function! UnMinify()
+    %s/{\ze[^\r\n]/{\r/g
+    %s/){/) {/g
+    %s/};\?\ze[^\r\n]/\0\r/g
+    %s/;\ze[^\r\n]/;\r/g
+    %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
+    normal ggVG=
+endfunction
