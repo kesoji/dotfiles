@@ -1,6 +1,11 @@
 BoldAsFont=-1
 CtrlShiftShortcuts=yes
 Font=Ricty Diminished Discord
+FontHeight=13
+Scrollbar=none
+Term=xterm-256color
+CursorType=block
+AllowBlinking=yes
 Locale=C
 Charset=UTF-8
 FontSmoothing=full
