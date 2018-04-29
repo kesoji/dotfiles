@@ -268,8 +268,10 @@ if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then source $HOME/my/google-cl
 if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then source $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
 
 # kubectl completion
-source <(kubectl completion zsh)
-
+which kubectl 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+    source <(kubectl completion zsh)
+fi
 
 # if wsl, tmux
 arch=`uname -a`
