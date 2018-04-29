@@ -15,7 +15,8 @@ endif
 scriptencoding utf-8
 
 " workaround for long long line.
-set synmaxcol=200
+set synmaxcol=400
+
 
 " Windows or Mac/Linux? {{{1
 if has('win32') || has('win64')
@@ -30,27 +31,6 @@ if has('win32') || has('win64')
     " Disable mswin.vim's C-V mapping
     " imap <C-V> <C-V>
     cmap <C-V> <C-V>
-
-    """"""""""""""""""""""""""""""
-    " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/kaoriya-trouble#plugin
-    "
-    " Kaoriya版に添付されているプラグインの無効化
-    " 問題があるものもあるので一律に無効化します。
-    " ファイルを参照(コメント部分で gf を実行)した上で、必要なプラグインは
-    " let plugin_..._disableの設定行をコメント化(削除)して有効にして下さい。
-    """"""""""""""""""""""""""""""
-    "$VIM/plugins/kaoriya/plugin/autodate.vim
-    let plugin_autodate_disable  = 1
-    "$VIM/plugins/kaoriya/plugin/cmdex.vim
-    let plugin_cmdex_disable     = 1
-    "$VIM/plugins/kaoriya/plugin/dicwin.vim
-    let plugin_dicwin_disable    = 1
-    "$VIM/plugins/kaoriya/plugin/hz_ja.vim
-    "let plugin_hz_ja_disable     = 1
-    "$VIM/plugins/kaoriya/plugin/scrnmode.vim
-    let plugin_scrnmode_disable  = 1
-    "$VIM/plugins/kaoriya/plugin/verifyenc.vim
-    "let plugin_verifyenc_disable = 1
 else
     " Mac or Linux
     set directory=~/.vim/swp
@@ -83,7 +63,13 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
-
+if has('mac')
+    " fzf shoud be installed by Homebrew
+    Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
+elseif !has('win32') && !has('win64')
+    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+    Plug 'junegunn/fzf.vim'
+endif
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
@@ -140,6 +126,10 @@ Plug 'kana/vim-operator-replace'
 Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'bps/vim-textobj-python'
+Plug 'prabirshrestha/async.vim'
+Plug 'prabirshrestha/vim-lsp'
+Plug 'prabirshrestha/asyncomplete.vim'
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
@@ -147,18 +137,11 @@ Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
 Plug 'petdance/vim-perl', { 'for': ['perl'] }
 Plug 'c9s/perlomni.vim', { 'for': ['perl'] }
 Plug 'cespare/vim-toml', { 'for': ['toml'] }
-Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
-Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
+"Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
+"Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
 Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
-if has('mac')
-    " fzf shoud be installed by Homebrew
-    Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
-elseif !has('win32') && !has('win64')
-    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-    Plug 'junegunn/fzf.vim'
-endif
 " Clolor Scheme
 Plug 'tomasr/molokai'
 Plug 'sjl/badwolf'
@@ -169,10 +152,6 @@ Plug 'morhetz/gruvbox'
 Plug 'cocopon/iceberg.vim'
 
 call plug#end()
-
-" Memo 分割した設定ファイル(.vim/userautoload/*.vim)読み込み {{{1
-" set runtimepath+=~/.vim/
-" runtime! userautoload/*.vim
 
 " 基本設定 {{{1
 syntax enable
@@ -231,6 +210,10 @@ set ambiwidth=double
 set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
+noremap <silent> <F3> :set list! number!<CR>
+noremap <silent> <F4> :IndentLinesToggle<CR>
+"autocmd InsertEnter * set list
+"autocmd InsertLeave * set nolist
 
 set wildmenu
 set wildmode=list,longest,full "command-line-modeのリスト表示
@@ -250,43 +233,15 @@ catch
     endtry
 endtry
 
-" Tab {{{1
-" Anywhere SID.
-function! s:SID_PREFIX()
-    return matchstr(expand('<sfile>'), '<SNR>\d\+_\zeSID_PREFIX$')
-endfunction
-
-" Set tabline.
-function! s:my_tabline()  "{{{
-    let s = ''
-    for i in range(1, tabpagenr('$'))
-        let bufnrs = tabpagebuflist(i)
-        let bufnr = bufnrs[tabpagewinnr(i) - 1]  " first window, first appears
-        let no = i  " display 0-origin tabpagenr.
-        let mod = getbufvar(bufnr, '&modified') ? '!' : ' '
-        let title = fnamemodify(bufname(bufnr), ':t')
-        let title = '[' . title . ']'
-        let s .= '%'.i.'T'
-        let s .= '%#' . (i == tabpagenr() ? 'TabLineSel' : 'TabLine') . '#'
-        let s .= no . ':' . title
-        let s .= mod
-        let s .= '%#TabLineFill# '
-    endfor
-    let s .= '%#TabLineFill#%T%=%#TabLine#'
-    return s
-endfunction "}}}
-let &tabline = '%!'. s:SID_PREFIX() . 'my_tabline()'
-
-" Mapping {{{1{{{
-let mapleader = ','
-noremap \ ,
+" Mapping {{{1
+let mapleader = "\<Space>"
 
 " <C-u>は、範囲指定(数字入力)を削除
-nnoremap <Space>w :<C-u>w<CR>
-nnoremap <Space>W :<C-u>wq<CR>
-nnoremap <Space>q :<C-u>q<CR>
-nnoremap <Space><Space>q :<C-u>qa<CR>
-nnoremap <Space>Q :<C-u>q!<CR>
+nnoremap <Leader>w :<C-u>w<CR>
+nnoremap <Leader>W :<C-u>wq<CR>
+nnoremap <Leader>q :<C-u>q<CR>
+nnoremap <Leader><Leader>q :<C-u>qa<CR>
+nnoremap <Leader>Q :<C-u>q!<CR>
 
 nnoremap ; :
 nnoremap : ;
@@ -305,12 +260,12 @@ inoremap <S-Tab> <C-d>
 inoremap <silent>jj <ESC>
 inoremap <silent>jk <ESC>
 
-nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
-nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
+nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
 map y <Plug>(operator-flashy)
 "nnoremap Y y$
-nmap Y <Plug>(operator-flashy)$ 
+nmap Y <Plug>(operator-flashy)$
 
 noremap n nzzzv
 noremap N Nzzzv
@@ -319,15 +274,16 @@ nnoremap ? ?\v
 cnoremap s// s//
 cnoremap g// g//
 cnoremap v// v//
-nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
+nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left>
 
 " tagsジャンプの時に複数ある時は一覧表示
 nnoremap <C-]> g<C-]>
 
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <Space>h ^
-nnoremap <Space>l $
+noremap <Leader>h ^
+noremap <Leader>H 0
+noremap <Leader>l $
 
 " Window and Tab operation
 nnoremap s <Nop>
@@ -362,11 +318,11 @@ nnoremap sv :<C-u>vs<CR>
 nnoremap sq :<C-u>q<CR>
 nnoremap sQ :<C-u>bd<CR>
 
-nnoremap <leader>ev :vsplit $MYVIMRC<CR>
-nnoremap <leader>sv :source $MYVIMRC<CR>
-nnoremap <leader>egv :vsplit $MYGVIMRC<CR>
-nnoremap <leader>sgv :source $MYGVIMRC<CR>
-nnoremap <leader>a :cclose<CR>
+nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
+nnoremap <Leader>sv :source $MYVIMRC<CR>
+nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
+nnoremap <Leader>sgv :source $MYGVIMRC<CR>
+nnoremap <Leader>a :cclose<CR>
 
 nnoremap + <C-a>
 nnoremap - <C-x>
@@ -379,7 +335,7 @@ cnoremap <C-p> <C-t>
 " Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 set pastetoggle=<F12>
-"}}}
+
 "Command Mode Editing{{{1
 :cabbrev ga2 g/^/ if (line(".") % 2 == 1) <BAR>
 :cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
@@ -423,13 +379,13 @@ endfunction
 " バイナリ編集(xxd)モード（vim -b での起動、もしくは *.bin ファイルを開くと発動します）
 " http://d.hatena.ne.jp/rdera/20081022/1224682665
 augroup BinaryXXD
-  autocmd!
-  autocmd BufReadPre  *.bin let &binary =1
-  autocmd BufReadPost * if &binary | silent %!xxd -g 1
-  autocmd BufReadPost * set ft=xxd | endif
-  autocmd BufWritePre * if &binary | %!xxd -r | endif
-  autocmd BufWritePost * if &binary | silent %!xxd -g 1
-  autocmd BufWritePost * set nomod | endif
+    autocmd!
+    autocmd BufReadPre  *.bin let &binary =1
+    autocmd BufReadPost * if &binary | silent %!xxd -g 1
+    autocmd BufReadPost * set ft=xxd | endif
+    autocmd BufWritePre * if &binary | %!xxd -r | endif
+    autocmd BufWritePost * if &binary | silent %!xxd -g 1
+    autocmd BufWritePost * set nomod | endif
 augroup END
 
 augroup vimrc_loading
@@ -456,21 +412,21 @@ let g:jedi#popup_on_dot = 1
 "<<<Plugin>>> quickrun {{{1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
 let g:quickrun_config = {
-\   "_" : {
-\       "runner" : "vimproc",
-\       "runner/vimproc/updatetime" : 100,
-\       "outputter/buffer/split" : ":rightbelow vertical",
-\       "outputter/buffer/close_on_empty" : 1,
-\       "outputter" : "error",
-\       "outputter/error/success" : "buffer",
-\       "outputter/error/error" : "quickfix",
-\       "hook/output_encode/encoding" : "utf-8",
-\   },
-\   "python": {
-\       "hook/output_encode/encoding" : "sjis",
-\   },
-\}
-            
+            \   "_" : {
+            \       "runner" : "vimproc",
+            \       "runner/vimproc/updatetime" : 100,
+            \       "outputter/buffer/split" : ":rightbelow vertical",
+            \       "outputter/buffer/close_on_empty" : 1,
+            \       "outputter" : "error",
+            \       "outputter/error/success" : "buffer",
+            \       "outputter/error/error" : "quickfix",
+            \       "hook/output_encode/encoding" : "utf-8",
+            \   },
+            \   "python": {
+            \       "hook/output_encode/encoding" : "utf-8",
+            \   },
+            \}
+
 
 inoremap \\r <ESC>:QuickRun<CR>
 " <C-c> で実行を強制終了させる
@@ -612,7 +568,7 @@ nnoremap <silent> [unite]e :<C-u>Unite bookmark<CR>
 "ブックマークに追加
 nnoremap <silent> [unite]a :<C-u>UniteBookmarkAdd<CR>
 "VimFilerで絞り込み
-nnoremap <silent> 0 :<C-u>Unite file -default-action=vimfiler<CR>
+nnoremap <silent> [unite]0 :<C-u>Unite file -default-action=vimfiler<CR>
 
 nnoremap sT :<C-u>Unite tab<CR>
 nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>
@@ -793,6 +749,7 @@ vmap <C-v> <Plug>(expand_region_shrink)
 nnoremap <C-g> :Gtags 
 nnoremap <C-h> :Gtags -f %<CR>
 nnoremap <C-j> :GtagsCursor<CR>
+nnoremap <C-k> :Gtags -r <C-r><C-w><CR><CR>
 nnoremap <C-n> :cn<CR>
 nnoremap <C-p> :cp<CR>
 
@@ -826,3 +783,36 @@ let g:go_highlight_structs = 1
 "<<<Plugin>>> vim-edgemotion {{{1
 map ej <Plug>(edgemotion-j)
 map ek <Plug>(edgemotion-k)
+
+"<<<Plugin>>> vim-lsp {{{1
+" Python {{{2
+if executable('pyls')
+    " pip install python-language-server
+    augroup LspPython
+        au!
+        autocmd User lsp_setup call lsp#register_server({
+                    \ 'name': 'pyls',
+                    \ 'cmd': {server_info->['pyls']},
+                    \ 'whitelist': ['python'],
+                    \ })
+        autocmd FileType python setlocal omnifunc=lsp#complete
+    augroup END
+endif
+
+"<<<Plugin>>> NerdCommenter {{{1
+nmap <C-_> <Plug>NERDCommenterToggle
+vmap <C-_> <Plug>NERDCommenterToggle
+imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
+
+
+
+" Simple re-format for minified Javascript
+command! UnMinify call UnMinify()
+function! UnMinify()
+    %s/{\ze[^\r\n]/{\r/g
+    %s/){/) {/g
+    %s/};\?\ze[^\r\n]/\0\r/g
+    %s/;\ze[^\r\n]/;\r/g
+    %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
+    normal ggVG=
+endfunction
