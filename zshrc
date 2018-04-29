@@ -4,6 +4,8 @@ fi
 
 set -o vi
 
+fpath=(~/.zsh/completion $fpath)
+
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
 SAVEHIST=20000
@@ -164,6 +166,10 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ls='ls -G'
 fi
 
+## Docker
+alias dockerrmca='docker ps -aq | xargs docker rm'
+alias dockerrmia='docker images -aq | xargs docker rmi'
+
 ## Git
 alias gst='git status'
 alias ga='git add'
@@ -202,6 +208,7 @@ fi
 
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
 which fzf 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     cat << EOS
@@ -212,6 +219,19 @@ if [[ $? -ne 0 ]] ; then
     \$ ~/.fzf/install
 -----------------------------------------------------------------------------
 EOS
+else
+    which rg 2>/dev/null 1>&2
+    if [[ $? -eq 0 ]] ; then
+        export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
+        export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+        export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND"
+        export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
+    #'--color fg:242,bg:236,hl:65,fg+:15,bg+:239,hl+:108
+    #--color info:108,prompt:109,spinner:108,pointer:168,marker:168
+    #'
+    else
+        echo "You should install ripgrep(rg)"
+    fi
 fi
 
 # disable STOP (Ctrl+S)
@@ -259,3 +279,4 @@ if [[ $arch =~ "Microsoft" ]]; then
         tmux
     fi
 fi
+export DOCKER_HOST='tcp://0.0.0.0:2375'

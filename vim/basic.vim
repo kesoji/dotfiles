@@ -114,6 +114,7 @@ Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDi
 Plug 'zhaocai/unite-scriptnames'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
+Plug 'PProvost/vim-ps1'
 Plug 'Shougo/neocomplete.vim'
 "Plug 'Shougo/neosnippet'
 "Plug 'Shougo/neosnippet-snippets'
@@ -206,6 +207,8 @@ set smartcase
 set wrapscan    "default
 
 set ambiwidth=double
+
+set belloff=all
 
 set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
@@ -816,3 +819,9 @@ function! UnMinify()
     %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
     normal ggVG=
 endfunction
+
+"<<<Plugin>>> fzf {{{1
+nnoremap : :Buffers<CR>
+nnoremap t :Files<CR>
+nnoremap r :Tags<CR>
+

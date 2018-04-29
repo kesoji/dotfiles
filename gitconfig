@@ -7,7 +7,7 @@
     editor = vim
     excludesfile = ~/.gitignore_global
     quotepath = false
-	autocrlf = false
+    autocrlf = false
 [commit]
     verbose = true
 [alias]
@@ -23,6 +23,7 @@
     gra = log --graph --branches --pretty=format:'%C(yellow)%h%C(cyan)%d%Creset %s %C(green)- %an, %cr%Creset'
     unstage = reset HEAD --
     destroy = reset --hard HEAD --
+    ignoreupdate = "!git rm --cached `git ls-files --full-name -i --exclude-from=.gitignore`"
     hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
     ll = log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --numstat
     drag = pull --rebase
