@@ -816,3 +816,9 @@ function! UnMinify()
     %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
     normal ggVG=
 endfunction
+
+"<<<Plugin>>> fzf {{{1
+nnoremap : :Buffers<CR>
+nnoremap t :Files<CR>
+nnoremap r :Tags<CR>
+
