@@ -1,4 +1,4 @@
-" vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
+﻿" vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 
 nnoremap <Leader>j :!rm -f ~/winhome/Desktop/pittouch.zip &&  zip -r ~/winhome/Desktop/pittouch.zip pittouch/* -x G*<CR>
 
@@ -28,5 +28,4 @@ noremap  <buffer> <del> <esc>:<c-u>!sl<cr>
 inoremap <buffer> <del> <esc>:<c-u>!sl<cr>
 noremap  <buffer> <backspace> <esc>:<c-u>!sl<cr>
 inoremap <buffer> <backspace> <esc>:<c-u>!sl<cr>
-
 

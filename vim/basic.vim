@@ -114,6 +114,7 @@ Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDi
 Plug 'zhaocai/unite-scriptnames'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
+Plug 'PProvost/vim-ps1'
 Plug 'Shougo/neocomplete.vim'
 "Plug 'Shougo/neosnippet'
 "Plug 'Shougo/neosnippet-snippets'
