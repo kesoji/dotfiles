@@ -207,6 +207,8 @@ set wrapscan    "default
 
 set ambiwidth=double
 
+set belloff=all
+
 set list
 " set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
