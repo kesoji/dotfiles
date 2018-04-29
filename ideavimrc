@@ -1,94 +1,123 @@
-set ignorecase
+set surround
+"set clipboard        "clipboard options
+"set digraph          "enable the entering of digraphs in Insert mode
+"set gdefault         "the :substitute flag 'g' is default on
+"set history          "number of command-lines that are remembered
+set hlsearch         "highlight matches with last search pattern
+set ignorecase       "ignore case in search patterns
+"set iskeyword        "defines keywords for commands like 'w', '*', etc.
+set incsearch        "show where search pattern typed so far matches
+"set matchpairs       "pairs of characters that % can match
+"set nrformats        "number formats recognized for CTRL-A command
+"set number           "print the line number in front of each line
+"set relativenumber   "show the line number relative to the line with
+"set                    "the cursor
+"set scroll           "lines to scroll with CTRL-U and CTRL-D
+"set scrolljump       "minimum number of lines to scroll
+"set scrolloff        "minimum nr. of lines above and below cursor
+"set selection        "what type of selection to use
+"set showmode         "message on status line to show current mode
+"set sidescroll       "minimum number of columns to scroll horizontal
+"set sidescrolloff    "min. nr. of columns to left and right of cursor
+"set smartcase        "no ignore case when pattern has uppercase
+"set timeout          "use timeout for mapped key sequences
+"set timeoutlen       "time that is waited for a mapped key sequence
+"set undolevels       "maximum number of changes that can be undone
+"set viminfo          "information to remember after restart
+"set visualbell       "use visual bell instead of beeping
+"set wrapscan         "searches wrap around the end of the file
 
 " Enter the command-line mode
-noremap <CR> :
+"noremap <CR> :
+
+imap jj <ESC>
+imap jk <ESC>
+
 " Reload .ideavimrc
-nnoremap <Space>sv :<C-u>source ~/.ideavimrc<CR>
-
-" IDE actions
+nnoremap ,sv :<C-u>source ~/.ideavimrc<CR>
+"
+"" IDE actions
 nnoremap / :action Find<CR>
-nnoremap n :action FindNext<CR>
-nnoremap N :action FindPrevious<CR>
-nnoremap U :action $Redo<CR>
-nnoremap ; :action AceJumpAction<CR>
-"nnoremap <Space>o :action GotoClass<CR>
-"nnoremap <Space>O :action GotoFile<CR>
-nnoremap <Space>d :action CloseContent<CR>
-nnoremap <Space>j :action RecentFiles<CR>
-nnoremap <Space>k :action FileStructurePopup<CR>
-nnoremap <Space>h :action QuickJavaDoc<CR>
-
-let mapleader = ','
-noremap \ ,
-
-nnoremap <Space>w :<C-u>w<CR>
-nnoremap <Space>W :<C-u>wq<CR>
-nnoremap <Space>q :<C-u>q<CR>
-nnoremap <Space><Space>q :<C-u>qa<CR>
-nnoremap <Space>Q :<C-u>q!<CR>
-
-nnoremap ; :
-nnoremap : ;
-vnoremap ; :
-vnoremap : ;
-
-" Tab mapping
-"nnoremap <S-Tab> <<
-"inoremap <S-Tab> <C-d>
-
-imap <silent>jj <ESC>
-imap <silent>jk <ESC>
-
-nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
-nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
-
-" tagsジャンプの時に複数ある時は一覧表示
-nnoremap <C-]> g<C-]>
-
-nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <Space>h ^
-nnoremap <Space>l $
-
-nnoremap s <Nop>
-nnoremap sj <C-w>j
-nnoremap sk <C-w>k
-nnoremap sl <C-w>l
-nnoremap sh <C-w>h
-nnoremap sJ <C-w>J
-nnoremap sK <C-w>K
-nnoremap sL <C-w>L
-nnoremap sH <C-w>H
-nnoremap sr <C-w>r
-nnoremap s= <C-w>=
-nnoremap sw <C-w>w
-nnoremap so <C-w>_<C-w>|
-nnoremap s> <C-w>>
-nnoremap s< <C-w><
-nnoremap s+ <C-w>+
-nnoremap s- <C-w>-
-nnoremap sO <C-w>=
-nnoremap sN :<C-u>bn<CR>
-nnoremap sP :<C-u>bp<CR>
-nnoremap sn gt
-nnoremap sp gT
-for n in range(1, 9)
-    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
-endfor
-nnoremap st :<C-u>tabnew<CR>
-nnoremap sx :<C-u>tabclose<CR>
-nnoremap ss :<C-u>sp<CR>
-nnoremap sv :<C-u>vs<CR>
-nnoremap sq :<C-u>q<CR>
-nnoremap sQ :<C-u>bd<CR>
-
-" http://itchyny.hatenablog.com/entry/2014/12/25/090000
-nnoremap Y y$
-nnoremap + <C-a>
-nnoremap - <C-x>
-
-" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
-cnoremap <C-n> <C-g>
-cnoremap <C-p> <C-t>
-
-inoremap japp <ESC>:<C-u>set noimdisable<CR>a
-
+"nnoremap n :action FindNext<CR>
+"nnoremap N :action FindPrevious<CR>
+"nnoremap U :action $Redo<CR>
+"nnoremap ; :action AceJumpAction<CR>
+""nnoremap <Space>o :action GotoClass<CR>
+""nnoremap <Space>O :action GotoFile<CR>
+"nnoremap <Space>d :action CloseContent<CR>
+"nnoremap <Space>j :action RecentFiles<CR>
+"nnoremap <Space>k :action FileStructurePopup<CR>
+"nnoremap <Space>h :action QuickJavaDoc<CR>
+"
+"let mapleader = ','
+"noremap \ ,
+"
+"nnoremap <Space>w :<C-u>w<CR>
+"nnoremap <Space>W :<C-u>wq<CR>
+"nnoremap <Space>q :<C-u>q<CR>
+"nnoremap <Space><Space>q :<C-u>qa<CR>
+"nnoremap <Space>Q :<C-u>q!<CR>
+"
+"nnoremap ; :
+"nnoremap : ;
+"vnoremap ; :
+"vnoremap : ;
+"
+"" Tab mapping
+""nnoremap <S-Tab> <<
+""inoremap <S-Tab> <C-d>
+"
+"
+"nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
+"nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+"
+"" tagsジャンプの時に複数ある時は一覧表示
+"nnoremap <C-]> g<C-]>
+"
+"nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
+"nnoremap <Space>h ^
+"nnoremap <Space>l $
+"
+"nnoremap s <Nop>
+"nnoremap sj <C-w>j
+"nnoremap sk <C-w>k
+"nnoremap sl <C-w>l
+"nnoremap sh <C-w>h
+"nnoremap sJ <C-w>J
+"nnoremap sK <C-w>K
+"nnoremap sL <C-w>L
+"nnoremap sH <C-w>H
+"nnoremap sr <C-w>r
+"nnoremap s= <C-w>=
+"nnoremap sw <C-w>w
+"nnoremap so <C-w>_<C-w>|
+"nnoremap s> <C-w>>
+"nnoremap s< <C-w><
+"nnoremap s+ <C-w>+
+"nnoremap s- <C-w>-
+"nnoremap sO <C-w>=
+"nnoremap sN :<C-u>bn<CR>
+"nnoremap sP :<C-u>bp<CR>
+"nnoremap sn gt
+"nnoremap sp gT
+"for n in range(1, 9)
+"    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
+"endfor
+"nnoremap st :<C-u>tabnew<CR>
+"nnoremap sx :<C-u>tabclose<CR>
+"nnoremap ss :<C-u>sp<CR>
+"nnoremap sv :<C-u>vs<CR>
+"nnoremap sq :<C-u>q<CR>
+"nnoremap sQ :<C-u>bd<CR>
+"
+"" http://itchyny.hatenablog.com/entry/2014/12/25/090000
+"nnoremap Y y$
+"nnoremap + <C-a>
+"nnoremap - <C-x>
+"
+"" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
+"cnoremap <C-n> <C-g>
+"cnoremap <C-p> <C-t>
+"
+"inoremap japp <ESC>:<C-u>set noimdisable<CR>a
+"
