@@ -74,7 +74,7 @@ fi
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOROOT=$HOME/go1.10
+export GOROOT=$HOME/go1.10.1
 export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -249,3 +249,13 @@ if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then source $HOME/my/goo
 
 # kubectl completion
 source <(kubectl completion zsh)
+
+
+# if wsl, tmux
+arch=`uname -a`
+if [[ $arch =~ "Microsoft" ]]; then
+    # avoid nesting
+    if [[ -z "$TMUX" ]]; then
+        tmux
+    fi
+fi
