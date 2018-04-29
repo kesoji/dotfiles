@@ -4,6 +4,8 @@ fi
 
 set -o vi
 
+fpath=(~/.zsh/completion $fpath)
+
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
 SAVEHIST=20000
@@ -164,6 +166,10 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ls='ls -G'
 fi
 
+## Docker
+alias dockerrmca='docker ps -aq | xargs docker rm'
+alias dockerrmia='docker images -aq | xargs docker rmi'
+
 ## Git
 alias gst='git status'
 alias ga='git add'
@@ -259,3 +265,4 @@ if [[ $arch =~ "Microsoft" ]]; then
         tmux
     fi
 fi
+export DOCKER_HOST='tcp://0.0.0.0:2375'
