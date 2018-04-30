@@ -63,13 +63,6 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
-if has('mac')
-    " fzf shoud be installed by Homebrew
-    Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
-elseif !has('win32') && !has('win64')
-    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-    Plug 'junegunn/fzf.vim'
-endif
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
@@ -131,6 +124,14 @@ Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
+if has('mac')
+    " fzf shoud be installed by Homebrew
+    Plug '/usr/local/opt/fzf'
+    Plug 'junegunn/fzf.vim'
+elseif !has('win32') && !has('win64')
+    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+endif
+Plug 'junegunn/fzf.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
