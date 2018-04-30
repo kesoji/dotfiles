@@ -130,6 +130,8 @@ if has('mac')
     Plug 'junegunn/fzf.vim'
 elseif !has('win32') && !has('win64')
     Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+else
+    Plug 'junegunn/fzf'
 endif
 Plug 'junegunn/fzf.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
