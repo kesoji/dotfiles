@@ -98,7 +98,6 @@ Plug 'haya14busa/vim-edgemotion'
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
 Plug 'glidenote/memolist.vim'
-Plug 'zhaocai/unite-scriptnames'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 Plug 'PProvost/vim-ps1'
@@ -244,9 +243,7 @@ nnoremap <Leader><Leader>q :<C-u>qa<CR>
 nnoremap <Leader>Q :<C-u>q!<CR>
 
 nnoremap ; :
-nnoremap : ;
 vnoremap ; :
-vnoremap : ;
 
 noremap j gj
 noremap k gk
@@ -343,15 +340,15 @@ set pastetoggle=<F12>
 :cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>
 
 "User Defined Command {{{1
-"" DiffOrig - how did I edit this file?
+"" DiffOrig - how did I edit this file? {{{2
 command! DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
-"" Capture - view command result in QuickRun window
+"" Capture - view command result in QuickRun window {{{2
 command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
-"" JsonFormat - format json
+"" JsonFormat - format json {{{2
 command! JsonFormat :execute '%!python -m json.tool'
             \ | :execute '%!python -c "import re,sys;chr=__builtins__.__dict__.get(\"unichr\",chr);sys.stdout.write(re.sub(r''\\u[0-9a-f]{4}'', lambda x: chr(int(\"0x\" + x.group(0)[2:], 16)).encode(\"utf-8\"), sys.stdin.read()))"'
             \ | :set filetype=json | :1
-"" Jq - use system jq in vim
+"" Jq - use system jq in vim {{{2
 command! -nargs=? Jq call s:Jq(<f-args>)
             \ | :set filetype=json
 function! s:Jq(...)
@@ -364,7 +361,7 @@ function! s:Jq(...)
     execute "%!jq " . l:arg
 endfunction
 
-"" VO - insert output of vim command in current buffer
+"" VO - insert output of vim command in current buffer {{{2
 command! -narg=+ VO :call ViewOutput(<q-args>)
 function! ViewOutput(cmd)
     let save_reg=@a
@@ -373,6 +370,17 @@ function! ViewOutput(cmd)
     redir END
     put a
     let @a=save_reg
+endfunction
+
+"" UnMinify Simple re-format for minified Javascript {{{2
+command! UnMinify call UnMinify()
+function! UnMinify()
+    %s/{\ze[^\r\n]/{\r/g
+    %s/){/) {/g
+    %s/};\?\ze[^\r\n]/\0\r/g
+    %s/;\ze[^\r\n]/;\r/g
+    %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
+    normal ggVG=
 endfunction
 
 " AutoGroup {{{1
@@ -398,6 +406,15 @@ augroup END
 " Perl {{{1
 noremap ,pt <Esc>:%! perltidy -se<CR>
 noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
+
+"<<<Plugin>>> fzf {{{1
+nnoremap : <C-u>:Buffers<CR>
+nnoremap t <C-u>:Files<CR>
+nnoremap r <C-u>:Tags<CR>
+
+nnoremap [fzf] <Nop>
+nmap <Space>f [fzf]
+nnoremap [fzf]m <C-u>:History<CR>
 
 ""<<<Plugin>>> vim-operator-surround {{{1
 "map <silent>sa <Plug>(operator-surround-append)
@@ -542,63 +559,6 @@ let g:UltiSnipsJumpBackwardTrigger="<c-z>"
 " If you want :UltiSnipsEdit to split your window.
 let g:UltiSnipsEditSplit="vertical"
 
-"uniteを開いている間のキーマッピング
-augroup vimrc
-    autocmd FileType unite call s:unite_my_settings()
-augroup END
-function! s:unite_my_settings()
-    "ESCでuniteを終了
-    nmap <buffer> <ESC> <Plug>(unite_exit)
-    "入力モードのときjjでノーマルモードに移動
-    imap <buffer> jj <Plug>(unite_insert_leave)
-    imap <buffer> jk <Plug>(unite_insert_leave)
-    "入力モードのときctrl+wでバックスラッシュも削除
-    imap <buffer> <C-w> <Plug>(unite_delete_backward_path)
-    "sでsplit
-    nnoremap <silent><buffer><expr> s unite#smart_map('s', unite#do_action('split'))
-    inoremap <silent><buffer><expr> s unite#smart_map('s', unite#do_action('split'))
-    "vでvsplit
-    nnoremap <silent><buffer><expr> v unite#smart_map('v', unite#do_action('vsplit'))
-    inoremap <silent><buffer><expr> v unite#smart_map('v', unite#do_action('vsplit'))
-    "fでvimfiler
-    nnoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
-    inoremap <silent><buffer><expr> f unite#smart_map('f', unite#do_action('vimfiler'))
-    " http://thinca.hatenablog.com/entry/20101027/1288190498
-    call unite#custom#substitute('file', '[^~.]\zs/', '*/*', 20)
-    call unite#custom#substitute('file', '/\ze[^*]', '/*', 10)
-    call unite#custom#substitute('file', '^@@', '\=fnamemodify(expand("#"), ":p:h")."/*"', 2)
-    call unite#custom#substitute('file', '^@', '\=getcwd()."/*"', 1)
-    call unite#custom#substitute('file', '\*\*\+', '*', -1)
-endfunction
-
-" [agでvimの検索関連を高速化 - Qiita](http://qiita.com/0829/items/7053b6e3371592e4fbe6)
-if executable('pt')
-    let g:unite_source_grep_command = 'pt'
-    let g:unite_source_grep_default_opts = '--nogroup --nocolor'
-    let g:unite_source_grep_recursive_opt = ''
-    let g:unite_source_grep_encoding = 'utf-8'
-    let g:ag_prg="pt --vimgrep --smart-case"
-elseif executable('ag')
-    let g:unite_source_grep_command = 'ag'
-    let g:unite_source_grep_default_opts = '--nogroup --nocolor'
-    let g:unite_source_grep_recursive_opt = ''
-    let g:unite_source_grep_encoding = 'utf-8'
-    let g:ag_prg="ag --vimgrep --smart-case"
-endif
-
-nnoremap <silent> ,g :<C-u>Unite grep:. -buffer-name=search-buffer<CR>
-nnoremap <silent> ,cg :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
-nnoremap <silent> ,sg  :<C-u>UniteResume search-buffer<CR>
-vnoremap ,g y:Unite grep::-iHRn:<C-R>=escape(@", '\\.*$^[]')<CR><CR>
-
-"<<<Plugin>>> unite-help {{{2
-nnoremap ,h :<C-u>Unite -start-insert help<CR>
-nnoremap <silent> g,h :<C-u>UniteWithCursorWord help<CR>
-
-
-"<<<Plugin>>> VimFiler {{{1
-let g:vimfiler_ignore_pattern='\(desktop.ini\)'
-
 " Markdown {{{1
 
 "<<<Plugin>>> Vim-Markdown [plasticboy/vim-markdown](https://github.com/plasticboy/vim-markdown){{{2
@@ -721,22 +681,8 @@ nnoremap <C-k> :Gtags -r <C-r><C-w><CR><CR>
 nnoremap <C-n> :cn<CR>
 nnoremap <C-p> :cp<CR>
 
-"<<<Plugin>>> unite-everything {{{1
-if has('win32') || has('win64')
-    let g:unite_source_everything_limit = 100
-    let g:unite_source_everything_full_path_search = 0
-    let g:unite_source_everything_posix_regexp_search = 0
-    let g:unite_source_everything_sort_by_full_path = 0
-    let g:unite_source_everything_case_sensitive_search = 0
-    let g:unite_source_everything_cmd_path = 'es.exe'
-    let g:unite_source_everything_async_minimum_length = 3
-endif
-
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
-let g:memolist_unite = 1
-let g:memolist_unite_source = "file_rec"
-let g:memolist_unite_option = "-auto-preview -start-insert"
 
 "<<<Plugin>>> vim-go {{{1
 augroup VimGoMySettings
@@ -772,25 +718,4 @@ nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
 
-
-
-" Simple re-format for minified Javascript
-command! UnMinify call UnMinify()
-function! UnMinify()
-    %s/{\ze[^\r\n]/{\r/g
-    %s/){/) {/g
-    %s/};\?\ze[^\r\n]/\0\r/g
-    %s/;\ze[^\r\n]/;\r/g
-    %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
-    normal ggVG=
-endfunction
-
-"<<<Plugin>>> fzf {{{1
-nnoremap : <C-u>:Buffers<CR>
-nnoremap t <C-u>:Files<CR>
-nnoremap r <C-u>:Tags<CR>
-
-nnoremap [fzf] <Nop>
-nmap <Space>f [fzf]
-nnoremap [fzf]m <C-u>:History<CR>
 
