@@ -4,7 +4,7 @@ nnoremap <Leader>j :!rm -f ~/winhome/Desktop/pittouch.zip &&  zip -r ~/winhome/D
 
 set runtimepath+=~/.vim/
 runtime! config/*.vim
-
+" ~/.vim/config/basic.vim
 
 function! TeachKey(message)
     let summon = join(["!clear; cowsay -f dragon ", a:message, "を押すのだ"])

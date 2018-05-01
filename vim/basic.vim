@@ -64,18 +64,14 @@ endif
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
-Plug 'Shougo/unite.vim'
 Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
-Plug 'ujihisa/unite-colorscheme'
-Plug 'Shougo/unite-help'
 Plug 'thinca/vim-quickrun'
 Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
 Plug 'godlygeek/tabular'
-Plug 'Shougo/vimshell'
 Plug 'itchyny/lightline.vim'
 Plug 'vim-scripts/open-browser.vim'
 Plug 'iamcco/markdown-preview.vim'
@@ -90,7 +86,6 @@ Plug 'Yggdroot/indentLine'
 Plug 'easymotion/vim-easymotion'
 Plug 'basyura/twibill.vim'
 Plug 'terryma/vim-expand-region'
-Plug 'sgur/unite-everything'
 Plug 'Konfekt/FastFold'
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'thinca/vim-visualstar'
@@ -103,7 +98,6 @@ Plug 'haya14busa/vim-edgemotion'
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
 Plug 'glidenote/memolist.vim'
-Plug 'Shougo/vimfiler', { 'on': ['VimFiler', 'VimFilerClose', 'VimFilerCurrentDir', 'VimFilerExplorer', 'VimFilerSplit', 'VimFilerBufferDir', 'VimFilerCreate', 'VimFilerDouble', 'VimFilerSimple', 'VimFilerTab'] }
 Plug 'zhaocai/unite-scriptnames'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
@@ -548,38 +542,6 @@ let g:UltiSnipsJumpBackwardTrigger="<c-z>"
 " If you want :UltiSnipsEdit to split your window.
 let g:UltiSnipsEditSplit="vertical"
 
-"<<<Plugin>>> Unite {{{1
-" set prefix
-nnoremap [unite] <Nop>
-nmap <Space>f [unite]
-let g:unite_enable_start_insert=1
-let g:unite_source_history_yank_enable =1
-let g:unite_source_file_mru_limit = 100
-"file_mruの表示フォーマットを指定。空にすると表示スピードが高速化される
-let g:unite_source_file_mru_filename_format = ''
-
-"現在開いているファイルのディレクトリ下のファイル一覧。
-"開いていない場合はカレントディレクトリ
-nnoremap <silent> [unite]f :<C-u>UniteWithBufferDir -buffer-name=files file<CR>
-"カスタムsubstitute用
-nnoremap <silent> [unite]d :<C-u>Unite -buffer-name=file file<CR>
-"バッファ一覧
-nnoremap <silent> [unite]b :<C-u>Unite buffer<CR>
-"レジスタ一覧
-nnoremap <silent> [unite]r :<C-u>Unite -buffer-name=register register<CR>
-"最近使用したファイルと一覧
-nnoremap <silent> [unite]m :<C-u>Unite file_mru<CR>
-"ブックマーク一覧
-nnoremap <silent> [unite]e :<C-u>Unite bookmark<CR>
-"ブックマークに追加
-nnoremap <silent> [unite]a :<C-u>UniteBookmarkAdd<CR>
-"VimFilerで絞り込み
-nnoremap <silent> [unite]0 :<C-u>Unite file -default-action=vimfiler<CR>
-
-nnoremap sT :<C-u>Unite tab<CR>
-nnoremap sb :<C-u>Unite buffer_tab -buffer-name=file<CR>
-nnoremap sB :<C-u>Unite buffer -buffer-name=file<CR>
-
 "uniteを開いている間のキーマッピング
 augroup vimrc
     autocmd FileType unite call s:unite_my_settings()
@@ -824,7 +786,11 @@ function! UnMinify()
 endfunction
 
 "<<<Plugin>>> fzf {{{1
-nnoremap : :Buffers<CR>
-nnoremap t :Files<CR>
-nnoremap r :Tags<CR>
+nnoremap : <C-u>:Buffers<CR>
+nnoremap t <C-u>:Files<CR>
+nnoremap r <C-u>:Tags<CR>
+
+nnoremap [fzf] <Nop>
+nmap <Space>f [fzf]
+nnoremap [fzf]m <C-u>:History<CR>
 
