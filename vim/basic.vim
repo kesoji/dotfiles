@@ -409,12 +409,11 @@ noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
 
 "<<<Plugin>>> fzf {{{1
 nnoremap : <C-u>:Buffers<CR>
-nnoremap t <C-u>:Files<CR>
-nnoremap r <C-u>:Tags<CR>
-
 nnoremap [fzf] <Nop>
 nmap <Space>f [fzf]
 nnoremap [fzf]m <C-u>:History<CR>
+nnoremap [fzf]f <C-u>:Files<CR>
+nnoremap [fzf]t <C-u>:Tags<CR>
 
 ""<<<Plugin>>> vim-operator-surround {{{1
 "map <silent>sa <Plug>(operator-surround-append)
