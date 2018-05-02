@@ -408,12 +408,12 @@ noremap ,pt <Esc>:%! perltidy -se<CR>
 noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
 
 "<<<Plugin>>> fzf {{{1
-nnoremap : <C-u>:Buffers<CR>
+nnoremap : :<C-u>Buffers<CR>
 nnoremap [fzf] <Nop>
 nmap <Space>f [fzf]
-nnoremap [fzf]m <C-u>:History<CR>
-nnoremap [fzf]f <C-u>:Files<CR>
-nnoremap [fzf]t <C-u>:Tags<CR>
+nnoremap [fzf]m :<C-u>History<CR>
+nnoremap [fzf]f :<C-u>Files<CR>
+nnoremap [fzf]t :<C-u>Tags<CR>
 
 ""<<<Plugin>>> vim-operator-surround {{{1
 "map <silent>sa <Plug>(operator-surround-append)
