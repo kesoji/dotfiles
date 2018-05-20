@@ -117,6 +117,7 @@ Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
+Plug 'leafgarland/typescript-vim'
 if has('mac')
     " fzf shoud be installed by Homebrew
     Plug '/usr/local/opt/fzf'
