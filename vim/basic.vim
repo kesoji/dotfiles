@@ -63,6 +63,7 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'tpope/vim-unimpaired'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
@@ -273,6 +274,8 @@ cnoremap g// g//
 cnoremap v// v//
 nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left>
+
+nnoremap <Leader>vp :vim  ** \| cw<Left><Left><Left><Left><Left><Left><Left><Left>
 
 " tagsジャンプの時に複数ある時は一覧表示
 nnoremap <C-]> g<C-]>
