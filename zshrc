@@ -261,6 +261,8 @@ fi
 # AWS completion
 if [ -f $HOME/.local/bin/aws_zsh_completer.sh ]; then
     source "$HOME/.local/bin/aws_zsh_completer.sh"
+elif [ -f $HOME/.pyenv/shims/aws_zsh_completer.sh ]; then
+    source "$(pyenv which aws_zsh_completer.sh)"
 fi
 
 # The next line updates PATH for the Google Cloud SDK.
@@ -284,3 +286,4 @@ if [[ $arch =~ "Microsoft" ]]; then
     fi
 fi
 export DOCKER_HOST='tcp://0.0.0.0:2375'
+
