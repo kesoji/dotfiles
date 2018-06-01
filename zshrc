@@ -200,10 +200,10 @@ if [[ $? -ne 0 ]] ; then
     cat << EOS
 -----------------------------------------------------------------------------
     Hey! you don't have sshrc. You should download it from
-      https://github.com/Russell91/sshrc"
-    \$ wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc
-    \$ chmod +x sshrc
-    \$ sudo mv sshrc /usr/local/bin #or anywhere else
+      https://github.com/Russell91/sshrc" >>>
+    wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc
+    chmod +x sshrc
+    sudo mv sshrc /usr/local/bin #or anywhere else
 -----------------------------------------------------------------------------
 EOS
 fi
