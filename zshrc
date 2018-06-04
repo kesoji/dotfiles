@@ -287,3 +287,22 @@ if [[ $arch =~ "Microsoft" ]]; then
 fi
 export DOCKER_HOST='tcp://0.0.0.0:2375'
 
+
+function my-pyenvinstall (){
+    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+    echo "Check if there are dependencies like"
+        echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
+  libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
+  xz-utils tk-dev"
+    echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
+    source ~/.zshrc
+}
+
+function cssh() {ssh $*;tmux select-pane -P 'fg=default,bg=default'}
+alias ssh='cssh '
+function csshrc() {sshrc $*;tmux select-pane -P 'fg=default,bg=default'}
+alias sshrc='csshrc '
+
+function my-showcolortable (){
+    for i in {0..255}; do printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n"; done | xargs
+}
