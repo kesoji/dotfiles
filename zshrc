@@ -70,13 +70,12 @@ else
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
 
-# bash-completion someday...
-#autoload -U +X bashcompinit && bashcompinit
-#source /usr/share/bash-completion/completions/firewall-cmd
+# Can source bash completion
+autoload -U +X bashcompinit && bashcompinit
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOROOT=$HOME/go1.10.1
+export GOROOT=$HOME/go1.10.2
 export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -305,4 +304,24 @@ alias sshrc='csshrc '
 
 function my-showcolortable (){
     for i in {0..255}; do printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n"; done | xargs
+}
+
+# Haskell
+which stack 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    cat << EOS
+    stack (Haskell) isn't installed.
+      curl -sSL https://get.haskellstack.org/ | sh
+EOS
+else
+    eval "$(stack --bash-completion-script stack)"
+fi
+
+# ssh_agent
+function my-sshkeyadd (){
+    eval $(ssh-agent -t 6h)
+    ssh-add
+}
+function my-sshkeyadd_agentoff (){
+    eval $(ssh-agent -k)
 }

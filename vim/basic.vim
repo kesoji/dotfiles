@@ -6,6 +6,8 @@ endif
 set encoding=utf-8
 set fileencoding=utf-8
 set fileformats=unix,dos,mac
+set autowrite
+set updatetime=100
 
 if has('vim_starting')
     set fileencodings+=cp932
@@ -129,6 +131,7 @@ else
     Plug 'junegunn/fzf'
 endif
 Plug 'junegunn/fzf.vim'
+Plug 'AndrewRadev/splitjoin.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
@@ -669,8 +672,6 @@ xmap <Space>s <Plug>(easymotion-s2)
 " surround.vimと被らないように
 omap z <Plug>(easymotion-s2)
 
-"<<<Plugin>>> tweetvim {{{1
-nnoremap <silent> <Leader>t  :TweetVimListStatuses list<CR>
 
 "<<<Plugin>>> expand-region {{{1
 vmap v <Plug>(expand_region_expand)
@@ -689,13 +690,48 @@ let g:memolist_path = "~/.vim/memo"
 
 "<<<Plugin>>> vim-go {{{1
 augroup VimGoMySettings
-    "autocmd!
-    "autocmd FileType go nnoremap <leader>b <Plug>(go-build)
-    "autocmd FileType go nnoremap <leader>r <Plug>(go-run)
+    autocmd!
+    autocmd FileType go nmap <leader>u <Plug>(go-run)
+    autocmd FileType go nmap <leader>t <Plug>(go-test)
+    autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
+    autocmd FileType go nnoremap <leader>b :<C-u>call <SID>build_go_files()<CR>
+    autocmd Filetype go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
+    autocmd Filetype go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
+    autocmd Filetype go command! -bang AS call go#alternate#Switch(<bang>0, 'split')
 augroup END
+function! s:build_go_files()
+    let l:file = expand('%')
+    if l:file =~# '^\f\+_test\.go$'
+        call go#test#Test(0, 1)
+    elseif l:file =~# '^\f\+\.go$'
+        call go#cmd#Build(0)
+    endif
+endfunction
+let g:go_fmt_command = "goimports"
+let g:go_metalinter_autosave = 1
+let g:go_auto_type_info = 1
+let g:go_auto_sameids = 1
+
 let g:go_highlight_functions = 1
+let g:go_highlight_function_calls = 1
 let g:go_highlight_methods = 1
 let g:go_highlight_structs = 1
+let g:go_highlight_array_whitespace_error = 0
+let g:go_highlight_chan_whitespace_error = 0
+let g:go_highlight_extra_types = 0
+let g:go_highlight_space_tab_error = 0
+let g:go_highlight_trailing_whitespace_error = 0
+let g:go_highlight_operators = 0
+let g:go_highlight_function_arguments = 0
+let g:go_highlight_types = 0
+let g:go_highlight_fields = 0
+let g:go_highlight_build_constraints = 0
+let g:go_highlight_generate_tags = 0
+let g:go_highlight_string_spellcheck = 1
+let g:go_highlight_format_strings = 1
+let g:go_highlight_variable_declarations = 0
+let g:go_highlight_variable_assignments = 0
+
 
 "<<<Plugin>>> vim-edgemotion {{{1
 map ej <Plug>(edgemotion-j)
