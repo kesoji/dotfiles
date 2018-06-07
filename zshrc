@@ -29,6 +29,7 @@ EOS
 fi
 
 if which diff-highlight >/dev/null ; then
+    ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
     echo "diff-highlight is missing"
 fi
