@@ -28,6 +28,11 @@ else
 EOS
 fi
 
+if which diff-highlight >/dev/null ; then
+else
+    echo "diff-highlight is missing"
+fi
+
 if which git-secrets >/dev/null ;  then
 else
     cat << EOS
