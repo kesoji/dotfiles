@@ -104,7 +104,9 @@ Plug 'glidenote/memolist.vim'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 Plug 'PProvost/vim-ps1'
-Plug 'Shougo/neocomplete.vim'
+Plug 'mhinz/vim-signify'
+Plug 'Valloric/YouCompleteMe'
+"Plug 'Shougo/neocomplete.vim'
 "Plug 'Shougo/neosnippet'
 "Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
@@ -757,4 +759,6 @@ nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
 
-
+"<<<Plugin>>> YouCompleteMe {{{1
+let g:ycm_key_list_select_completion = ['<Down>']
+let g:ycm_key_list_previous_completion = ['<Up>']
