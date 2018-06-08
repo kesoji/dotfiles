@@ -762,3 +762,21 @@ imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
 "<<<Plugin>>> YouCompleteMe {{{1
 let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
+
+" GREP {{{1
+augroup grepQuickfixOpen
+    autocmd QuickFixCmdPost *grep* cwindow
+augroup END
+if executable('rg')
+    set grepprg=rg\ --vimgrep\ --no-heading
+    set grepformat=%f:%l:%c:%m,%f:%l:%m
+endif
+nnoremap <expr> g* ':Rg ' . expand('<cword>') . '<CR>'
+nnoremap <expr> * ':vimgrep ' . expand('<cword>') . ' %<CR>'
+
+command! -bang -nargs=* Rg
+  \ call fzf#vim#grep(
+  \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+  \   <bang>0 ? fzf#vim#with_preview('up:60%')
+  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+  \   <bang>0)
