@@ -773,6 +773,7 @@ if executable('rg')
 endif
 nnoremap <expr> g* ':Rg ' . expand('<cword>') . '<CR>'
 nnoremap <expr> * ':vimgrep ' . expand('<cword>') . ' %<CR>'
+" https://qiita.com/yuku_t/items/0c1aff03949cb1b8fe6b
 
 command! -bang -nargs=* Rg
   \ call fzf#vim#grep(
