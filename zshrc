@@ -331,3 +331,14 @@ function my-sshkeyadd (){
 function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
 }
+
+# gibo
+which gibo 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "gibo is not installed: my-giboinstall()"
+fi
+function my-giboinstall (){
+    mkdir -p ~/my/bin
+    curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
+    -so ~/my/bin/gibo && chmod +x ~/my/bin/gibo && ~/my/bin/gibo -u
+}

@@ -71,6 +71,7 @@ Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'thinca/vim-quickrun'
+Plug 'majutsushi/tagbar'
 Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
@@ -762,6 +763,9 @@ imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
 "<<<Plugin>>> YouCompleteMe {{{1
 let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
+
+"<<<Plugin>>> Tagbar {{{1
+nnoremap <silent> <leader>t :TagbarToggle<CR>
 
 " GREP {{{1
 augroup grepQuickfixOpen
