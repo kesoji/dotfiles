@@ -18,14 +18,21 @@ bindkey '^s' history-incremental-pattern-search-forward
 
 if [[ -e ~/.zplug/init.zsh ]]; then
     source ~/.zplug/init.zsh
+    zplug "greymd/tmux-xpanes"
+    # Install plugins if there are plugins that have not been installed
+    if ! zplug check --verbose; then
+      printf "Install? [y/N]: "
+      if read -q; then
+        echo; zplug install
+      fi
+    fi
+    zplug load
 else
-    cat << EOS
------------------------------------------------------------------------------
-    Hey! you don't have zplug.
-      https://github.com/zplug/zplug
-    \$ curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh
------------------------------------------------------------------------------
-EOS
+    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall()"
+    function my-zpluginstall() {
+        com="curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
+        echo ">>> $com"; eval $com
+    }
 fi
 
 if which diff-highlight >/dev/null ; then
@@ -315,10 +322,11 @@ function my-showcolortable (){
 # Haskell
 which stack 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    cat << EOS
-    stack (Haskell) isn't installed.
-      curl -sSL https://get.haskellstack.org/ | sh
-EOS
+    echo "stack (Haskell) isn't installed: my-haskellstackinstall()"
+    function my-haskellstackinstall (){
+        com="curl -sSL https://get.haskellstack.org/ | sh"
+        echo ">>> $com"; eval $com
+    }
 else
     eval "$(stack --bash-completion-script stack)"
 fi
@@ -336,9 +344,9 @@ function my-sshkeyadd_agentoff (){
 which gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "gibo is not installed: my-giboinstall()"
+    function my-giboinstall (){
+        mkdir -p ~/my/bin;
+        curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
+            -so ~/my/bin/gibo && chmod +x ~/my/bin/gibo && ~/my/bin/gibo -u
+    }
 fi
-function my-giboinstall (){
-    mkdir -p ~/my/bin
-    curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
-    -so ~/my/bin/gibo && chmod +x ~/my/bin/gibo && ~/my/bin/gibo -u
-}
