@@ -6,6 +6,8 @@ endif
 set encoding=utf-8
 set fileencoding=utf-8
 set fileformats=unix,dos,mac
+set autowrite
+set updatetime=100
 
 if has('vim_starting')
     set fileencodings+=cp932
@@ -63,11 +65,13 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'tpope/vim-unimpaired'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'thinca/vim-quickrun'
+Plug 'majutsushi/tagbar'
 Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
@@ -101,7 +105,9 @@ Plug 'glidenote/memolist.vim'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 Plug 'PProvost/vim-ps1'
-Plug 'Shougo/neocomplete.vim'
+Plug 'mhinz/vim-signify'
+Plug 'Valloric/YouCompleteMe'
+"Plug 'Shougo/neocomplete.vim'
 "Plug 'Shougo/neosnippet'
 "Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
@@ -117,6 +123,7 @@ Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
+Plug 'leafgarland/typescript-vim'
 if has('mac')
     " fzf shoud be installed by Homebrew
     Plug '/usr/local/opt/fzf'
@@ -127,6 +134,7 @@ else
     Plug 'junegunn/fzf'
 endif
 Plug 'junegunn/fzf.vim'
+Plug 'AndrewRadev/splitjoin.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
@@ -273,6 +281,8 @@ cnoremap g// g//
 cnoremap v// v//
 nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left>
+
+nnoremap <Leader>vp :vim  ** \| cw<Left><Left><Left><Left><Left><Left><Left><Left>
 
 " tagsジャンプの時に複数ある時は一覧表示
 nnoremap <C-]> g<C-]>
@@ -665,8 +675,6 @@ xmap <Space>s <Plug>(easymotion-s2)
 " surround.vimと被らないように
 omap z <Plug>(easymotion-s2)
 
-"<<<Plugin>>> tweetvim {{{1
-nnoremap <silent> <Leader>t  :TweetVimListStatuses list<CR>
 
 "<<<Plugin>>> expand-region {{{1
 vmap v <Plug>(expand_region_expand)
@@ -685,13 +693,48 @@ let g:memolist_path = "~/.vim/memo"
 
 "<<<Plugin>>> vim-go {{{1
 augroup VimGoMySettings
-    "autocmd!
-    "autocmd FileType go nnoremap <leader>b <Plug>(go-build)
-    "autocmd FileType go nnoremap <leader>r <Plug>(go-run)
+    autocmd!
+    autocmd FileType go nmap <leader>u <Plug>(go-run)
+    autocmd FileType go nmap <leader>t <Plug>(go-test)
+    autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
+    autocmd FileType go nnoremap <leader>b :<C-u>call <SID>build_go_files()<CR>
+    autocmd Filetype go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
+    autocmd Filetype go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
+    autocmd Filetype go command! -bang AS call go#alternate#Switch(<bang>0, 'split')
 augroup END
+function! s:build_go_files()
+    let l:file = expand('%')
+    if l:file =~# '^\f\+_test\.go$'
+        call go#test#Test(0, 1)
+    elseif l:file =~# '^\f\+\.go$'
+        call go#cmd#Build(0)
+    endif
+endfunction
+let g:go_fmt_command = "goimports"
+let g:go_metalinter_autosave = 1
+let g:go_auto_type_info = 1
+let g:go_auto_sameids = 1
+
 let g:go_highlight_functions = 1
+let g:go_highlight_function_calls = 1
 let g:go_highlight_methods = 1
 let g:go_highlight_structs = 1
+let g:go_highlight_array_whitespace_error = 0
+let g:go_highlight_chan_whitespace_error = 0
+let g:go_highlight_extra_types = 0
+let g:go_highlight_space_tab_error = 0
+let g:go_highlight_trailing_whitespace_error = 0
+let g:go_highlight_operators = 0
+let g:go_highlight_function_arguments = 0
+let g:go_highlight_types = 0
+let g:go_highlight_fields = 0
+let g:go_highlight_build_constraints = 0
+let g:go_highlight_generate_tags = 0
+let g:go_highlight_string_spellcheck = 1
+let g:go_highlight_format_strings = 1
+let g:go_highlight_variable_declarations = 0
+let g:go_highlight_variable_assignments = 0
+
 
 "<<<Plugin>>> vim-edgemotion {{{1
 map ej <Plug>(edgemotion-j)
@@ -717,4 +760,28 @@ nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
 
+"<<<Plugin>>> YouCompleteMe {{{1
+let g:ycm_key_list_select_completion = ['<Down>']
+let g:ycm_key_list_previous_completion = ['<Up>']
 
+"<<<Plugin>>> Tagbar {{{1
+nnoremap <silent> <leader>t :TagbarToggle<CR>
+
+" GREP {{{1
+augroup grepQuickfixOpen
+    autocmd QuickFixCmdPost *grep* cwindow
+augroup END
+if executable('rg')
+    set grepprg=rg\ --vimgrep\ --no-heading
+    set grepformat=%f:%l:%c:%m,%f:%l:%m
+endif
+nnoremap <expr> g* ':Rg ' . expand('<cword>') . '<CR>'
+nnoremap <expr> * ':vimgrep ' . expand('<cword>') . ' %<CR>'
+" https://qiita.com/yuku_t/items/0c1aff03949cb1b8fe6b
+
+command! -bang -nargs=* Rg
+  \ call fzf#vim#grep(
+  \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+  \   <bang>0 ? fzf#vim#with_preview('up:60%')
+  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+  \   <bang>0)

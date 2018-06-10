@@ -18,14 +18,27 @@ bindkey '^s' history-incremental-pattern-search-forward
 
 if [[ -e ~/.zplug/init.zsh ]]; then
     source ~/.zplug/init.zsh
+    zplug "greymd/tmux-xpanes"
+    # Install plugins if there are plugins that have not been installed
+    if ! zplug check --verbose; then
+      printf "Install? [y/N]: "
+      if read -q; then
+        echo; zplug install
+      fi
+    fi
+    zplug load
 else
-    cat << EOS
------------------------------------------------------------------------------
-    Hey! you don't have zplug.
-      https://github.com/zplug/zplug
-    \$ curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh
------------------------------------------------------------------------------
-EOS
+    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall()"
+    function my-zpluginstall() {
+        com="curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
+        echo ">>> $com"; eval $com
+    }
+fi
+
+if which diff-highlight >/dev/null ; then
+    ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
+else
+    echo "diff-highlight is missing"
 fi
 
 if which git-secrets >/dev/null ;  then
@@ -70,13 +83,12 @@ else
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
 
-# bash-completion someday...
-#autoload -U +X bashcompinit && bashcompinit
-#source /usr/share/bash-completion/completions/firewall-cmd
+# Can source bash completion
+autoload -U +X bashcompinit && bashcompinit
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOROOT=$HOME/go1.10.1
+export GOROOT=$HOME/go1.10.2
 export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -114,6 +126,8 @@ fi
 if [ -e "${HOME}/.pyenv" ]; then
   export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
+fi
+if command -v pyenv 1>/dev/null 2>&1; then
   eval "$(pyenv init -)"
 fi
 
@@ -198,10 +212,10 @@ if [[ $? -ne 0 ]] ; then
     cat << EOS
 -----------------------------------------------------------------------------
     Hey! you don't have sshrc. You should download it from
-      https://github.com/Russell91/sshrc"
-    \$ wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc
-    \$ chmod +x sshrc
-    \$ sudo mv sshrc /usr/local/bin #or anywhere else
+      https://github.com/Russell91/sshrc" >>>
+    wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc
+    chmod +x sshrc
+    sudo mv sshrc /usr/local/bin #or anywhere else
 -----------------------------------------------------------------------------
 EOS
 fi
@@ -259,6 +273,8 @@ fi
 # AWS completion
 if [ -f $HOME/.local/bin/aws_zsh_completer.sh ]; then
     source "$HOME/.local/bin/aws_zsh_completer.sh"
+elif [ -f $HOME/.pyenv/shims/aws_zsh_completer.sh ]; then
+    source "$(pyenv which aws_zsh_completer.sh)"
 fi
 
 # The next line updates PATH for the Google Cloud SDK.
@@ -282,3 +298,55 @@ if [[ $arch =~ "Microsoft" ]]; then
     fi
 fi
 export DOCKER_HOST='tcp://0.0.0.0:2375'
+
+
+function my-pyenvinstall (){
+    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+    echo "Check if there are dependencies like"
+        echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
+  libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
+  xz-utils tk-dev"
+    echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
+    source ~/.zshrc
+}
+
+function cssh() {ssh $*;tmux select-pane -P 'fg=default,bg=default'}
+alias ssh='cssh '
+function csshrc() {sshrc $*;tmux select-pane -P 'fg=default,bg=default'}
+alias sshrc='csshrc '
+
+function my-showcolortable (){
+    for i in {0..255}; do printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n"; done | xargs
+}
+
+# Haskell
+which stack 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "stack (Haskell) isn't installed: my-haskellstackinstall()"
+    function my-haskellstackinstall (){
+        com="curl -sSL https://get.haskellstack.org/ | sh"
+        echo ">>> $com"; eval $com
+    }
+else
+    eval "$(stack --bash-completion-script stack)"
+fi
+
+# ssh_agent
+function my-sshkeyadd (){
+    eval $(ssh-agent -t 6h)
+    ssh-add
+}
+function my-sshkeyadd_agentoff (){
+    eval $(ssh-agent -k)
+}
+
+# gibo
+which gibo 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "gibo is not installed: my-giboinstall()"
+    function my-giboinstall (){
+        mkdir -p ~/my/bin;
+        curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
+            -so ~/my/bin/gibo && chmod +x ~/my/bin/gibo && ~/my/bin/gibo -u
+    }
+fi
