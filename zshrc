@@ -350,3 +350,16 @@ if [[ $? -ne 0 ]] ; then
             -so ~/my/bin/gibo && chmod +x ~/my/bin/gibo && ~/my/bin/gibo -u
     }
 fi
+
+# Ctrl-z switch back
+function switch-back-ctrl-z () {
+    if [[ $#BUFFER -eq 0 ]]; then
+        BUFFER="fg"
+        zle accept-line
+    else
+        zle push-input
+        zle clear-screen
+    fi
+}
+zle -N switch-back-ctrl-z
+bindkey '^z' switch-back-ctrl-z
