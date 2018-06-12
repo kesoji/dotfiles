@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<packages>
+  <package id="ConEmu" />
+  <package id="everything" />
+  <package id="fzf" />
+  <package id="ripgrep" />
+  <package id="slack" />
+</packages>

@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<packages>
+  <package id="ccleaner" />
+  <package id="keepass" />
+  <package id="keepass.install" />
+  <package id="mediainfo" />
+  <package id="mpc-hc" />
+  <package id="Revo.Uninstaller" />
+  <package id="unifiedremote" />
+  <package id="vlc" />
+  <package id="volume2" />
+</packages>
