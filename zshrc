@@ -329,6 +329,9 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     eval "$(stack --bash-completion-script stack)"
+    alias ghci='stack ghci'
+    alias ghc='stack ghci --'
+    alias runghc='stack runghci --'
 fi
 
 # ssh_agent
