@@ -84,6 +84,7 @@ Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
 Plug 'thinca/vim-singleton'
 Plug 'tyru/restart.vim'
 Plug 'vim-scripts/cisco.vim'
+Plug 'posva/vim-vue'
 Plug 'bbchung/gtags.vim'
 Plug 'scrooloose/syntastic'
 Plug 'Yggdroot/indentLine'
