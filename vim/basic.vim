@@ -333,8 +333,8 @@ nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <Leader>sgv :source $MYGVIMRC<CR>
 nnoremap <Leader>a :cclose<CR>
 
-nnoremap + <C-a>
-nnoremap - <C-x>
+noremap + <C-a>
+noremap - <C-x>
 
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
 " Highlight during search without moving cursor
