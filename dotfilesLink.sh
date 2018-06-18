@@ -14,6 +14,7 @@ ln -sf ~/dotfiles/zshenv ~/.zshenv
 ln -sf ~/dotfiles/sshrc ~/.sshrc
 ln -sf ~/dotfiles/tigrc ~/.tigrc
 ln -sf ~/dotfiles/inputrc ~/.inputrc
+ln -sf ~/dotfiles/globalrc ~/.globalrc
 
 # dir
 ln -Tsf ~/dotfiles/sshrc.d ~/.sshrc.d
