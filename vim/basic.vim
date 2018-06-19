@@ -1,24 +1,24 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 
-if !&compatible
-    set nocompatible
-endif
 set encoding=utf-8
 set fileencoding=utf-8
 set fileformats=unix,dos,mac
-set autowrite
-set updatetime=100
+scriptencoding utf-8
+
+unlet! skip_defaults_vim
+source $VIMRUNTIME/defaults.vim
 
 if has('vim_starting')
     set fileencodings+=cp932
     let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
     let $PATH = expand("~/.plenv/shims") . ":" . $PATH
 endif
-scriptencoding utf-8
+
+set autowrite
+set updatetime=100
 
 " workaround for long long line.
-set synmaxcol=400
-
+"set synmaxcol=400
 
 " Windows or Mac/Linux? {{{1
 if has('win32') || has('win64')
@@ -161,9 +161,6 @@ Plug 'cocopon/iceberg.vim'
 call plug#end()
 
 " 基本設定 {{{1
-syntax enable
-filetype plugin indent on
-
 if has('clientserver')
     call singleton#enable()
     let g:singleton#opener = "edit"
@@ -206,7 +203,6 @@ set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回�
 set backspace=indent,eol,start
 set clipboard+=autoselect,unnamed
 
-set incsearch
 set hlsearch
 set ignorecase
 set smartcase
