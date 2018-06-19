@@ -331,7 +331,7 @@ else
     eval "$(stack --bash-completion-script stack)"
     alias ghci='stack ghci'
     alias ghc='stack ghci --'
-    alias runghc='stack runghci --'
+    alias runghc='stack runghc --'
 fi
 
 # ssh_agent

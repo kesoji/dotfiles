@@ -588,8 +588,7 @@ let g:previm_enable_realtime = 1
 
 "<<<Plugin>>> OpenBrowser {{{1
 let g:netrw_nogx = 1 " disable netrw's gx mapping.
-nmap <C-l> <Plug>(openbrowser-smart-search)
-vmap <C-l> <Plug>(openbrowser-smart-search)
+map <space>ob <Plug>(openbrowser-smart-search)
 
 "<<<Plugin>>> lightline {{{1
 set laststatus=2
