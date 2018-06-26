@@ -126,9 +126,20 @@ fi
 if [ -e "${HOME}/.pyenv" ]; then
   export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
-fi
-if command -v pyenv 1>/dev/null 2>&1; then
-  eval "$(pyenv init -)"
+  if command -v pyenv 1>/dev/null 2>&1; then
+      eval "$(pyenv init -)"
+  fi
+else
+  echo "pyenv is not installed: my-pyenvinstall()"
+  function my-pyenvinstall (){
+      git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+      echo "Check if there are dependencies like"
+          echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
+    libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
+    xz-utils tk-dev"
+      echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
+      source ~/.zshrc
+  }
 fi
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
@@ -189,6 +200,10 @@ alias gst='git status'
 alias ga='git add'
 alias gp='git push'
 alias gpl='git pull'
+function gwt() {
+    GIT_CDUP_DIR=`git rev-parse --show-cdup`
+    git worktree add ${GIT_CDUP_DIR}git-worktrees/$1 -b $1
+}
 
 ## Global Alias
 alias -g L='| less'
@@ -300,15 +315,6 @@ fi
 export DOCKER_HOST='tcp://0.0.0.0:2375'
 
 
-function my-pyenvinstall (){
-    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-    echo "Check if there are dependencies like"
-        echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
-  libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
-  xz-utils tk-dev"
-    echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
-    source ~/.zshrc
-}
 
 function cssh() {ssh $*;tmux select-pane -P 'fg=default,bg=default'}
 alias ssh='cssh '
