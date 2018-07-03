@@ -88,9 +88,10 @@ autoload -U +X bashcompinit && bashcompinit
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOROOT=$HOME/go1.10.2
+export GOROOT=$HOME/go1.10.3
 export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
+export PATH=$HOME/.yarn/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
