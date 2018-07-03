@@ -38,7 +38,20 @@ fi
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
-    echo "diff-highlight is missing"
+    echo "diff-highlight (https://github.com/zplug/zplug) isn't installed: my-diff-highlightinstall()"
+    function my-diff-highlightinstall() {
+        dhworkdir="temp_git_diffhighlightinstall"
+        com="git clone --depth 1 https://github.com/git/git $dhworkdir"
+        echo ">>> $com"; eval $com
+        com="cd $dhworkdir/contrib/diff-highlight"
+        echo ">>> $com"; eval $com
+        com="make"
+        echo ">>> $com"; eval $com
+        com="sudo cp diff-highlight /usr/local/bin"
+        echo ">>> $com"; eval $com
+        com="cd; rm -rf $dhworkdir";
+        echo ">>> $com"; eval $com
+    }
 fi
 
 if which git-secrets >/dev/null ;  then
