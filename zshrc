@@ -375,7 +375,8 @@ bindkey '^z' switch-back-ctrl-z
 
 # hub
 if command -v hub >/dev/null 2>&1; then
-    function git(){hub "$@"}
+    # disable because sometimes git breaks...
+    #function git(){hub "$@"}
 else
     echo "hub (https://github.com/hub/hub.git) is not installed: my-hubinstall()"
     function my-hubinstall (){
