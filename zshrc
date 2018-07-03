@@ -4,7 +4,7 @@ fi
 
 set -o vi
 
-fpath=(~/.zsh/completion $fpath)
+fpath=(~/.zsh/completions $fpath)
 
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
@@ -305,15 +305,14 @@ if [[ $? -eq 0 ]] ; then
     source <(kubectl completion zsh)
 fi
 
-# if wsl, tmux
+# if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    # avoid nesting
-    if [[ -z "$TMUX" ]]; then
-        tmux
-    fi
+    # avoid tmux nesting
+    if [[ -z "$TMUX" ]]; then tmux; fi
+
+    export DOCKER_HOST='tcp://0.0.0.0:2375'
 fi
-export DOCKER_HOST='tcp://0.0.0.0:2375'
 
 
 
@@ -373,3 +372,18 @@ function switch-back-ctrl-z () {
 }
 zle -N switch-back-ctrl-z
 bindkey '^z' switch-back-ctrl-z
+
+# hub
+if command -v hub >/dev/null 2>&1; then
+    function git(){hub "$@"}
+else
+    echo "hub (https://github.com/hub/hub.git) is not installed: my-hubinstall()"
+    function my-hubinstall (){
+        com="go get github.com/github/hub"
+        echo ">>> $com"; eval $com
+        com="mkdir -m 755 -p ~/.zsh/completions"
+        echo ">>> $com"; eval $com
+        com="cp ~/go/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
+        echo ">>> $com"; eval $com
+    }
+fi
