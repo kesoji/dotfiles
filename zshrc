@@ -38,7 +38,7 @@ fi
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
-    echo "diff-highlight (https://github.com/zplug/zplug) isn't installed: my-diff-highlightinstall()"
+    echo "diff-highlight isn't installed: my-diff-highlightinstall()"
     function my-diff-highlightinstall() {
         dhworkdir="temp_git_diffhighlightinstall"
         com="git clone --depth 1 https://github.com/git/git $dhworkdir"
@@ -391,7 +391,7 @@ if command -v hub >/dev/null 2>&1; then
     # disable because sometimes git breaks...
     #function git(){hub "$@"}
 else
-    echo "hub (https://github.com/hub/hub.git) is not installed: my-hubinstall()"
+    echo "hub is not installed: my-hubinstall()"
     function my-hubinstall (){
         com="go get github.com/github/hub"
         echo ">>> $com"; eval $com
