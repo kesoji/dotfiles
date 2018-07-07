@@ -1,98 +1,123 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 
-if !&compatible
-    set nocompatible
-endif
 set encoding=utf-8
 set fileencoding=utf-8
-if has('vim_starting')
-    set fileencodings+=cp932
-endif
+set fileformats=unix,dos,mac
 scriptencoding utf-8
 
-set runtimepath+=$SSHHOME/.sshrc.d/vim/
+unlet! skip_defaults_vim
+source $VIMRUNTIME/defaults.vim
 
-" 基本設定 {{{1
-syntax enable
-filetype plugin indent on
-
-if has('clientserver')
-    call singleton#enable()
+if has('vim_starting')
+    set fileencodings+=cp932
+    let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
+    let $PATH = expand("~/.plenv/shims") . ":" . $PATH
 endif
+
+set autowrite
+set updatetime=100
+
+set hidden
 
 set modeline
 set modelines=2
 
-set cursorline
+set spell
+set spelllang=en,cjk
+
 set history=1000
 set tabstop=4
 set expandtab
+set smarttab
 set textwidth=0
-" set nowrap
+set virtualedit=block
 set shiftwidth=4
 set number
 set autoindent
 set smartindent
-" http://itchyny.hatenablog.com/entry/2014/12/25/090000
 source $VIMRUNTIME/macros/matchit.vim
 set display=lastline
 set pumheight=10
 set showmatch
 set matchtime=1
-" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
 if version >= 800
     set breakindent
 endif
 
-" set whichwrap=h,l,[,],<,>,b,s           "h,l,<-,->,backspace,spaceで上下の行に回り込む
-set whichwrap=[,],<,>,b,s           "<-,->,backspace,spaceで上下の行に回り込む
+set whichwrap=[,],<,>,b,s
 set backspace=indent,eol,start
 set clipboard+=autoselect,unnamed
 
-set incsearch
 set hlsearch
 set ignorecase
+set smartcase
+set wrapscan
+
+set ambiwidth=double
+
+set belloff=all
 
 set list
-" set listchars=tab:>-,trail:-,nbsp:%,extends:>,precedes:<,eol:<
 set listchars=tab:>-,trail:-
 
+set wildmenu
 set wildmode=list,longest,full "command-line-modeのリスト表示
 
-autocmd BufRead,BufNewFile *.vim    setfiletype vim
-
-" Style {{{1
 set background=dark
-" these setting are overridden by .gvimrc.
-colorscheme underflow
-"try
-"    colorscheme hybrid
-"catch
-"    try
-"        colorscheme molokai
-"    catch
-"        colorscheme desert
-"    endtry
-"endtry
+try
+    colorscheme molokai
+catch
+    colorscheme desert
+endtry
+
+
+"" ForceOverwrite - force write if readonly
+command! ForceOverwrite w !sudo tee >/dev/null %
+"" DiffOrig - how did I edit this file? {{{2
+command! DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
+"" JsonFormat - format json {{{2
+command! JsonFormat :execute '%!python -m json.tool'
+            \ | :execute '%!python -c "import re,sys;chr=__builtins__.__dict__.get(\"unichr\",chr);sys.stdout.write(re.sub(r''\\u[0-9a-f]{4}'', lambda x: chr(int(\"0x\" + x.group(0)[2:], 16)).encode(\"utf-8\"), sys.stdin.read()))"'
+            \ | :set filetype=json | :1
+"" VO - insert output of vim command in current buffer {{{2
+command! -narg=+ VO :call ViewOutput(<q-args>)
+function! ViewOutput(cmd)
+    let save_reg=@a
+    redir @a
+    silent exec a:cmd
+    redir END
+    put a
+    let @a=save_reg
+endfunction
+
+"" UnMinify Simple re-format for minified Javascript {{{2
+command! UnMinify call UnMinify()
+function! UnMinify()
+    %s/{\ze[^\r\n]/{\r/g
+    %s/){/) {/g
+    %s/};\?\ze[^\r\n]/\0\r/g
+    %s/;\ze[^\r\n]/;\r/g
+    %s/[^\s]\zs[=&|]\+\ze[^\s]/ \0 /g
+    normal ggVG=
+endfunction
 
 " Mapping {{{1
-let mapleader = ','
-noremap \ ,
-
-" Enter command-line mode
-noremap <CR> :
+let mapleader = "\<Space>"
 
 " <C-u>は、範囲指定(数字入力)を削除
-nnoremap <Space>w :<C-u>w<CR>
-nnoremap <Space>W :<C-u>wq<CR>
-nnoremap <Space>q :<C-u>q<CR>
-nnoremap <Space><Space>q :<C-u>qa<CR>
-nnoremap <Space>Q :<C-u>q!<CR>
+nnoremap <Leader>w :<C-u>w<CR>
+nnoremap <Leader>W :<C-u>wq<CR>
+nnoremap <Leader>q :<C-u>q<CR>
+nnoremap <Leader><Leader>q :<C-u>qa<CR>
+nnoremap <Leader>Q :<C-u>q!<CR>
 
 nnoremap ; :
-nnoremap : ;
 vnoremap ; :
-vnoremap : ;
+
+noremap j gj
+noremap k gk
+noremap gj j
+noremap gk k
 
 " Tab mapping
 nnoremap <S-Tab> <<
@@ -101,21 +126,34 @@ inoremap <S-Tab> <C-d>
 inoremap <silent>jj <ESC>
 inoremap <silent>jk <ESC>
 
-nnoremap <Space>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
-nnoremap <Space>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
+nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
-nmap / /\v
-cmap s/ s/\v
-nnoremap gs :<C-u>%s/\v//g<Left><Left><Left>
+map y <Plug>(operator-flashy)
+"nnoremap Y y$
+nmap Y <Plug>(operator-flashy)$
+
+noremap n nzzzv
+noremap N Nzzzv
+nnoremap / /\v
+nnoremap ? ?\v
+cnoremap s// s//
+cnoremap g// g//
+cnoremap v// v//
+nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left>
+
+nnoremap <Leader>vp :vim  ** \| cw<Left><Left><Left><Left><Left><Left><Left><Left>
 
 " tagsジャンプの時に複数ある時は一覧表示
 nnoremap <C-]> g<C-]>
 
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <Space>h ^
-nnoremap <Space>l $
+noremap <Leader>h ^
+noremap <Leader>H 0
+noremap <Leader>l $
 
+" Window and Tab operation
 nnoremap s <Nop>
 nnoremap sj <C-w>j
 nnoremap sk <C-w>k
@@ -148,43 +186,21 @@ nnoremap sv :<C-u>vs<CR>
 nnoremap sq :<C-u>q<CR>
 nnoremap sQ :<C-u>bd<CR>
 
-" http://itchyny.hatenablog.com/entry/2014/12/25/090000
-nnoremap Y y$
-nnoremap + <C-a>
-nnoremap - <C-x>
+nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
+nnoremap <Leader>sv :source $MYVIMRC<CR>
+nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
+nnoremap <Leader>sgv :source $MYGVIMRC<CR>
+nnoremap <Leader>a :cclose<CR>
+
+noremap + <C-a>
+noremap - <C-x>
 
 " New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
+" Highlight during search without moving cursor
 cnoremap <C-n> <C-g>
 cnoremap <C-p> <C-t>
 
+" Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
+set pastetoggle=<F12>
 
-"User Defined Command {{{1
-command! -nargs=+ -complete=command Capture QuickRun -type vim -src <q-args>
-command! JsonFormat :execute '%!python -m json.tool'
-            \ | :execute '%!python -c "import re,sys;chr=__builtins__.__dict__.get(\"unichr\",chr);sys.stdout.write(re.sub(r''\\u[0-9a-f]{4}'', lambda x: chr(int(\"0x\" + x.group(0)[2:], 16)).encode(\"utf-8\"), sys.stdin.read()))"'
-            \ | :set filetype=json | :1
-command! -nargs=? Jq call s:Jq(<f-args>)
-            \ | :set filetype=json
-function! s:Jq(...)
-    if 0 == a:0
-        let l:arg = "."
-    else
-        let l:arg = a:1
-    endif
-    " execute "%! jq 95fe1a73-e2e2-4737-bea1-a44257c50fc8quot;" . l:arg . "95fe1a73-e2e2-4737-bea1-a44257c50fc8quot;"
-    execute "%!jq " . l:arg
-endfunction
-
-" AutoGroup {{{1
-" バイナリ編集(xxd)モード（vim -b での起動、もしくは *.bin ファイルを開くと発動します）
-" http://d.hatena.ne.jp/rdera/20081022/1224682665
-augroup BinaryXXD
-  autocmd!
-  autocmd BufReadPre  *.bin let &binary =1
-  autocmd BufReadPost * if &binary | silent %!xxd -g 1
-  autocmd BufReadPost * set ft=xxd | endif
-  autocmd BufWritePre * if &binary | %!xxd -r | endif
-  autocmd BufWritePost * if &binary | silent %!xxd -g 1
-  autocmd BufWritePost * set nomod | endif
-augroup END

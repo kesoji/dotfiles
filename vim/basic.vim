@@ -348,6 +348,8 @@ set pastetoggle=<F12>
 :cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>
 
 "User Defined Command {{{1
+"" ForceOverwrite - force write if readonly
+command! ForceOverwrite w !sudo tee >/dev/null %
 "" DiffOrig - how did I edit this file? {{{2
 command! DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
 "" Capture - view command result in QuickRun window {{{2
