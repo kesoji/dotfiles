@@ -4,7 +4,7 @@ fi
 
 set -o vi
 
-fpath=(~/.zsh/completion $fpath)
+fpath=(~/.zsh/completions $fpath)
 
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
@@ -38,7 +38,20 @@ fi
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
-    echo "diff-highlight is missing"
+    echo "diff-highlight isn't installed: my-diff-highlightinstall()"
+    function my-diff-highlightinstall() {
+        dhworkdir="temp_git_diffhighlightinstall"
+        com="git clone --depth 1 https://github.com/git/git $dhworkdir"
+        echo ">>> $com"; eval $com
+        com="cd $dhworkdir/contrib/diff-highlight"
+        echo ">>> $com"; eval $com
+        com="make"
+        echo ">>> $com"; eval $com
+        com="sudo cp diff-highlight /usr/local/bin"
+        echo ">>> $com"; eval $com
+        com="cd; rm -rf $dhworkdir";
+        echo ">>> $com"; eval $com
+    }
 fi
 
 if which git-secrets >/dev/null ;  then
@@ -88,9 +101,10 @@ autoload -U +X bashcompinit && bashcompinit
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOROOT=$HOME/go1.10.2
+export GOROOT=$HOME/go1.10.3
 export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
+export PATH=$HOME/.yarn/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
@@ -126,9 +140,20 @@ fi
 if [ -e "${HOME}/.pyenv" ]; then
   export PYENV_ROOT="$HOME/.pyenv"
   export PATH="$PYENV_ROOT/bin:$PATH"
-fi
-if command -v pyenv 1>/dev/null 2>&1; then
-  eval "$(pyenv init -)"
+  if command -v pyenv 1>/dev/null 2>&1; then
+      eval "$(pyenv init -)"
+  fi
+else
+  echo "pyenv is not installed: my-pyenvinstall()"
+  function my-pyenvinstall (){
+      git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+      echo "Check if there are dependencies like"
+          echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
+    libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
+    xz-utils tk-dev"
+      echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
+      source ~/.zshrc
+  }
 fi
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
@@ -189,6 +214,10 @@ alias gst='git status'
 alias ga='git add'
 alias gp='git push'
 alias gpl='git pull'
+function gwt() {
+    GIT_CDUP_DIR=`git rev-parse --show-cdup`
+    git worktree add ${GIT_CDUP_DIR}git-worktrees/$1 -b $1
+}
 
 ## Global Alias
 alias -g L='| less'
@@ -289,26 +318,16 @@ if [[ $? -eq 0 ]] ; then
     source <(kubectl completion zsh)
 fi
 
-# if wsl, tmux
+# if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    # avoid nesting
-    if [[ -z "$TMUX" ]]; then
-        tmux
-    fi
+    # avoid tmux nesting
+    if [[ -z "$TMUX" ]]; then tmux; fi
+
+    export DOCKER_HOST='tcp://0.0.0.0:2375'
 fi
-export DOCKER_HOST='tcp://0.0.0.0:2375'
 
 
-function my-pyenvinstall (){
-    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-    echo "Check if there are dependencies like"
-        echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
-  libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
-  xz-utils tk-dev"
-    echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
-    source ~/.zshrc
-}
 
 function cssh() {ssh $*;tmux select-pane -P 'fg=default,bg=default'}
 alias ssh='cssh '
@@ -366,3 +385,19 @@ function switch-back-ctrl-z () {
 }
 zle -N switch-back-ctrl-z
 bindkey '^z' switch-back-ctrl-z
+
+# hub
+if command -v hub >/dev/null 2>&1; then
+    # disable because sometimes git breaks...
+    #function git(){hub "$@"}
+else
+    echo "hub is not installed: my-hubinstall()"
+    function my-hubinstall (){
+        com="go get github.com/github/hub"
+        echo ">>> $com"; eval $com
+        com="mkdir -m 755 -p ~/.zsh/completions"
+        echo ">>> $com"; eval $com
+        com="cp ~/go/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
+        echo ">>> $com"; eval $com
+    }
+fi

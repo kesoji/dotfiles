@@ -393,6 +393,9 @@ function! UnMinify()
     normal ggVG=
 endfunction
 
+"" CD - cd to current file dir
+command! CD cd %:h
+
 " AutoGroup {{{1
 " バイナリ編集(xxd)モード（vim -b での起動、もしくは *.bin ファイルを開くと発動します）
 " http://d.hatena.ne.jp/rdera/20081022/1224682665
