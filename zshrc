@@ -417,6 +417,16 @@ if [[ $? -ne 0 ]] ; then
     function my-kryptoninstall (){
         com="curl https://krypt.co/kr | sh"
         echo ">>> $com"; eval $com
+        if [ "$(uname)" != 'Darwin' ] ; then
+            com="sudo mkdir -p /usr/local/lib"
+            echo ">>> $com"; eval $com
+            com="sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so"
+            echo ">>> $com"; eval $com
+            com="sudo mkdir -p /usr/local/bin"
+            echo ">>> $com"; eval $com
+            com="sudo ln -s /usr/bin/krssh /usr/local/bin/krssh"
+            echo ">>> $com"; eval $com
+        fi
     }
 fi
 
