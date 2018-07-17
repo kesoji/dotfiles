@@ -28,7 +28,7 @@ if [[ -e ~/.zplug/init.zsh ]]; then
     fi
     zplug load
 else
-    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall()"
+    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall"
     function my-zpluginstall() {
         com="curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
         echo ">>> $com"; eval $com
@@ -38,7 +38,7 @@ fi
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
-    echo "diff-highlight isn't installed: my-diff-highlightinstall()"
+    echo "diff-highlight isn't installed: my-diff-highlightinstall"
     function my-diff-highlightinstall() {
         dhworkdir="temp_git_diffhighlightinstall"
         com="git clone --depth 1 https://github.com/git/git $dhworkdir"
@@ -54,16 +54,20 @@ else
     }
 fi
 
-if which git-secrets >/dev/null ;  then
-else
-    cat << EOS
------------------------------------------------------------------------------
-    You should >>>
-    git clone https://github.com/awslabs/git-secrets
-    cd git-secrets
-    sudo make install
------------------------------------------------------------------------------
-EOS
+which git-secrets 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "git-secretsisn't installed: my-git-secretsinstall"
+    function my-git-secretsinstall() {
+        dhworkdir="temp_git_gitsecretsinstall"
+        com="git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir"
+        echo ">>> $com"; eval $com
+        com="cd $dhworkdir"
+        echo ">>> $com"; eval $com
+        com="sudo make install"
+        echo ">>> $com"; eval $com
+        com="cd; rm -rf $dhworkdir";
+        echo ">>> $com"; eval $com
+    }
 fi
 
 # Source Prezto.
@@ -144,10 +148,10 @@ if [ -e "${HOME}/.pyenv" ]; then
       eval "$(pyenv init -)"
   fi
 else
-  echo "pyenv is not installed: my-pyenvinstall()"
+  echo "pyenv is not installed: my-pyenvinstall"
   function my-pyenvinstall (){
       git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-      echo "Check if there are dependencies like"
+      echo "When you cannot build python, check if there are dependencies like"
           echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
     libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
     xz-utils tk-dev"
@@ -245,6 +249,7 @@ if [[ $? -ne 0 ]] ; then
         com="chmod +x sshrc"
         echo ">>> $com"; eval $com
         com="sudo mv sshrc /usr/local/bin/sshrc"
+        echo ">>> $com"; eval $com
     }
 fi
 
@@ -340,7 +345,7 @@ function my-showcolortable (){
 # Haskell
 which stack 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "stack (Haskell) isn't installed: my-haskellstackinstall()"
+    echo "stack (Haskell) isn't installed: my-haskellstackinstall"
     function my-haskellstackinstall (){
         com="curl -sSL https://get.haskellstack.org/ | sh"
         echo ">>> $com"; eval $com
@@ -364,7 +369,7 @@ function my-sshkeyadd_agentoff (){
 # gibo
 which gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "gibo is not installed: my-giboinstall()"
+    echo "gibo is not installed: my-giboinstall"
     function my-giboinstall (){
         mkdir -p ~/my/bin;
         curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
@@ -390,7 +395,7 @@ if command -v hub >/dev/null 2>&1; then
     # disable because sometimes git breaks...
     #function git(){hub "$@"}
 else
-    echo "hub is not installed: my-hubinstall()"
+    echo "hub is not installed: my-hubinstall"
     function my-hubinstall (){
         com="go get github.com/github/hub"
         echo ">>> $com"; eval $com
