@@ -410,6 +410,15 @@ else
     }
 fi
 
+# Krypton
+which kr 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "krypton is not installed: my-kryptoninstall"
+    function my-kryptoninstall (){
+        com="curl https://krypt.co/kr | sh"
+        echo ">>> $com"; eval $com
+    }
+fi
 
 #
 # Defines transfer alias and provides easy command line file and folder sharing.
