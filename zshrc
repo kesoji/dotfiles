@@ -110,7 +110,11 @@ if [[ "$(uname -a)" =~ "Microsoft" ]]; then
     export GOROOT=$HOME/go1.10.3
     export PATH=$GOROOT/bin:$PATH
 fi
-export PATH=$HOME/go/bin:$PATH
+if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
+elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
+else                   ; echo "go is not installed"
+fi
+export PATH=$HOME/$DEFAULT_GOPATH/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -402,11 +406,11 @@ else
     echo "hub is not installed: my-hubinstall"
     function my-hubinstall (){
         com="go get github.com/github/hub"
-        echo ">>> $com"; eval $com
+        echo ">>> $com"; eval $com || return
         com="mkdir -m 755 -p ~/.zsh/completions"
-        echo ">>> $com"; eval $com
-        com="cp ~/go/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
-        echo ">>> $com"; eval $com
+        echo ">>> $com"; eval $com || return
+        com="cp ~/$DEFAULT_GOPATH/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
+        echo ">>> $com"; eval $com || return
     }
 fi
 
