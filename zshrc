@@ -106,7 +106,7 @@ autoload -U +X bashcompinit && bashcompinit
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
-if [ "$(uname)" != 'Darwin' ] ; then
+if [[ "$(uname -a)` =~ "Microsoft" ]]; then
     export GOROOT=$HOME/go1.10.3
     export PATH=$GOROOT/bin:$PATH
 fi
