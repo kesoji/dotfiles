@@ -114,7 +114,8 @@ Plug 'Valloric/YouCompleteMe'
 "Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
 "Plug 'rhysd/vim-operator-surround'
-Plug 'tpope/vim-surround'
+"Plug 'tpope/vim-surround'
+Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-operator-user'
 Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-operator-replace'
@@ -159,6 +160,7 @@ Plug 'morhetz/gruvbox'
 Plug 'cocopon/iceberg.vim'
 
 call plug#end()
+runtime macros/sandwich/keymap/surround.vim
 
 " 基本設定 {{{1
 if has('clientserver')
