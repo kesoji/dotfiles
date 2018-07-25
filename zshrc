@@ -28,7 +28,7 @@ if [[ -e ~/.zplug/init.zsh ]]; then
     fi
     zplug load
 else
-    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall()"
+    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall"
     function my-zpluginstall() {
         com="curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
         echo ">>> $com"; eval $com
@@ -38,7 +38,7 @@ fi
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
-    echo "diff-highlight isn't installed: my-diff-highlightinstall()"
+    echo "diff-highlight isn't installed: my-diff-highlightinstall"
     function my-diff-highlightinstall() {
         dhworkdir="temp_git_diffhighlightinstall"
         com="git clone --depth 1 https://github.com/git/git $dhworkdir"
@@ -54,16 +54,20 @@ else
     }
 fi
 
-if which git-secrets >/dev/null ;  then
-else
-    cat << EOS
------------------------------------------------------------------------------
-    You should >>>
-    git clone https://github.com/awslabs/git-secrets
-    cd git-secrets
-    sudo make install
------------------------------------------------------------------------------
-EOS
+which git-secrets 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "git-secretsisn't installed: my-git-secretsinstall"
+    function my-git-secretsinstall() {
+        dhworkdir="temp_git_gitsecretsinstall"
+        com="git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir"
+        echo ">>> $com"; eval $com
+        com="cd $dhworkdir"
+        echo ">>> $com"; eval $com
+        com="sudo make install"
+        echo ">>> $com"; eval $com
+        com="cd; rm -rf $dhworkdir";
+        echo ">>> $com"; eval $com
+    }
 fi
 
 # Source Prezto.
@@ -101,8 +105,16 @@ autoload -U +X bashcompinit && bashcompinit
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
-export GOROOT=$HOME/go1.10.3
-export PATH=$GOROOT/bin:$HOME/go/bin:$PATH
+
+if [[ "$(uname -a)" =~ "Microsoft" ]]; then
+    export GOROOT=$HOME/go1.10.3
+    export PATH=$GOROOT/bin:$PATH
+fi
+if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
+elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
+else                   ; echo "go is not installed"
+fi
+export PATH=$HOME/$DEFAULT_GOPATH/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -144,10 +156,10 @@ if [ -e "${HOME}/.pyenv" ]; then
       eval "$(pyenv init -)"
   fi
 else
-  echo "pyenv is not installed: my-pyenvinstall()"
+  echo "pyenv is not installed: my-pyenvinstall"
   function my-pyenvinstall (){
       git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-      echo "Check if there are dependencies like"
+      echo "When you cannot build python, check if there are dependencies like"
           echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
     libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
     xz-utils tk-dev"
@@ -238,15 +250,15 @@ bindkey " " globalias
 # SSHRC
 which sshrc 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    cat << EOS
------------------------------------------------------------------------------
-    Hey! you don't have sshrc. You should download it from
-      https://github.com/Russell91/sshrc" >>>
-    wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc
-    chmod +x sshrc
-    sudo mv sshrc /usr/local/bin #or anywhere else
------------------------------------------------------------------------------
-EOS
+    echo "sshrc isn't installed: my-sshrcinstall"
+    function my-sshrcinstall (){
+        com="wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc"
+        echo ">>> $com"; eval $com
+        com="chmod +x sshrc"
+        echo ">>> $com"; eval $com
+        com="sudo mv sshrc /usr/local/bin/sshrc"
+        echo ">>> $com"; eval $com
+    }
 fi
 
 # fzf
@@ -341,7 +353,7 @@ function my-showcolortable (){
 # Haskell
 which stack 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "stack (Haskell) isn't installed: my-haskellstackinstall()"
+    echo "stack (Haskell) isn't installed: my-haskellstackinstall"
     function my-haskellstackinstall (){
         com="curl -sSL https://get.haskellstack.org/ | sh"
         echo ">>> $com"; eval $com
@@ -365,7 +377,7 @@ function my-sshkeyadd_agentoff (){
 # gibo
 which gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "gibo is not installed: my-giboinstall()"
+    echo "gibo is not installed: my-giboinstall"
     function my-giboinstall (){
         mkdir -p ~/my/bin;
         curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
@@ -391,17 +403,36 @@ if command -v hub >/dev/null 2>&1; then
     # disable because sometimes git breaks...
     #function git(){hub "$@"}
 else
-    echo "hub is not installed: my-hubinstall()"
+    echo "hub is not installed: my-hubinstall"
     function my-hubinstall (){
         com="go get github.com/github/hub"
-        echo ">>> $com"; eval $com
+        echo ">>> $com"; eval $com || return
         com="mkdir -m 755 -p ~/.zsh/completions"
-        echo ">>> $com"; eval $com
-        com="cp ~/go/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
-        echo ">>> $com"; eval $com
+        echo ">>> $com"; eval $com || return
+        com="cp ~/$DEFAULT_GOPATH/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
+        echo ">>> $com"; eval $com || return
     }
 fi
 
+# Krypton
+which kr 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "krypton is not installed: my-kryptoninstall"
+    function my-kryptoninstall (){
+        com="curl https://krypt.co/kr | sh"
+        echo ">>> $com"; eval $com
+        if [ "$(uname)" != 'Darwin' ] ; then
+            com="sudo mkdir -p /usr/local/lib"
+            echo ">>> $com"; eval $com
+            com="sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so"
+            echo ">>> $com"; eval $com
+            com="sudo mkdir -p /usr/local/bin"
+            echo ">>> $com"; eval $com
+            com="sudo ln -s /usr/bin/krssh /usr/local/bin/krssh"
+            echo ">>> $com"; eval $com
+        fi
+    }
+fi
 
 #
 # Defines transfer alias and provides easy command line file and folder sharing.
