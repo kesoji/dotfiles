@@ -114,7 +114,8 @@ Plug 'Valloric/YouCompleteMe'
 "Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
 "Plug 'rhysd/vim-operator-surround'
-Plug 'tpope/vim-surround'
+"Plug 'tpope/vim-surround'
+Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-operator-user'
 Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-operator-replace'
@@ -159,6 +160,7 @@ Plug 'morhetz/gruvbox'
 Plug 'cocopon/iceberg.vim'
 
 call plug#end()
+runtime macros/sandwich/keymap/surround.vim
 
 " 基本設定 {{{1
 if has('clientserver')
@@ -348,6 +350,8 @@ set pastetoggle=<F12>
 :cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>
 
 "User Defined Command {{{1
+"" ForceOverwrite - force write if readonly
+command! ForceOverwrite w !sudo tee >/dev/null %
 "" DiffOrig - how did I edit this file? {{{2
 command! DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis | wincmd p | diffthis
 "" Capture - view command result in QuickRun window {{{2
