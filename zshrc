@@ -63,7 +63,7 @@ else
         comexec "cd $dhworkdir/contrib/diff-highlight" || return
         comexec "make" || return
         comexec "sudo cp diff-highlight /usr/local/bin" || return
-        comexec "cd; rm -rf $dhworkdir"; || return
+        comexec "cd; rm -rf $dhworkdir" || return
     }
 fi
 
