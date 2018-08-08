@@ -39,7 +39,6 @@ function comexec() {
     echo ">>> $1"; eval $1
 }
 
-
 which tig 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "tig isn't installed: my-tiginstall"
@@ -60,16 +59,11 @@ else
     echo "diff-highlight isn't installed: my-diff-highlightinstall"
     function my-diff-highlightinstall() {
         dhworkdir="temp_git_diffhighlightinstall"
-        com="git clone --depth 1 https://github.com/git/git $dhworkdir"
-        echo ">>> $com"; eval $com
-        com="cd $dhworkdir/contrib/diff-highlight"
-        echo ">>> $com"; eval $com
-        com="make"
-        echo ">>> $com"; eval $com
-        com="sudo cp diff-highlight /usr/local/bin"
-        echo ">>> $com"; eval $com
-        com="cd; rm -rf $dhworkdir";
-        echo ">>> $com"; eval $com
+        comexec "git clone --depth 1 https://github.com/git/git $dhworkdir" || return
+        comexec "cd $dhworkdir/contrib/diff-highlight" || return
+        comexec "make" || return
+        comexec "sudo cp diff-highlight /usr/local/bin" || return
+        comexec "cd; rm -rf $dhworkdir"; || return
     }
 fi
 
@@ -78,14 +72,10 @@ if [[ $? -ne 0 ]] ; then
     echo "git-secretsisn't installed: my-git-secretsinstall"
     function my-git-secretsinstall() {
         dhworkdir="temp_git_gitsecretsinstall"
-        com="git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir"
-        echo ">>> $com"; eval $com
-        com="cd $dhworkdir"
-        echo ">>> $com"; eval $com
-        com="sudo make install"
-        echo ">>> $com"; eval $com
-        com="cd; rm -rf $dhworkdir";
-        echo ">>> $com"; eval $com
+        comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir" || return
+        comexec "cd $dhworkdir" || return
+        comexec "sudo make install" || return
+        comexec "cd; rm -rf $dhworkdir"; || return
     }
 fi
 
@@ -175,9 +165,9 @@ if [ -e "${HOME}/.pyenv" ]; then
 else
   echo "pyenv is not installed: my-pyenvinstall"
   function my-pyenvinstall (){
-      git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-      echo "When you cannot build python, check if there are dependencies like"
-          echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
+      comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv"
+      echo "When you cannot build python, check if there are dependencies."
+      echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
     libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
     xz-utils tk-dev"
       echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
@@ -269,12 +259,9 @@ which sshrc 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "sshrc isn't installed: my-sshrcinstall"
     function my-sshrcinstall (){
-        com="wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc"
-        echo ">>> $com"; eval $com
-        com="chmod +x sshrc"
-        echo ">>> $com"; eval $com
-        com="sudo mv sshrc /usr/local/bin/sshrc"
-        echo ">>> $com"; eval $com
+        comexec "wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc" || return
+        comexec "chmod +x sshrc" || return
+        comexec "sudo mv sshrc /usr/local/bin/sshrc" || return
     }
 fi
 
@@ -372,8 +359,7 @@ which stack 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "stack (Haskell) isn't installed: my-haskellstackinstall"
     function my-haskellstackinstall (){
-        com="curl -sSL https://get.haskellstack.org/ | sh"
-        echo ">>> $com"; eval $com
+        comexec "curl -sSL https://get.haskellstack.org/ | sh" || return
     }
 else
     eval "$(stack --bash-completion-script stack)"
@@ -385,7 +371,7 @@ fi
 # ssh_agent
 function my-sshkeyadd (){
     eval $(ssh-agent -t 6h)
-    ssh-add
+    ssh-add ~/.ssh/id_ed25519_work
 }
 function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
@@ -422,14 +408,9 @@ if command -v hub >/dev/null 2>&1; then
 else
     echo "hub is not installed: my-hubinstall"
     function my-hubinstall (){
-        com="go get github.com/github/hub"
-        echo ">>> $com"; eval $com || return
-        com="go get github.com/github/hub"
-        echo ">>> $com"; eval $com || return
-        com="mkdir -m 755 -p ~/.zsh/completions"
-        echo ">>> $com"; eval $com || return
-        com="cp ~/$DEFAULT_GOPATH/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub"
-        echo ">>> $com"; eval $com || return
+        comexec "go get github.com/github/hub" || return
+        comexec "mkdir -m 755 -p ~/.zsh/completions" || return
+        comexec "cp ~/$DEFAULT_GOPATH/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub" || return
     }
 fi
 
@@ -438,17 +419,12 @@ which kr 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "krypton is not installed: my-kryptoninstall"
     function my-kryptoninstall (){
-        com="curl https://krypt.co/kr | sh"
-        echo ">>> $com"; eval $com
+        comexec "curl https://krypt.co/kr | sh" || return
         if [ "$(uname)" != 'Darwin' ] ; then
-            com="sudo mkdir -p /usr/local/lib"
-            echo ">>> $com"; eval $com
-            com="sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so"
-            echo ">>> $com"; eval $com
-            com="sudo mkdir -p /usr/local/bin"
-            echo ">>> $com"; eval $com
-            com="sudo ln -s /usr/bin/krssh /usr/local/bin/krssh"
-            echo ">>> $com"; eval $com
+            comexec "sudo mkdir -p /usr/local/lib" || return
+            comexec "sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so" || return
+            comexec "sudo mkdir -p /usr/local/bin" || return
+            comexec "sudo ln -s /usr/bin/krssh /usr/local/bin/krssh" || return
         fi
     }
 fi
