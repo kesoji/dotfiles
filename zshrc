@@ -35,6 +35,25 @@ else
     }
 fi
 
+function comexec() {
+    echo ">>> $1"; eval $1
+}
+
+
+which tig 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "tig isn't installed: my-tiginstall"
+    function my-tiginstall() {
+        olddir=`pwd`
+        comexec "mkdir -p ~/my/{src,bin}" || return
+        comexec "pushd ~/my/src; git clone https://github.com/jonas/tig; cd tig" || return
+        comexec "make configure" || return
+        comexec "./configure --prefix=$HOME/my LDLIBS=-lncursesw CPPFLAGS=-DHAVE_NCURSESW_CURSES_H" || return
+        comexec "make; make install" || return
+        cd $olddir
+    }
+fi
+
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
@@ -101,8 +120,6 @@ else
 fi
 
 # Can source bash completion
-autoload -U +X bashcompinit && bashcompinit
-
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
@@ -405,6 +422,8 @@ if command -v hub >/dev/null 2>&1; then
 else
     echo "hub is not installed: my-hubinstall"
     function my-hubinstall (){
+        com="go get github.com/github/hub"
+        echo ">>> $com"; eval $com || return
         com="go get github.com/github/hub"
         echo ">>> $com"; eval $com || return
         com="mkdir -m 755 -p ~/.zsh/completions"
