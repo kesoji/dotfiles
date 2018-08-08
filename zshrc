@@ -75,7 +75,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir" || return
         comexec "cd $dhworkdir" || return
         comexec "sudo make install" || return
-        comexec "cd; rm -rf $dhworkdir"; || return
+        comexec "cd; rm -rf $dhworkdir" || return
     }
 fi
 
