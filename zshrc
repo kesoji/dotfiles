@@ -501,4 +501,5 @@ else
     }
 fi
 
-
+alias sls=serverless
+[ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ] && . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
