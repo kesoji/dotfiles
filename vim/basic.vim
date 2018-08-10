@@ -132,6 +132,7 @@ elseif !has('win32') && !has('win64')
 else
     Plug 'junegunn/fzf'
 endif
+Plug 'c9s/phpunit.vim'
 Plug 'junegunn/fzf.vim'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
@@ -421,7 +422,6 @@ noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
 
 "<<<Plugin>>> fzf {{{1
 nnoremap : :<C-u>Buffers<CR>
-nnoremap [fzf] <Nop>
 nmap <Space>f [fzf]
 nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
@@ -436,8 +436,6 @@ let g:jedi#popup_on_dot = 1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
 let g:quickrun_config = {
             \   "_" : {
-            \       "runner" : "vimproc",
-            \       "runner/vimproc/updatetime" : 100,
             \       "outputter/buffer/split" : ":rightbelow vertical",
             \       "outputter/buffer/close_on_empty" : 1,
             \       "outputter" : "error",
@@ -652,6 +650,9 @@ let g:ycm_key_list_previous_completion = ['<Up>']
 
 "<<<Plugin>>> Tagbar {{{1
 nnoremap <silent> <leader>t :TagbarToggle<CR>
+
+"<<<Plugin>>> phpunit {{{1
+let g:phpunit_bin = './vendor/bin/phpunit'
 
 " GREP {{{1
 augroup grepQuickfixOpen
