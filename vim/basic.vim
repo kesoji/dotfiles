@@ -109,11 +109,7 @@ Plug 'honza/vim-snippets'
 Plug 'PProvost/vim-ps1'
 Plug 'mhinz/vim-signify'
 Plug 'Valloric/YouCompleteMe'
-"Plug 'Shougo/neocomplete.vim'
-"Plug 'Shougo/neosnippet'
-"Plug 'Shougo/neosnippet-snippets'
 Plug 'Shougo/vinarise'
-"Plug 'rhysd/vim-operator-surround'
 "Plug 'tpope/vim-surround'
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-operator-user'
@@ -431,11 +427,6 @@ nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
 nnoremap [fzf]t :<C-u>Tags<CR>
 
-""<<<Plugin>>> vim-operator-surround {{{1
-"map <silent>sa <Plug>(operator-surround-append)
-"map <silent>sd <Plug>(operator-surround-delete)
-"map <silent>sr <Plug>(operator-surround-replace)
-
 "<<<Plugin>>> jedi-vim {{{1
 let g:jedi#auto_initialization = 1
 let g:jedi#rename_command = "<leader>R"
@@ -459,120 +450,10 @@ let g:quickrun_config = {
             \   },
             \}
 
-
 inoremap \\r <ESC>:QuickRun<CR>
 " <C-c> で実行を強制終了させる
 " quickrun.vim が実行していない場合には <C-c> を呼び出す
 nnoremap <expr><silent> <C-c> quickrun#is_running() ? quickrun#sweep_sessions() : "\<C-c>"
-
-"<<<Plugin>>> NeoComplete {{{1
-" Note: This option must set it in .vimrc(_vimrc).  NOT IN .gvimrc(_gvimrc)!
-" Disable AutoComplPop. (only if using AutoComplPop)
-"let g:acp_enableAtStartup = 0
-" Use neocomplete.
-let g:neocomplete#enable_at_startup = 1
-" Use smartcase.
-let g:neocomplete#enable_smart_case = 1
-" Set minimum syntax keyword length.
-let g:neocomplete#sources#syntax#min_keyword_length = 3
-" neocomplcacheを自動的にロックするバッファ名のパターンを指定します。 ku.vimやfuzzyfinderなど、neocomplcacheと相性が悪いプラグインを使用する場合に設定します。
-let g:neocomplete#lock_buffer_name_pattern = '\*ku\*'
-
-" Define dictionary.
-let g:neocomplete#sources#dictionary#dictionaries = {
-            \ 'default' : '',
-            \ 'vimshell' : $HOME.'/.vimshell_hist',
-            \ 'scheme' : $HOME.'/.gosh_completions'
-            \ }
-
-" Define keyword.
-if !exists('g:neocomplete#keyword_patterns')
-    let g:neocomplete#keyword_patterns = {}
-endif
-let g:neocomplete#keyword_patterns['default'] = '\h\w*'
-
-" Plugin key-mappings.
-inoremap <expr><C-g>     neocomplete#undo_completion()
-" Shell-like completion
-inoremap <expr><C-l>     neocomplete#complete_common_string()
-
-" Recommended key-mappings.
-" <CR>: close popup and save indent.
-inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
-function! s:my_cr_function()
-    return (pumvisible() ? "\<C-y>" : "" ) . "\<CR>"
-    " For no inserting <CR> key.
-    "return pumvisible() ? "\<C-y>" : "\<CR>"
-endfunction
-" <TAB>: completion.
-"inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
-"inoremap <expr><S-TAB>  pumvisible() ? "\<C-p>" : "\<S-TAB>"
-" <C-h>, <BS>: close popup and delete backword char.
-inoremap <expr><C-h> neocomplete#smart_close_popup()."\<C-h>"
-inoremap <expr><BS> neocomplete#smart_close_popup()."\<C-h>"
-
-" Close popup by <Space>.
-inoremap <expr><Space> pumvisible() ? "\<C-y>" : "\<Space>"
-
-" AutoComplPop like behavior.
-"let g:neocomplete#enable_auto_select = 1
-
-" Shell like behavior(not recommended).
-"set completeopt+=longest
-"let g:neocomplete#enable_auto_select = 1
-"let g:neocomplete#disable_auto_complete = 1
-"inoremap <expr><TAB>  pumvisible() ? "\<Down>" : "\<C-x>\<C-u>"
-
-" Enable omni completion.
-augroup neocomplete
-    autocmd!
-    autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
-    autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
-    autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
-    autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
-    autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
-augroup END
-
-" Enable heavy omni completion.
-if !exists('g:neocomplete#sources#omni#input_patterns')
-    let g:neocomplete#sources#omni#input_patterns = {}
-endif
-"let g:neocomplete#sources#omni#input_patterns.php = '[^. \t]->\h\w*\|\h\w*::'
-"let g:neocomplete#sources#omni#input_patterns.c = '[^.[:digit:] *\t]\%(\.\|->\)'
-"let g:neocomplete#sources#omni#input_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\|\h\w*::'
-
-" For perlomni.vim setting.
-" https://github.com/c9s/perlomni.vim
-let g:neocomplete#sources#omni#input_patterns.perl = '\h\w*->\h\w*\|\h\w*::'
-let g:neocomplete#sources#omni#input_patterns.go = '\h\w\.\w*'
-
-"<<<Plugin>>> NeoSnippets"{{{1
-"let g:neosnippet#snippets_directory='~/.vim/snippets'
-"
-"imap <C-k>     <Plug>(neosnippet_expand_or_jump)
-"smap <C-k>     <Plug>(neosnippet_expand_or_jump)
-"xmap <C-k>     <Plug>(neosnippet_expand_target)"
-"
-"" SuperTab like snippets behavior.
-"imap <expr><TAB> pumvisible() ? "\<C-n>"
-"            \ : neosnippet#expandable_or_jumpable() ?
-"            \ "\<Plug>(neosnippet_expand_or_jump)"
-"            \ : "\<TAB>"
-"
-"smap <expr><TAB> neosnippet#expandable_or_jumpable() ? "\<Plug>(neosnippet_expand_or_jump)"
-"            \ : "\<TAB>"
-"
-"" For snippet_complete marker.
-"if has('conceal')
-"    set conceallevel=2 concealcursor=i
-"endif
-
-let g:UltiSnipsExpandTrigger="<tab>"
-let g:UltiSnipsJumpForwardTrigger="<c-b>"
-let g:UltiSnipsJumpBackwardTrigger="<c-z>"
-
-" If you want :UltiSnipsEdit to split your window.
-let g:UltiSnipsEditSplit="vertical"
 
 " Markdown {{{1
 
