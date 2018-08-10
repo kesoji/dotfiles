@@ -240,54 +240,59 @@ endtry
 " Mapping {{{1
 let mapleader = "\<Space>"
 
-" <C-u>は、範囲指定(数字入力)を削除
+" 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
 nnoremap <Leader>w :<C-u>w<CR>
 nnoremap <Leader>W :<C-u>wq<CR>
 nnoremap <Leader>q :<C-u>q<CR>
 nnoremap <Leader><Leader>q :<C-u>qa<CR>
 nnoremap <Leader>Q :<C-u>q!<CR>
 
-nnoremap ; :
-vnoremap ; :
-
+" ベースの動きをスワップ
+noremap ; :
 noremap j gj
 noremap k gk
 noremap gj j
 noremap gk k
+nnoremap <C-]> g<C-]> " tagsジャンプの時に複数ある時は一覧表示
+
+" Moving
+noremap <Leader>h ^
+noremap <Leader>H 0
+noremap <Leader>l $
+
+" <ESC>
+inoremap <silent>jj <ESC>
+inoremap <silent>jk <ESC>
+
+" Location List
+" MEMO: Use [q, ]q for QuickFix! ([l, ]l can also be used for Location List.)
+nnoremap <C-n> :lne<CR>
+nnoremap <C-p> :lp<CR>
 
 " Tab mapping
 nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
-inoremap <silent>jj <ESC>
-inoremap <silent>jk <ESC>
-
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
-map y <Plug>(operator-flashy)
-"nnoremap Y y$
+map  y <Plug>(operator-flashy)
 nmap Y <Plug>(operator-flashy)$
+"nnoremap Y y$
 
-noremap n nzzzv
-noremap N Nzzzv
+" Search and Replace
+noremap  n nzzzv
+noremap  N Nzzzv
 nnoremap / /\v
 nnoremap ? ?\v
 cnoremap s// s//
 cnoremap g// g//
 cnoremap v// v//
 nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
-vnoremap gs :s/\v//g<Left><Left><Left>
-
+vnoremap gs :s/\v//g<Left><Left><Left><C-f>i
+vnoremap gsg y:%s/\v<C-r>"//gc<Left><Left><C-f>i
 nnoremap <Leader>vp :vim  ** \| cw<Left><Left><Left><Left><Left><Left><Left><Left>
-
-" tagsジャンプの時に複数ある時は一覧表示
-nnoremap <C-]> g<C-]>
-
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-noremap <Leader>h ^
-noremap <Leader>H 0
-noremap <Leader>l $
 
 " Window and Tab operation
 nnoremap s <Nop>
@@ -569,8 +574,6 @@ nnoremap <C-g> :Gtags
 nnoremap <C-h> :Gtags -f %<CR>
 nnoremap <C-j> :GtagsCursor<CR>
 nnoremap <C-k> :Gtags -r <C-r><C-w><CR><CR>
-nnoremap <C-n> :cn<CR>
-nnoremap <C-p> :cp<CR>
 
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
