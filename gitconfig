@@ -16,6 +16,7 @@
     ss = status -s
     sh = show
     ci = commit
+    cim = commit -m
     ciam = commit -a -m
     co = checkout
     pl = pull --prune

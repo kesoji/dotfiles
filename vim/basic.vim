@@ -240,36 +240,44 @@ endtry
 " Mapping {{{1
 let mapleader = "\<Space>"
 
-" 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
+""" Editing
+"xでレジスタに入れない
+nnoremap x "_x
+
+""" 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
 nnoremap <Leader>w :<C-u>w<CR>
 nnoremap <Leader>W :<C-u>wq<CR>
 nnoremap <Leader>q :<C-u>q<CR>
 nnoremap <Leader><Leader>q :<C-u>qa<CR>
 nnoremap <Leader>Q :<C-u>q!<CR>
 
-" ベースの動きをスワップ
+""" ベースの動きをスワップ
 noremap ; :
 noremap j gj
 noremap k gk
 noremap gj j
 noremap gk k
-nnoremap <C-]> g<C-]> " tagsジャンプの時に複数ある時は一覧表示
+"tagsジャンプの時に複数ある時は一覧表示
+nnoremap <C-]> g<C-]>
 
-" Moving
+""" Moving
 noremap <Leader>h ^
 noremap <Leader>H 0
 noremap <Leader>l $
 
-" <ESC>
+""" <ESC>
 inoremap <silent>jj <ESC>
 inoremap <silent>jk <ESC>
+inoremap <silent>jl <ESC><Right>
 
-" Location List
-" MEMO: Use [q, ]q for QuickFix! ([l, ]l can also be used for Location List.)
+""" Location List / QuickFix
+""" MEMO: Use [q, ]q for QuickFix! ([l, ]l can also be used for Location List.)
 nnoremap <C-n> :lne<CR>
 nnoremap <C-p> :lp<CR>
+nnoremap <Leader>a :cclose<CR>
+nnoremap <Leader><Leader>a :lclose<CR>
 
-" Tab mapping
+""" Tab mapping
 nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
@@ -280,7 +288,7 @@ map  y <Plug>(operator-flashy)
 nmap Y <Plug>(operator-flashy)$
 "nnoremap Y y$
 
-" Search and Replace
+""" Search and Replace
 noremap  n nzzzv
 noremap  N Nzzzv
 nnoremap / /\v
@@ -290,11 +298,13 @@ cnoremap g// g//
 cnoremap v// v//
 nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
 vnoremap gs :s/\v//g<Left><Left><Left><C-f>i
-vnoremap gsg y:%s/\v<C-r>"//gc<Left><Left><C-f>i
+vnoremap gsg y:%s/\v<C-r>"//gc<Left><Left><Left><C-f>i
 nnoremap <Leader>vp :vim  ** \| cw<Left><Left><Left><Left><Left><Left><Left><Left>
 nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
+nnoremap <silent> <Space><Space> "zyiw:let @/ = '\<' . @z . '\>'<CR>:set hlsearch<CR>
+vnoremap <silent> <Space><Space> "zy:let @/ = @z<CR>:set hlsearch<CR>
 
-" Window and Tab operation
+""" Window and Tab operation
 nnoremap s <Nop>
 nnoremap sj <C-w>j
 nnoremap sk <C-w>k
@@ -331,25 +341,33 @@ nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <Leader>sv :source $MYVIMRC<CR>
 nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <Leader>sgv :source $MYGVIMRC<CR>
-nnoremap <Leader>a :cclose<CR>
 
 noremap + <C-a>
 noremap - <C-x>
 
-" New in Vim8 http://itchyny.hatenablog.com/entry/2016/09/13/000000
-" Highlight during search without moving cursor
-cnoremap <C-n> <C-g>
-cnoremap <C-p> <C-t>
+""" Command Mode
+cnoremap <C-n> <Down>
+cnoremap <C-p> <Up>
+"cnoremap <C-b> <Left>
+"cnoremap <C-f> <Right>
+cnoremap <C-a> <Home>
+cnoremap <C-e> <End>
+"cnoremap <C-d> <Del>
 
-" Text usabiity improvement
+""" Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
 set pastetoggle=<F12>
 
-"Command Mode Editing{{{1
+""" Command Mode Editing{{{1
 :cabbrev ga2 g/^/ if (line(".") % 2 == 1) <BAR>
 :cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
 :cabbrev ga4 g/^/ if (line(".") % 4 == 1) <BAR>
 :cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>
+
+""" Hack
+"ビジュアルモードで連続ペースト
+vnoremap <expr> p 'pgv"'.v:register.'y`>'
+vnoremap <expr> P 'Pgv"'.v:register.'y`>'
 
 "User Defined Command {{{1
 "" ForceOverwrite - force write if readonly
