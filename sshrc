@@ -1,3 +1,7 @@
+if [ $(hostname | grep kesoji) ] ; then
+    echo "sshrc is ignored."
+    exec zsh
+else
 # shell
 set -o vi
 
@@ -94,3 +98,5 @@ transfer() {
 
 # Congratulations
 echo "Yeah! sshrc is working!"
+
+fi
