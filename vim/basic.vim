@@ -66,26 +66,22 @@ endif
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
 Plug 'tpope/vim-unimpaired'
+Plug 'tpope/vim-fugitive'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
-Plug 'thinca/vim-quickrun'
 Plug 'majutsushi/tagbar'
 Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
 Plug 'godlygeek/tabular'
 Plug 'itchyny/lightline.vim'
-Plug 'vim-scripts/open-browser.vim'
 Plug 'iamcco/markdown-preview.vim'
 Plug 'Townk/vim-autoclose'
-Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
-Plug 'thinca/vim-singleton'
 Plug 'tyru/restart.vim'
 Plug 'vim-scripts/cisco.vim'
 Plug 'posva/vim-vue'
-Plug 'tbastos/vim-lua'
 Plug 'bbchung/gtags.vim'
 Plug 'scrooloose/syntastic'
 Plug 'Yggdroot/indentLine'
@@ -94,29 +90,29 @@ Plug 'basyura/twibill.vim'
 Plug 'terryma/vim-expand-region'
 Plug 'Konfekt/FastFold'
 Plug 'nathanaelkane/vim-indent-guides'
+Plug 'thinca/vim-quickrun'
+Plug 'thinca/vim-singleton'
 Plug 'thinca/vim-visualstar'
-Plug 'rking/ag.vim'
-Plug 'tpope/vim-fugitive'
-Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'thinca/vim-fontzoom'
+Plug 'thinca/vim-qfreplace'
+Plug 'rking/ag.vim'
+Plug 'vim-scripts/open-browser.vim'
+Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'vim-scripts/DirDiff.vim'
-Plug 'haya14busa/vim-edgemotion'
-Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
-Plug 'Rykka/riv.vim', { 'for': ['rst'] }
 Plug 'glidenote/memolist.vim'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
-Plug 'PProvost/vim-ps1'
 Plug 'mhinz/vim-signify'
-Plug 'Valloric/YouCompleteMe'
+"Plug 'Valloric/YouCompleteMe'
 Plug 'Shougo/vinarise'
-"Plug 'tpope/vim-surround'
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-operator-user'
 Plug 'kana/vim-textobj-user'
 Plug 'kana/vim-operator-replace'
 Plug 'kana/vim-textobj-indent'
+Plug 'haya14busa/vim-edgemotion'
 Plug 'haya14busa/vim-operator-flashy'
+Plug 'AndrewRadev/splitjoin.vim'
 Plug 'bps/vim-textobj-python'
 Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
@@ -124,17 +120,24 @@ Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
 Plug 'leafgarland/typescript-vim'
 if has('mac')
-    " fzf shoud be installed by Homebrew
+    " Mac: fzf shoud be installed by Homebrew
     Plug '/usr/local/opt/fzf'
+    Plug 'junegunn/fzf'
     Plug 'junegunn/fzf.vim'
 elseif !has('win32') && !has('win64')
+    " Linux
     Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+    Plug 'junegunn/fzf.vim'
 else
-    Plug 'junegunn/fzf'
+    " Windows
 endif
-Plug 'c9s/phpunit.vim'
-Plug 'junegunn/fzf.vim'
-Plug 'AndrewRadev/splitjoin.vim'
+Plug 'PProvost/vim-ps1', { 'for': ['ps1'] }
+Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
+Plug 'Rykka/riv.vim', { 'for': ['rst'] }
+Plug 'c9s/phpunit.vim', {'for': ['php']}
+Plug 'tbastos/vim-lua', { 'for': ['lua'] }
+Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
+Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
 Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
 Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
@@ -144,7 +147,6 @@ Plug 'c9s/perlomni.vim', { 'for': ['perl'] }
 Plug 'cespare/vim-toml', { 'for': ['toml'] }
 "Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
 "Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
-Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
 " Clolor Scheme
@@ -588,10 +590,10 @@ vmap v <Plug>(expand_region_expand)
 vmap <C-v> <Plug>(expand_region_shrink)
 
 "<<<Plugin>>> Gtags {{{1
-nnoremap <C-g> :Gtags 
+nnoremap <C-g> :Gtags -g 
 nnoremap <C-h> :Gtags -f %<CR>
 nnoremap <C-j> :GtagsCursor<CR>
-nnoremap <C-k> :Gtags -r <C-r><C-w><CR><CR>
+nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
@@ -664,6 +666,11 @@ endif
 nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
+
+"<<<Plugin>>> UltiSnips {{{1
+let g:UltiSnipsExpandTrigger       = "<tab>"
+let g:UltiSnipsJumpForwardTrigger  = "<tab>"
+let g:UltiSnipsJumpBackwardTrigger = "<c-z>"
 
 "<<<Plugin>>> YouCompleteMe {{{1
 let g:ycm_key_list_select_completion = ['<Down>']
