@@ -216,9 +216,6 @@ setopt correct
 setopt no_beep
 setopt hist_no_store
 
-# Completion
-compdef sshrc=ssh
-
 # Alias
 alias history='history -i'
 alias ls='ls -F --color'
@@ -228,6 +225,7 @@ alias vi='vim'
 alias c='clear'
 alias tmux='tmux -2'
 alias tma='tmux -2 a'
+alias ssh='sshrc'
 alias ssc='sshrc'
 alias ap='ansible-playbook'
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -361,6 +359,9 @@ function cssh() {ssh $*;tmux select-pane -P 'fg=default,bg=default'}
 alias ssh='cssh '
 function csshrc() {sshrc $*;tmux select-pane -P 'fg=default,bg=default'}
 alias sshrc='csshrc '
+# Completion
+compdef sshrc=ssh
+compdef csshrc=ssh
 
 function my-showcolortable (){
     for i in {0..255}; do printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n"; done | xargs
