@@ -66,11 +66,6 @@ if has("vim_starting") && !has('gui_running') && has('vertsplit')
 endif
 
 " 基本設定 {{{1
-if has('clientserver')
-    call singleton#enable()
-    let g:singleton#opener = "edit"
-endif
-
 set hidden
 
 set modeline
