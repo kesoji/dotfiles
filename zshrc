@@ -150,7 +150,7 @@ fi
 
 which git-secrets 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "git-secretsisn't installed: my-git-secretsinstall"
+    echo "git-secrets isn't installed: my-git-secretsinstall"
     function my-git-secretsinstall() {
         dhworkdir="temp_git_gitsecretsinstall"
         comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir" || return
@@ -158,6 +158,15 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo make install" || return
         comexec "cd; rm -rf $dhworkdir" || return
     }
+fi
+
+# NVM
+if [[ ! -d $HOME/.nvm ]] ; then
+    echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
+else
+    export NVM_DIR="$HOME/.nvm"
+    \. "$NVM_DIR/nvm.sh"
+    \. "$NVM_DIR/bash_completion"
 fi
 
 # Plenv
@@ -305,10 +314,6 @@ fi
 
 # disable STOP (Ctrl+S)
 [ -t 0 ] && stty stop undef
-
-# NVM
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # pet
 if `which pet 2>/dev/null 1>&2` ; then
