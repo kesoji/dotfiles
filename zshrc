@@ -164,9 +164,11 @@ fi
 if [[ ! -d $HOME/.nvm ]] ; then
     echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
 else
-    export NVM_DIR="$HOME/.nvm"
-    \. "$NVM_DIR/nvm.sh"
-    \. "$NVM_DIR/bash_completion"
+    function my-initnvm() {
+        export NVM_DIR="$HOME/.nvm"
+        \. "$NVM_DIR/nvm.sh"
+        \. "$NVM_DIR/bash_completion"
+    }
 fi
 
 # Plenv
@@ -185,7 +187,7 @@ if [ -e "${HOME}/.pyenv" ]; then
   fi
 else
   echo "pyenv is not installed: my-pyenvinstall"
-  function my-pyenvinstall (){
+  function my-pyenvinstall() {
       comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv"
       echo "When you cannot build python, check if there are dependencies."
       echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
