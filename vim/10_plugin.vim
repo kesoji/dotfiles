@@ -5,6 +5,7 @@ let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
+Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
