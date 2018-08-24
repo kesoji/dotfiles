@@ -3,6 +3,7 @@ GRTAGS
 GPATH
 .python-version
 git-worktrees/*
+.envrc
 
 ### https://raw.github.com/github/gitignore/a018c720b7c69c8280038c016ba88b5060969bfe/Global/Windows.gitignore
 

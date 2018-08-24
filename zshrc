@@ -160,6 +160,22 @@ if [[ $? -ne 0 ]] ; then
     }
 fi
 
+# direnv
+which direnv 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "direnv isn't installed: my-direnvinstall"
+    function my-direnvinstall {
+        comexec "git clone git@github.com:direnv/direnv.git"
+        comexec "cd direnv"
+        comexec "make"
+        comexec "make install DESTDIR=$HOME/my"
+        comexec "cd .."
+        comexec "rm -rf direnv"
+    }
+else
+    eval "$(direnv hook zsh)"
+fi
+
 # NVM
 if [[ ! -d $HOME/.nvm ]] ; then
     echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
