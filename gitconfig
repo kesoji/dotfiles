@@ -19,8 +19,11 @@
     cim = commit -m
     ciam = commit -a -m
     co = checkout
-    pl = pull --prune
+    pl = pull --prune --rebase
+    plo = pull --prune --rabase origin master
     ps = push
+    po = push origin master
+    pf = push --force-with-lease
     br = branch
     gr = log --graph --date=short --decorate=short --pretty=format:'%Cgreen%h %Creset%cd %Cblue%cn %Cred%d %Creset%s'
     gra = log --graph --branches --pretty=format:'%C(yellow)%h%C(cyan)%d%Creset %s %C(green)- %an, %cr%Creset'
@@ -33,6 +36,7 @@
     drag = pull --rebase
     f = "!git ls-files | grep -i"
     d  = diff
+    dm = diff --patience master
     dc = diff --cached
     d1 = diff HEAD~
     d2 = diff HEAD~2
@@ -54,10 +58,10 @@
 [include]
     path = ~/.gitconfig.local
 [pager]
-	log  = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
-	show = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
-	diff = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
+    log  = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
+    show = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
+    diff = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
 [interactive]
-	diffFilter = (diff-highlight 2>/dev/null || cat)
+    diffFilter = (diff-highlight 2>/dev/null || cat)
 [diff]
-	compactionHeuristic = true
+    compactionHeuristic = true
