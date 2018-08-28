@@ -285,6 +285,9 @@ augroup VimGoMySettings
     autocmd FileType go nmap <leader>u <Plug>(go-run)
     autocmd FileType go nmap <leader>t <Plug>(go-test)
     autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
+    autocmd FileType go nmap <leader>m <Plug>(go-metalinter)
+    autocmd FileType go nnoremap <C-h> :<C-u>GoDeclsDir<cr>
+    autocmd FileType go inoremap <C-h> <esc>:<C-u>GoDeclsDir<cr>
     autocmd FileType go nnoremap <leader>b :<C-u>call <SID>build_go_files()<CR>
     autocmd Filetype go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
     autocmd Filetype go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
