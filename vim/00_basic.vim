@@ -226,6 +226,9 @@ nnoremap <Leader>sgv :source $MYGVIMRC<CR>
 noremap + <C-a>
 noremap - <C-x>
 
+""" Utility
+nnoremap c. q:<UP><CR>
+
 """ Command Mode
 cnoremap <C-n> <Down>
 cnoremap <C-p> <Up>
