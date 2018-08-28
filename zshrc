@@ -189,9 +189,27 @@ fi
 
 # Plenv
 if [ -e "${HOME}/.plenv" ]; then
-  export PATH="$HOME/.plenv/bin:$PATH"
-  #export PATH="$HOME/.plenv/bin:$HOME/.plenv/shims:$PATH"
-  eval "$(plenv init -)"
+    export PATH="$HOME/.plenv/bin:$PATH"
+    #export PATH="$HOME/.plenv/shims:$PATH"
+    eval "$(plenv init -)"
+fi
+
+# rbenv
+if [ -e "${HOME}/.rbenv" ]; then
+    export PATH="$HOME/.rbenv/bin:$PATH"
+    #export PATH="$HOME/.rbenv/shims:$PATH"
+    eval "$(rbenv init -)"
+else
+    echo "rbenv is not installed: my-rbenvinstall"
+    function my-rbenvinstall() {
+        comexec "git clone https://github.com/rbenv/rbenv.git ~/.rbenv"
+        comexec "cd ~/.rbenv && src/configure && make -C src"
+        comexec "~/.rbenv/bin/rbenv init"
+        comexec "curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash"
+        comexec "mkdir -p ""$(~/.rbenv/bin/rbenv root)""/plugins"
+        comexec "git clone https://github.com/rbenv/ruby-build.git ""$(~/.rbenv/bin/rbenv root)""/plugins/ruby-build"
+        source ~/.zshrc
+    }
 fi
 
 # Pyenv
