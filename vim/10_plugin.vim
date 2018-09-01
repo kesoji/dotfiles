@@ -30,7 +30,6 @@ Plug 'terryma/vim-expand-region'
 Plug 'Konfekt/FastFold'
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'thinca/vim-quickrun'
-Plug 'thinca/vim-singleton'
 Plug 'thinca/vim-visualstar'
 Plug 'thinca/vim-fontzoom'
 Plug 'thinca/vim-qfreplace'
@@ -98,11 +97,6 @@ Plug 'morhetz/gruvbox'
 Plug 'cocopon/iceberg.vim'
 
 call plug#end()
-
-if has('clientserver')
-    call singleton#enable()
-    let g:singleton#opener = "edit"
-endif
 
 "<<<Plugin>>> vim-sandwitch {{{1
 runtime macros/sandwich/keymap/surround.vim
