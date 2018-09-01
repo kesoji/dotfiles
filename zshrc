@@ -42,16 +42,17 @@ fi
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 
-    if [[ ! -d "${ZPREZTODIR}/contrib" ]]; then
+    if [[ ! -d "${ZDOTDIR:-$HOME}/.zprezto/contrib" ]]; then
         echo "prezto contrib is not installed: my-preztocontribinstall"
     fi
 
     function my-preztocontribinstall (){
-        comexec "cd $ZPREZTODIR"
+        comexec "pushd ${ZDOTDIR:-$HOME}/.zprezto/"
         comexec "git clone https://github.com/belak/prezto-contrib contrib"
         comexec "cd contrib"
         comexec "git submodule init"
         comexec "git submodule update"
+        comexec "popd"
     }
 else
     # PROMPT
