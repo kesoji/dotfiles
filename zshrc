@@ -42,18 +42,21 @@ fi
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 
-    if [[ ! -d "${ZDOTDIR:-$HOME}/.zprezto/contrib" ]]; then
-        echo "prezto contrib is not installed: my-preztocontribinstall"
+    if [[ -z "${ZPREZTODIR}" ]]; then
+        echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR is not found."
+    else
+        if [[ ! -d "${ZPREZTODIR}/contrib" ]]; then
+            echo "prezto contrib is not installed: my-preztocontribinstall"
+            function my-preztocontribinstall (){
+                comexec "pushd $ZPREZTODIR"
+                comexec "git clone https://github.com/belak/prezto-contrib contrib"
+                comexec "pushd contrib"
+                comexec "git submodule init"
+                comexec "git submodule update"
+                comexec "popd; popd"
+            }
+        fi
     fi
-
-    function my-preztocontribinstall (){
-        comexec "pushd ${ZDOTDIR:-$HOME}/.zprezto/"
-        comexec "git clone https://github.com/belak/prezto-contrib contrib"
-        comexec "pushd contrib"
-        comexec "git submodule init"
-        comexec "git submodule update"
-        comexec "popd; popd"
-    }
 else
     # PROMPT
     autoload -U promptinit
@@ -83,6 +86,8 @@ fi
 
 
 # Can source bash completion
+autoload bashcompinit
+bashcompinit
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
@@ -557,4 +562,4 @@ else
 fi
 
 alias sls=serverless
-[ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ] && . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
+[ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ] && . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash || true
