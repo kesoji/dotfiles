@@ -49,10 +49,10 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     function my-preztocontribinstall (){
         comexec "pushd ${ZDOTDIR:-$HOME}/.zprezto/"
         comexec "git clone https://github.com/belak/prezto-contrib contrib"
-        comexec "cd contrib"
+        comexec "pushd contrib"
         comexec "git submodule init"
         comexec "git submodule update"
-        comexec "popd"
+        comexec "popd; popd"
     }
 else
     # PROMPT
