@@ -398,6 +398,15 @@ if [[ $arch =~ "Microsoft" ]]; then
     if [[ -z "$TMUX" ]]; then tmux; fi
 
     export DOCKER_HOST='tcp://0.0.0.0:2375'
+
+    # open google-chrome
+    if [[ ! -x ~/my/bin/google-chrome ]]; then
+        cat << 'SCRIPT' > ~/my/bin/google-chrome
+#!/bin/sh
+exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
+SCRIPT
+        chmod +x ~/my/bin/google-chrome
+    fi
 fi
 
 
@@ -481,6 +490,8 @@ if [[ $? -ne 0 ]] ; then
     function my-ghqinstall (){
         comexec "go get github.com/motemen/ghq" || return
     }
+else
+    alias repo='cd $(ghq root)/$(ghq list | fzf)'
 fi
 
 # Krypton
