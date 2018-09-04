@@ -360,4 +360,6 @@ nnoremap <silent> <leader>t :TagbarToggle<CR>
 "<<<Plugin>>> phpunit {{{1
 let g:phpunit_bin = './vendor/bin/phpunit'
 
-
+"<<<Plugin>>> ale {{{1
+let g:ale_completion_enabled = 1
+let g:ale_sign_column_always = 1
