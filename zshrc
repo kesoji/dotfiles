@@ -419,8 +419,11 @@ alias sshrc='csshrc '
 compdef sshrc=ssh
 compdef csshrc=ssh
 
-function my-showcolortable (){
+function my-colortable (){
     for i in {0..255}; do printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n"; done | xargs
+}
+function my-colortable2() {
+    for fore in `seq 30 37`; do printf "\e[${fore}m \\\e[${fore}m \e[m\n"; for mode in 1 4 5; do printf "\e[${fore};${mode}m \\\e[${fore};${mode}m \e[m"; for back in `seq 40 47`; do printf "\e[${fore};${back};${mode}m \\\e[${fore};${back};${mode}m \e[m"; done; echo; done; echo; done; printf " \\\e[m\n"
 }
 
 # Haskell
@@ -508,6 +511,23 @@ if [[ $? -ne 0 ]] ; then
         fi
     }
 fi
+
+# php
+function my-php() {
+    local -a ary=("phpstan" "phpcbf")
+    for v in $ary; do
+        commandinstalled $v
+    done
+}
+
+function commandinstalled() {
+    which $1 2>/dev/null 1>&2
+    if [[ $? -eq 0 ]]; then
+        echo -e "$1: \e[37;42;1minstalled\e[m"
+    else
+        echo -e "$1: \e[30;41;1mnot installed\e[m"
+    fi
+}
 
 #
 # Defines transfer alias and provides easy command line file and folder sharing.
