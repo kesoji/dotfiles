@@ -11,7 +11,7 @@ Plug 'Shougo/neomru.vim'
 Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'majutsushi/tagbar'
-Plug 'gregsexton/MatchTag'
+"Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
 Plug 'godlygeek/tabular'
@@ -29,6 +29,7 @@ Plug 'basyura/twibill.vim'
 Plug 'terryma/vim-expand-region'
 Plug 'Konfekt/FastFold'
 Plug 'nathanaelkane/vim-indent-guides'
+Plug 'janko-m/vim-test'
 Plug 'thinca/vim-quickrun'
 Plug 'thinca/vim-visualstar'
 Plug 'thinca/vim-fontzoom'
@@ -83,7 +84,7 @@ Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
 Plug 'petdance/vim-perl', { 'for': ['perl'] }
 Plug 'c9s/perlomni.vim', { 'for': ['perl'] }
 Plug 'cespare/vim-toml', { 'for': ['toml'] }
-"Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
+Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
 "Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }

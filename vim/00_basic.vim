@@ -116,6 +116,9 @@ set list
 set listchars=tab:>-,trail:-
 noremap <silent> <F3> :set list! number!<CR>
 
+set completeopt=menu,preview,menuone,noselect
+set infercase
+
 "autocmd InsertEnter * set list
 "autocmd InsertLeave * set nolist
 
@@ -168,6 +171,10 @@ inoremap <S-Tab> <C-d>
 
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
+
+""" Completion
+inoremap <expr> <C-j> pumvisible() ? "\<Down>" : "\<C-x>\<C-o>"
+inoremap <expr> <Tab> pumvisible() ? "\<CR>" : "\<Tab>"
 
 """ Search and Replace
 noremap  n nzzzv

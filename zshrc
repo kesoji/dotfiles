@@ -286,8 +286,9 @@ if [ "$(uname)" = 'Darwin' ] ; then
 fi
 
 ## Docker
-alias dockerrmca='docker ps -aq | xargs docker rm'
-alias dockerrmia='docker images -aq | xargs docker rmi'
+alias drmca='docker ps -aq | xargs docker rm'
+alias drmia='docker images -aq | xargs docker rmi'
+alias dco='docker-compose'
 
 ## Git
 alias gst='git status'
