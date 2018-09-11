@@ -490,7 +490,7 @@ fi
 # ghq
 which ghq 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "ghq is not installed: my-kryptoninstall"
+    echo "ghq is not installed: my-ghqinstall"
     function my-ghqinstall (){
         comexec "go get github.com/motemen/ghq" || return
     }
