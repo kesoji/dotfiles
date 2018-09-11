@@ -279,6 +279,7 @@ augroup VimGoMySettings
     autocmd!
     autocmd FileType go nmap <leader>u <Plug>(go-run)
     autocmd FileType go nmap <leader>t <Plug>(go-test)
+    autocmd FileType go nmap <leader>f <Plug>(go-test-func)
     autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
     autocmd FileType go nmap <leader>m <Plug>(go-metalinter)
     autocmd FileType go nnoremap <C-h> :<C-u>GoDeclsDir<cr>
@@ -297,6 +298,7 @@ function! s:build_go_files()
     endif
 endfunction
 let g:go_fmt_command = "goimports"
+let g:go_fmt_autosave = 1
 let g:go_metalinter_autosave = 1
 let g:go_auto_type_info = 1
 let g:go_auto_sameids = 1
