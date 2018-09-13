@@ -99,6 +99,11 @@ Plug 'cocopon/iceberg.vim'
 
 call plug#end()
 
+"if has('clientserver')
+"    call singleton#enable()
+"    let g:singleton#opener = "edit"
+"endif
+
 "<<<Plugin>>> vim-sandwitch {{{1
 runtime macros/sandwich/keymap/surround.vim
 
