@@ -42,7 +42,7 @@ Plug 'glidenote/memolist.vim'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 Plug 'mhinz/vim-signify'
-"Plug 'Valloric/YouCompleteMe'
+Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-operator-user'
