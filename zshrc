@@ -43,10 +43,10 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 
     if [[ -z "${ZPREZTODIR}" ]]; then
-        echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR is not found."
+        echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR isn't found."
     else
         if [[ ! -d "${ZPREZTODIR}/contrib" ]]; then
-            echo "prezto contrib is not installed: my-preztocontribinstall"
+            echo "prezto contrib isn't installed: my-preztocontribinstall"
             function my-preztocontribinstall (){
                 comexec "pushd $ZPREZTODIR"
                 comexec "git clone https://github.com/belak/prezto-contrib contrib"
@@ -97,7 +97,7 @@ if [[ "$(uname -a)" =~ "Microsoft" ]]; then
 fi
 if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
 elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
-else                   ; echo "go is not installed"
+else                   ; echo "go isn't installed"
 fi
 export PATH=$HOME/$DEFAULT_GOPATH/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
@@ -206,7 +206,7 @@ if [ -e "${HOME}/.rbenv" ]; then
     #export PATH="$HOME/.rbenv/shims:$PATH"
     eval "$(rbenv init -)"
 else
-    echo "rbenv is not installed: my-rbenvinstall"
+    echo "rbenv isn't installed: my-rbenvinstall"
     function my-rbenvinstall() {
         comexec "git clone https://github.com/rbenv/rbenv.git ~/.rbenv"
         comexec "cd ~/.rbenv && src/configure && make -C src"
@@ -226,7 +226,7 @@ if [ -e "${HOME}/.pyenv" ]; then
       eval "$(pyenv init -)"
   fi
 else
-  echo "pyenv is not installed: my-pyenvinstall"
+  echo "pyenv isn't installed: my-pyenvinstall"
   function my-pyenvinstall() {
       comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv"
       echo "When you cannot build python, check if there are dependencies."
@@ -332,14 +332,11 @@ fi
 
 which fzf 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    cat << EOS
------------------------------------------------------------------------------
-    Hey! you don't have fzf. You should download it from
-      https://github.com/junegunn/fzf
-    \$ git clone https://github.com/junegunn/fzf.git ~/.fzf
-    \$ ~/.fzf/install
------------------------------------------------------------------------------
-EOS
+    echo "fzf isn't installed: my-fzfinstall"
+    function my-fzfinstall() {
+        comexec "git clone https://github.com/junegunn/fzf.git ~/.fzf" || return
+        comexec "~/.fzf/install" || return
+    }
 else
     which rg 2>/dev/null 1>&2
     if [[ $? -eq 0 ]] ; then
@@ -453,7 +450,7 @@ function my-sshkeyadd_agentoff (){
 # gibo
 which gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "gibo is not installed: my-giboinstall"
+    echo "gibo isn't installed: my-giboinstall"
     function my-giboinstall (){
         mkdir -p ~/my/bin;
         curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
@@ -479,7 +476,7 @@ if command -v hub >/dev/null 2>&1; then
     # disable because sometimes git breaks...
     #function git(){hub "$@"}
 else
-    echo "hub is not installed: my-hubinstall"
+    echo "hub isn't installed: my-hubinstall"
     function my-hubinstall (){
         comexec "go get github.com/github/hub" || return
         comexec "mkdir -m 755 -p ~/.zsh/completions" || return
@@ -490,7 +487,7 @@ fi
 # ghq
 which ghq 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "ghq is not installed: my-ghqinstall"
+    echo "ghq isn't installed: my-ghqinstall"
     function my-ghqinstall (){
         comexec "go get github.com/motemen/ghq" || return
     }
@@ -501,7 +498,7 @@ fi
 # Krypton
 which kr 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "krypton is not installed: my-kryptoninstall"
+    echo "krypton isn't installed: my-kryptoninstall"
     function my-kryptoninstall (){
         comexec "curl https://krypt.co/kr | sh" || return
         if [ "$(uname)" != 'Darwin' ] ; then
