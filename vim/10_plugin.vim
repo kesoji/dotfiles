@@ -59,17 +59,16 @@ Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
 Plug 'leafgarland/typescript-vim'
 if has('mac')
-    " Mac: fzf shoud be installed by Homebrew
+    " Mac: fzf should be installed by Homebrew
     Plug '/usr/local/opt/fzf'
-    Plug 'junegunn/fzf'
-    Plug 'junegunn/fzf.vim'
 elseif !has('win32') && !has('win64')
     " Linux
     Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-    Plug 'junegunn/fzf.vim'
 else
-    " Windows
+    " Windows: fzf should be placed in PATH
+    Plug 'junegunn/fzf'
 endif
+Plug 'junegunn/fzf.vim'
 Plug 'PProvost/vim-ps1', { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
