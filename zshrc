@@ -92,12 +92,20 @@ export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
 if [[ "$(uname -a)" =~ "Microsoft" ]]; then
-    export GOROOT=$HOME/go1.10.3
-    export PATH=$GOROOT/bin:$PATH
+    if [[ "$(which go)" =~ "/usr" ]]; then
+        # nothing
+    else
+        export GOROOT=$HOME/go1.10.3
+        export PATH=$GOROOT/bin:$PATH
+    fi
 fi
-if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
-elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
-else                   ; echo "go isn't installed"
+if which go >/dev/null ; then
+    if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
+    elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
+    else :
+    fi
+else
+    echo "go isn't installed"
 fi
 export PATH=$HOME/$DEFAULT_GOPATH/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
