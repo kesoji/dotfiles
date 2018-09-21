@@ -531,8 +531,8 @@ if [[ $? -ne 0 ]] ; then
     echo "krypton isn't installed: my-kryptoninstall"
     function my-kryptoninstall (){
         if [[ "$(uname -a)" =~ "Microsoft" ]]; then
-            comexec("go get github.com/kryptco/kr") || return
-            comexec("cd ~/go/src/github.com/kryptco/kr && make install && kr restart") || return
+            comexec "go get github.com/kryptco/kr" || return
+            comexec "cd ~/go/src/github.com/kryptco/kr && make install && kr restart" || return
         else
             comexec "curl https://krypt.co/kr | sh" || return
         fi
