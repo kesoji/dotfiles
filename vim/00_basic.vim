@@ -146,7 +146,7 @@ noremap k gk
 noremap gj j
 noremap gk k
 "tagsジャンプの時に複数ある時は一覧表示
-nnoremap <C-]> g<C-]>
+"nnoremap <C-]> g<C-]>
 
 """ Moving
 noremap <Leader>h ^
@@ -344,4 +344,3 @@ if executable('rg')
 endif
 nnoremap <expr> * ':vimgrep ' . expand('<cword>') . ' %<CR>'
 " https://qiita.com/yuku_t/items/0c1aff03949cb1b8fe6b
-

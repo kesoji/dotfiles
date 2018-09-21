@@ -462,9 +462,8 @@ else
 fi
 
 # Haskell
-which rustup 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "Rustup(Rust) isn't installed: my-rustinstall"
+if [[ ! -e $HOME/.cargo ]] ; then
+    echo "Cargo(Rust) isn't installed: my-rustinstall"
     function my-rustinstall (){
         comexec "curl https://sh.rustup.rs -sSf | sh" || return
     }

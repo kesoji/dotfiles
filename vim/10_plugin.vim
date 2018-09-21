@@ -72,7 +72,8 @@ Plug 'junegunn/fzf.vim'
 Plug 'PProvost/vim-ps1', { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
 Plug 'Rykka/riv.vim', { 'for': ['rst'] }
-Plug 'c9s/phpunit.vim', {'for': ['php']}
+Plug 'c9s/phpunit.vim', { 'for': ['php'] }
+Plug 'lvht/phpcd.vim', { 'for': 'php', 'do': 'composer install' }
 Plug 'tbastos/vim-lua', { 'for': ['lua'] }
 Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
 Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
@@ -375,9 +376,13 @@ let g:ale_linters = {
             \}
 let g:ale_fixers = {
             \ '*': ['remove_trailing_lines', 'trim_whitespace'],
+            \ 'php': ['phpcbf'],
             \}
 let g:ale_open_list = 1
 let g:ale_fix_on_save = 1
 let g:ale_completion_enabled = 1
 let g:ale_sign_column_always = 1
-let g:ale_php_phpcs_standard = 'PSR1,PSR2'
+let g:ale_php_phpcs_standard = 'PSR2'
+let g:ale_php_phpcbf_standard = 'PSR2'
+
+nmap <leader>n <Plug>(ale_toggle)
