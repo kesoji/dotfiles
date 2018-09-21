@@ -292,6 +292,25 @@ if [ "$(uname)" = 'Darwin' ] ; then
 fi
 
 ## Docker
+which docker 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "docker isn't installed: my-dockerinstall (CURRENTLY ONLY IN UBUNTU)"
+    function my-dockerinstall() {
+        comexec "sudo apt-get update"
+        comexec "sudo apt-get install apt-transport-https ca-certificates curl software-properties-common"
+        comexec "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
+        comexec "sudo apt-key fingerprint 0EBFCD88"
+        comexec "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\""
+        comexec "sudo apt-get update"
+        comexec "sudo apt-get install docker-ce"
+        DOCKER_COMPOSE_VERSION=1.22.0
+        comexec "curl -L \"https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)\" -o $HOME/my/bin/docker-compose"
+        comexec "chmod +x $HOME/my/bin/docker-compose"
+        comexec "mkdir -p ~/.zsh/completions"
+        comexec "curl -L https://raw.githubusercontent.com/docker/compose/$DOCKER_COMPOSE_VERSION/contrib/completion/zsh/_docker-compose > ~/.zsh/completions/_docker-compose"
+
+    }
+fi
 alias drmca='docker ps -aq | xargs docker rm'
 alias drmia='docker images -aq | xargs docker rmi'
 alias dco='docker-compose'
@@ -414,7 +433,7 @@ fi
 # if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    # avoid tmux nesting
+    # run tmux avoiding nest
     if [[ -z "$TMUX" ]]; then tmux; fi
 
     export DOCKER_HOST='tcp://0.0.0.0:2375'
@@ -425,7 +444,7 @@ if [[ $arch =~ "Microsoft" ]]; then
 #!/bin/sh
 exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
 SCRIPT
-chmod +x ~/my/bin/google-chrome
+    chmod +x ~/my/bin/google-chrome
     fi
 fi
 
@@ -555,11 +574,22 @@ fi
 
 # php
 function my-php() {
-    local -a ary=("phpstan" "phpcbf")
+    local -a ary=("composer" "phpstan" "phpcbf")
     for v in $ary; do
         commandinstalled $v
     done
 }
+
+which composer 2>/dev/null 1>&2
+if [[ $? -ne 0 ]]; then
+    echo "composer isn't installed: my-composerinstall"
+    function my-composerinstall() {
+        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
+        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '544e09ee996cdf60ece3804abc52599c22b1f40f4323403c44d44fdfdd586475ca9813a858088ffbc1f233e9b180f061') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\""
+        comexec "php composer-setup.php --install-dir=$HOME/my/bin --filename=composer"
+        comexec "php -r \"unlink('composer-setup.php');\""
+    }
+fi
 
 function commandinstalled() {
     which $1 2>/dev/null 1>&2
