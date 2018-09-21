@@ -143,6 +143,8 @@ if [[ $? -ne 0 ]] ; then
     else
         echo "go isn't installed"
     fi
+else
+    export PATH=${GOPATH:-$HOME/go/bin}:$PATH
 fi
 
 # diff-highlight
