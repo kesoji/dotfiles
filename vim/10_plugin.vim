@@ -22,7 +22,7 @@ Plug 'tyru/restart.vim'
 Plug 'vim-scripts/cisco.vim'
 Plug 'posva/vim-vue'
 Plug 'bbchung/gtags.vim'
-Plug 'scrooloose/syntastic'
+"Plug 'scrooloose/syntastic'
 Plug 'Yggdroot/indentLine'
 Plug 'easymotion/vim-easymotion'
 Plug 'basyura/twibill.vim'
@@ -199,45 +199,47 @@ let g:vimfiler_edit_action = 'tabopen'
 let g:vimfiler_enable_auto_cd = 1
 
 "<<<Plugin>>> vim-session {{{1
-if has('win32') || has('win64')
-    let g:session_directory = $HOME . '/.vim/sessions'
-endif
+if exists('g:loaded_session')
+    if has('win32') || has('win64')
+        let g:session_directory = $HOME . '/.vim/sessions'
+    endif
 
-" 現在のディレクトリ直下の .vimsessions/ を取得 
-let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
-" 存在すれば
-if isdirectory(s:local_session_directory)
-    " session保存ディレクトリをそのディレクトリの設定
-    let g:session_directory = s:local_session_directory
-    " vimを辞める時に自動保存
-    let g:session_autosave = 'yes'
-    " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
-    let g:session_autoload = 'yes'
-    " 1分間に1回自動保存
-    let g:session_autosave_periodic = 1
-else
-    let g:session_autosave = 'no'
-    let g:session_autoload = 'no'
+    " 現在のディレクトリ直下の .vimsessions/ を取得
+    let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
+    " 存在すれば
+    if isdirectory(s:local_session_directory)
+        " session保存ディレクトリをそのディレクトリの設定
+        let g:session_directory = s:local_session_directory
+        " vimを辞める時に自動保存
+        let g:session_autosave = 'yes'
+        " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
+        let g:session_autoload = 'yes'
+        " 1分間に1回自動保存
+        let g:session_autosave_periodic = 1
+    else
+        let g:session_autosave = 'no'
+        let g:session_autoload = 'no'
+    endif
+    unlet s:local_session_directory
 endif
-unlet s:local_session_directory
 
 "<<<Plugin>>> vim-json {{{1
 let g:vim_json_syntax_conceal = 0
 
 
-"<<<Plugin>>> syntastic {{{1
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_loc_list_height = 6
-let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
-
-let g:syntastic_enable_perl_checker = 1
-let g:syntastic_perl_checkers = ['perl', 'podchecker']
-let g:syntastic_javascript_checkers = ['eslint']
+""<<<Plugin>>> syntastic {{{1
+"set statusline+=%#warningmsg#
+"set statusline+=%{SyntasticStatuslineFlag()}
+"set statusline+=%*
+"let g:syntastic_always_populate_loc_list = 1
+"let g:syntastic_auto_loc_list = 1
+"let g:syntastic_loc_list_height = 6
+"let g:syntastic_check_on_open = 1
+"let g:syntastic_check_on_wq = 0
+"
+"let g:syntastic_enable_perl_checker = 1
+"let g:syntastic_perl_checkers = ['perl', 'podchecker']
+"let g:syntastic_javascript_checkers = ['eslint']
 
 "<<<Plugin>>> vim-easymotion {{{1
 let g:EasyMotion_do_mapping = 0
@@ -270,7 +272,7 @@ vmap v <Plug>(expand_region_expand)
 vmap <C-v> <Plug>(expand_region_shrink)
 
 "<<<Plugin>>> Gtags {{{1
-nnoremap <C-g> :Gtags -g 
+nnoremap <C-g> :Gtags -g
 nnoremap <C-h> :Gtags -f %<CR>
 nnoremap <C-j> :GtagsCursor<CR>
 nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
@@ -362,11 +364,20 @@ let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
 
 "<<<Plugin>>> Tagbar {{{1
-nnoremap <silent> <leader>t :TagbarToggle<CR>
+nnoremap <silent> <leader>e :TagbarToggle<CR>
 
 "<<<Plugin>>> phpunit {{{1
 let g:phpunit_bin = './vendor/bin/phpunit'
 
 "<<<Plugin>>> ale {{{1
+let g:ale_linters = {
+            \ 'php': ['phpstan', 'phpcs', 'php'],
+            \}
+let g:ale_fixers = {
+            \ '*': ['remove_trailing_lines', 'trim_whitespace'],
+            \}
+let g:ale_open_list = 1
+let g:ale_fix_on_save = 1
 let g:ale_completion_enabled = 1
 let g:ale_sign_column_always = 1
+let g:ale_php_phpcs_standard = 'PSR1,PSR2'
