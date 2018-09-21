@@ -528,6 +528,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "go get github.com/motemen/ghq" || return
     }
 else
+    export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
     alias repo='cd $(ghq root)/$(ghq list | fzf)'
 fi
 
