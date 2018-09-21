@@ -91,7 +91,6 @@ bashcompinit
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
-export PATH=$HOME/$DEFAULT_GOPATH/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -136,19 +135,13 @@ fi
 # go
 which go 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "go isn't installed"
-else
-    if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
-    elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
-    else :
-    fi
-    if [[ "$(uname -a)" =~ "Microsoft" && "$(which go)" =~ "/usr" ]]; then
-        # package install. do nothing
-        :
-    else
-        # manual install
+    # not installed OR manually installed
+    if [[ -e $HOME/go ]]; then
         export GOROOT=$HOME/go1.10.3
         export PATH=$GOROOT/bin:$PATH
+        export PATH=${GOPATH:-$HOME/go/bin}:$PATH
+    else
+        echo "go isn't installed"
     fi
 fi
 
@@ -281,6 +274,7 @@ setopt hist_no_store
 
 # Alias
 alias history='history -i'
+alias c.='cd ..'
 alias ls='ls -F --color'
 alias ll='ls -l'
 alias la='ls -la'
@@ -288,8 +282,6 @@ alias vi='vim'
 alias c='clear'
 alias tmux='tmux -2'
 alias tma='tmux -2 a'
-alias ssh='sshrc'
-alias ssc='sshrc'
 alias ap='ansible-playbook'
 if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
@@ -327,6 +319,12 @@ globalias() {
 zle -N globalias
 bindkey " " globalias
 
+## SSH
+function cssh() {
+    ssh $*
+    tmux selectp -P 'fg=default,bg=default'
+}
+alias ssh='cssh '
 
 # SSHRC
 which sshrc 2>/dev/null 1>&2
@@ -337,6 +335,16 @@ if [[ $? -ne 0 ]] ; then
         comexec "chmod +x sshrc" || return
         comexec "sudo mv sshrc /usr/local/bin/sshrc" || return
     }
+else
+    alias ssh='csshrc'
+    alias sshrc='csshrc '
+    function csshrc() {
+        sshrc $*
+        tmux selectp -P 'fg=default,bg=default'
+    }
+    # Completion
+    compdef sshrc=ssh
+    compdef csshrc=ssh
 fi
 
 # fzf
@@ -418,16 +426,6 @@ SCRIPT
 chmod +x ~/my/bin/google-chrome
     fi
 fi
-
-
-
-function cssh() {ssh $*;tmux select-pane -P 'fg=default,bg=default'}
-alias ssh='cssh '
-function csshrc() {sshrc $*;tmux select-pane -P 'fg=default,bg=default'}
-alias sshrc='csshrc '
-# Completion
-compdef sshrc=ssh
-compdef csshrc=ssh
 
 function my-colortable (){
     for i in {0..255}; do
@@ -511,12 +509,13 @@ bindkey '^z' switch-back-ctrl-z
 if command -v hub >/dev/null 2>&1; then
     # disable because sometimes git breaks...
     #function git(){hub "$@"}
+    :
 else
     echo "hub isn't installed: my-hubinstall"
     function my-hubinstall (){
         comexec "go get github.com/github/hub" || return
         comexec "mkdir -m 755 -p ~/.zsh/completions" || return
-        comexec "cp ~/$DEFAULT_GOPATH/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub" || return
+        comexec "cp ~/${GOPATH:-go}/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub" || return
     }
 fi
 
@@ -641,4 +640,6 @@ else
     }
 fi
 
-[ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ] && . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash || true
+if [ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ]; then
+    . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
+fi
