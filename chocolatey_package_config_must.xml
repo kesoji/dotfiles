@@ -3,6 +3,7 @@
   <package id="autohotkey" />
   <package id="ConEmu" />
   <package id="everything" />
+  <package id="7zip" />
   <package id="fzf" />
   <package id="ripgrep" />
   <package id="slack" />
