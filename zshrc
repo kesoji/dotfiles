@@ -91,22 +91,6 @@ bashcompinit
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
-if [[ "$(uname -a)" =~ "Microsoft" ]]; then
-    if [[ "$(which go)" =~ "/usr" ]]; then
-        # nothing
-    else
-        export GOROOT=$HOME/go1.10.3
-        export PATH=$GOROOT/bin:$PATH
-    fi
-fi
-if which go >/dev/null ; then
-    if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
-    elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
-    else :
-    fi
-else
-    echo "go isn't installed"
-fi
 export PATH=$HOME/$DEFAULT_GOPATH/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
@@ -134,6 +118,7 @@ if which lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
 fi
 
+# tig
 which tig 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "tig isn't installed: my-tiginstall"
@@ -148,6 +133,26 @@ if [[ $? -ne 0 ]] ; then
     }
 fi
 
+# go
+which go 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "go isn't installed"
+else
+    if  [[ -e $HOME/go ]] ;  then DEFAULT_GOPATH="go"
+    elif [[ -e $HOME/.go ]]; then DEFAULT_GOPATH=".go"
+    else :
+    fi
+    if [[ "$(uname -a)" =~ "Microsoft" && "$(which go)" =~ "/usr" ]]; then
+        # package install. do nothing
+        :
+    else
+        # manual install
+        export GOROOT=$HOME/go1.10.3
+        export PATH=$GOROOT/bin:$PATH
+    fi
+fi
+
+# diff-highlight
 if which diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
@@ -162,6 +167,7 @@ else
     }
 fi
 
+# git-secrets
 which git-secrets 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "git-secrets isn't installed: my-git-secretsinstall"
