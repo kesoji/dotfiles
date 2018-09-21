@@ -179,12 +179,12 @@ which direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "direnv isn't installed: my-direnvinstall"
     function my-direnvinstall {
-        comexec "git clone git@github.com:direnv/direnv.git"
-        comexec "cd direnv"
-        comexec "make"
-        comexec "make install DESTDIR=$HOME/my"
-        comexec "cd .."
-        comexec "rm -rf direnv"
+        comexec "git clone git@github.com:direnv/direnv.git" || return
+        comexec "cd direnv" || return
+        comexec "make" || return
+        comexec "make install DESTDIR=$HOME/my" || return
+        comexec "cd .." || return
+        comexec "rm -rf direnv" || return
     }
 else
     eval "$(direnv hook zsh)"
@@ -216,38 +216,36 @@ if [ -e "${HOME}/.rbenv" ]; then
 else
     echo "rbenv isn't installed: my-rbenvinstall"
     function my-rbenvinstall() {
-        comexec "git clone https://github.com/rbenv/rbenv.git ~/.rbenv"
-        comexec "cd ~/.rbenv && src/configure && make -C src"
-        comexec "~/.rbenv/bin/rbenv init"
-        comexec "curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash"
-        comexec "mkdir -p ""$(~/.rbenv/bin/rbenv root)""/plugins"
-        comexec "git clone https://github.com/rbenv/ruby-build.git ""$(~/.rbenv/bin/rbenv root)""/plugins/ruby-build"
+        comexec "git clone https://github.com/rbenv/rbenv.git ~/.rbenv" || return
+        comexec "cd ~/.rbenv && src/configure && make -C src" || return
+        comexec "~/.rbenv/bin/rbenv init" || return
+        comexec "curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash" || return
+        comexec "mkdir -p ""$(~/.rbenv/bin/rbenv root)""/plugins" || return
+        comexec "git clone https://github.com/rbenv/ruby-build.git ""$(~/.rbenv/bin/rbenv root)""/plugins/ruby-build" || return
         source ~/.zshrc
     }
 fi
 
 # Pyenv
 if [ -e "${HOME}/.pyenv" ]; then
-  export PYENV_ROOT="$HOME/.pyenv"
-  export PATH="$PYENV_ROOT/bin:$PATH"
-  if command -v pyenv 1>/dev/null 2>&1; then
-      eval "$(pyenv init -)"
-  fi
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    if command -v pyenv 1>/dev/null 2>&1; then
+        eval "$(pyenv init -)"
+    fi
 else
-  echo "pyenv isn't installed: my-pyenvinstall"
-  function my-pyenvinstall() {
-      comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv"
-      echo "When you cannot build python, check if there are dependencies."
-      echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \\
-    libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
-    xz-utils tk-dev"
-      echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
-      source ~/.zshrc
-  }
+    echo "pyenv isn't installed: my-pyenvinstall"
+    function my-pyenvinstall() {
+        comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv" || return
+        echo "When you cannot build python, check if there are dependencies."
+        echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev"
+        echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
+        source ~/.zshrc
+    }
 fi
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
-  fpath=(/usr/share/zsh/sites-functions $fpath)
+    fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
 
 
@@ -316,7 +314,7 @@ alias -g GI='| grep -ri'
 ## auto expand
 globalias() {
     if [[ $LBUFFER =~ ' [A-Z0-9]+$' ]]; then
-      zle _expand_alias
+        zle _expand_alias
     fi
     zle self-insert
 }
@@ -352,9 +350,9 @@ else
         export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
         export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND"
         export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
-    #'--color fg:242,bg:236,hl:65,fg+:15,bg+:239,hl+:108
-    #--color info:108,prompt:109,spinner:108,pointer:168,marker:168
-    #'
+        #'--color fg:242,bg:236,hl:65,fg+:15,bg+:239,hl+:108
+        #--color info:108,prompt:109,spinner:108,pointer:168,marker:168
+        #'
     else
         echo "You should install ripgrep(rg)"
     fi
@@ -366,13 +364,13 @@ fi
 # pet
 if `which pet 2>/dev/null 1>&2` ; then
     function prev() {
-      PREV=$(fc -lrn | head -n 1)
-      sh -c "pet new `printf %q "$PREV"`"
+        PREV=$(fc -lrn | head -n 1)
+        sh -c "pet new `printf %q "$PREV"`"
     }
     function pet-select() {
-      BUFFER=$(pet search --query "$LBUFFER")
-      CURSOR=$#BUFFER
-      zle redisplay
+        BUFFER=$(pet search --query "$LBUFFER")
+        CURSOR=$#BUFFER
+        zle redisplay
     }
     zle -N pet-select
     bindkey '^s' pet-select
@@ -411,7 +409,7 @@ if [[ $arch =~ "Microsoft" ]]; then
 #!/bin/sh
 exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
 SCRIPT
-        chmod +x ~/my/bin/google-chrome
+chmod +x ~/my/bin/google-chrome
     fi
 fi
 
@@ -426,10 +424,23 @@ compdef sshrc=ssh
 compdef csshrc=ssh
 
 function my-colortable (){
-    for i in {0..255}; do printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n"; done | xargs
+    for i in {0..255}; do
+        printf "\x1b[38;5;${i}mcolour${i}\x1b[0m\n";
+    done | xargs
 }
 function my-colortable2() {
-    for fore in `seq 30 37`; do printf "\e[${fore}m \\\e[${fore}m \e[m\n"; for mode in 1 4 5; do printf "\e[${fore};${mode}m \\\e[${fore};${mode}m \e[m"; for back in `seq 40 47`; do printf "\e[${fore};${back};${mode}m \\\e[${fore};${back};${mode}m \e[m"; done; echo; done; echo; done; printf " \\\e[m\n"
+    for fore in `seq 30 37`; do
+        printf "\e[${fore}m \\\e[${fore}m \e[m\n";
+        for mode in 1 4 5; do
+            printf "\e[${fore};${mode}m \\\e[${fore};${mode}m \e[m";
+            for back in `seq 40 47`; do
+                printf "\e[${fore};${back};${mode}m \\\e[${fore};${back};${mode}m \e[m";
+            done
+            echo
+        done
+        echo
+    done
+    printf " \\\e[m\n"
 }
 
 # Haskell
@@ -444,6 +455,17 @@ else
     alias ghci='stack ghci'
     alias ghc='stack ghci --'
     alias runghc='stack runghc --'
+fi
+
+# Haskell
+which rustup 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "Rustup(Rust) isn't installed: my-rustinstall"
+    function my-rustinstall (){
+        comexec "curl https://sh.rustup.rs -sSf | sh" || return
+    }
+else
+    export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
 # ssh_agent
@@ -508,7 +530,13 @@ which kr 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "krypton isn't installed: my-kryptoninstall"
     function my-kryptoninstall (){
-        comexec "curl https://krypt.co/kr | sh" || return
+        if [[ "$(uname -a)" =~ "Microsoft" ]]; then
+            comexec("go get github.com/kryptco/kr") || return
+            comexec("cd ~/go/src/github.com/kryptco/kr && make install && kr restart") || return
+        else
+            comexec "curl https://krypt.co/kr | sh" || return
+        fi
+
         if [ "$(uname)" != 'Darwin' ] ; then
             comexec "sudo mkdir -p /usr/local/lib" || return
             comexec "sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so" || return
