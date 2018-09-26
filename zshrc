@@ -113,12 +113,12 @@ export LS_COLORS='no=00:fi=00:di=34:ow=34;40:ln=35:pi=30;44:so=35;44:do=35;44:bd
 # http://qiita.com/delphinus/items/b04752bb5b64e6cc4ea9
 export LESS="-R -M -i -W -x4"
 export LESSGLOBALTAGS=global
-if which lesspipe.sh > /dev/null; then
+if command -v lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
 fi
 
 # tig
-which tig 2>/dev/null 1>&2
+command -v tig 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "tig isn't installed: my-tiginstall"
     function my-tiginstall() {
@@ -133,7 +133,7 @@ if [[ $? -ne 0 ]] ; then
 fi
 
 # go
-which go 2>/dev/null 1>&2
+command -v go 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     # not installed OR manually installed
     if [[ -e $HOME/go ]]; then
@@ -148,7 +148,7 @@ else
 fi
 
 # diff-highlight
-if which diff-highlight >/dev/null ; then
+if command -v diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
     echo "diff-highlight isn't installed: my-diff-highlightinstall"
@@ -163,7 +163,7 @@ else
 fi
 
 # git-secrets
-which git-secrets 2>/dev/null 1>&2
+command -v git-secrets 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "git-secrets isn't installed: my-git-secretsinstall"
     function my-git-secretsinstall() {
@@ -176,7 +176,7 @@ if [[ $? -ne 0 ]] ; then
 fi
 
 # direnv
-which direnv 2>/dev/null 1>&2
+command -v direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "direnv isn't installed: my-direnvinstall"
     function my-direnvinstall {
@@ -263,7 +263,7 @@ fi
 #fi
 
 # GTAGS
-# if [ `which global` ]; then
+# if [ `command -v global` ]; then
 #     _global_complete() {
 #         local cur
 #         cur=${COMP_WORDS[COMP_CWORD]}
@@ -297,7 +297,7 @@ alias tfp='terraform plan'
 alias tfw='terraform workspace'
 
 ## Docker
-which docker 2>/dev/null 1>&2
+command -v docker 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "docker isn't installed: my-dockerinstall (CURRENTLY ONLY IN UBUNTU)"
     function my-dockerinstall() {
@@ -353,7 +353,7 @@ function cssh() {
 alias ssh='cssh '
 
 # SSHRC
-which sshrc 2>/dev/null 1>&2
+command -v sshrc 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "sshrc isn't installed: my-sshrcinstall"
     function my-sshrcinstall (){
@@ -376,7 +376,7 @@ fi
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-which fzf 2>/dev/null 1>&2
+command -v fzf 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "fzf isn't installed: my-fzfinstall"
     function my-fzfinstall() {
@@ -384,7 +384,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "~/.fzf/install" || return
     }
 else
-    which rg 2>/dev/null 1>&2
+    command -v rg 2>/dev/null 1>&2
     if [[ $? -eq 0 ]] ; then
         export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
         export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
@@ -402,7 +402,7 @@ fi
 [ -t 0 ] && stty stop undef
 
 # pet
-if `which pet 2>/dev/null 1>&2` ; then
+if `command -v pet 2>/dev/null 1>&2` ; then
     function prev() {
         PREV=$(fc -lrn | head -n 1)
         sh -c "pet new `printf %q "$PREV"`"
@@ -430,7 +430,7 @@ if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then source $HOME/my/google-cl
 if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then source $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
 
 # kubectl completion
-which kubectl 2>/dev/null 1>&2
+command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
     source <(kubectl completion zsh)
 fi
@@ -474,7 +474,7 @@ function my-colortable2() {
 }
 
 # Haskell
-which stack 2>/dev/null 1>&2
+command -v stack 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "stack (Haskell) isn't installed: my-haskellstackinstall"
     function my-haskellstackinstall (){
@@ -507,7 +507,7 @@ function my-sshkeyadd_agentoff (){
 }
 
 # gibo
-which gibo 2>/dev/null 1>&2
+command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "gibo isn't installed: my-giboinstall"
     function my-giboinstall (){
@@ -545,7 +545,7 @@ else
 fi
 
 # ghq
-which ghq 2>/dev/null 1>&2
+command -v ghq 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "ghq isn't installed: my-ghqinstall"
     function my-ghqinstall (){
@@ -557,7 +557,7 @@ else
 fi
 
 # Krypton
-which kr 2>/dev/null 1>&2
+command -v kr 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "krypton isn't installed: my-kryptoninstall"
     function my-kryptoninstall (){
@@ -585,7 +585,7 @@ function my-php() {
     done
 }
 
-which composer 2>/dev/null 1>&2
+command -v composer 2>/dev/null 1>&2
 if [[ $? -ne 0 ]]; then
     echo "composer isn't installed: my-composerinstall"
     function my-composerinstall() {
@@ -597,7 +597,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 function commandinstalled() {
-    which $1 2>/dev/null 1>&2
+    command -v $1 2>/dev/null 1>&2
     if [[ $? -eq 0 ]]; then
         echo -e "$1: \e[37;42;1minstalled\e[m"
     else
