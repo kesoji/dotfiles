@@ -3,6 +3,7 @@
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'hashivim/vim-terraform'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'w0rp/ale'

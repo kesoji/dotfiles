@@ -19,24 +19,24 @@ function comexec() {
     echo ">>> $1"; eval $1
 }
 
-if [[ -e ~/.zplug/init.zsh ]]; then
-    source ~/.zplug/init.zsh
-    zplug "greymd/tmux-xpanes"
-    zplug denysdovhan/spaceship-prompt, use:spaceship.zsh, from:github, as:theme
-    # Install plugins if there are plugins that have not been installed
-    if ! zplug check --verbose; then
-      printf "Install? [y/N]: "
-      if read -q; then
-        echo; zplug install
-      fi
-    fi
-    zplug load
-else
-    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall"
-    function my-zpluginstall() {
-        comexec "curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
-    }
-fi
+#if [[ -e ~/.zplug/init.zsh ]]; then
+#    source ~/.zplug/init.zsh
+#    zplug "greymd/tmux-xpanes"
+#    zplug denysdovhan/spaceship-prompt, use:spaceship.zsh, from:github, as:theme
+#    # Install plugins if there are plugins that have not been installed
+#    if ! zplug check --verbose; then
+#      printf "Install? [y/N]: "
+#      if read -q; then
+#        echo; zplug install
+#      fi
+#    fi
+#    zplug load
+#else
+#    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall"
+#    function my-zpluginstall() {
+#        comexec "curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
+#    }
+#fi
 
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
@@ -195,7 +195,7 @@ fi
 if [[ ! -d $HOME/.nvm ]] ; then
     echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
 else
-    function my-initnvm() {
+    function nvminit() {
         export NVM_DIR="$HOME/.nvm"
         \. "$NVM_DIR/nvm.sh"
         \. "$NVM_DIR/bash_completion"
@@ -211,9 +211,11 @@ fi
 
 # rbenv
 if [ -e "${HOME}/.rbenv" ]; then
-    export PATH="$HOME/.rbenv/bin:$PATH"
-    #export PATH="$HOME/.rbenv/shims:$PATH"
-    eval "$(rbenv init -)"
+    function rbenvinit() {
+        export PATH="$HOME/.rbenv/bin:$PATH"
+        #export PATH="$HOME/.rbenv/shims:$PATH"
+        eval "$(rbenv init -)"
+    }
 else
     echo "rbenv isn't installed: my-rbenvinstall"
     function my-rbenvinstall() {
@@ -229,11 +231,11 @@ fi
 
 # Pyenv
 if [ -e "${HOME}/.pyenv" ]; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    if command -v pyenv 1>/dev/null 2>&1; then
+    function pyenvinit() {
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
         eval "$(pyenv init -)"
-    fi
+    }
 else
     echo "pyenv isn't installed: my-pyenvinstall"
     function my-pyenvinstall() {
@@ -290,6 +292,9 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
     alias ls='ls -G'
 fi
+alias tfa='terraform apply'
+alias tfp='terraform plan'
+alias tfw='terraform workspace'
 
 ## Docker
 which docker 2>/dev/null 1>&2
@@ -675,3 +680,6 @@ fi
 if [ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ]; then
     . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
 fi
+
+autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C /home/kesoji/my/bin/terraform terraform
