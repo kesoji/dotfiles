@@ -9,7 +9,6 @@ Plug 'tpope/vim-fugitive'
 Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'Shougo/neomru.vim'
-Plug 'lambdalisue/gina.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'majutsushi/tagbar'
 "Plug 'gregsexton/MatchTag'
