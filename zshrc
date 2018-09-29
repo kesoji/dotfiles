@@ -590,7 +590,7 @@ if [[ $? -ne 0 ]]; then
     echo "composer isn't installed: my-composerinstall"
     function my-composerinstall() {
         comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
-        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '544e09ee996cdf60ece3804abc52599c22b1f40f4323403c44d44fdfdd586475ca9813a858088ffbc1f233e9b180f061') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\""
+        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '93b54496392c062774670ac18b134c3b3a95e5a5e5c8f1a9f115f203b75bf9a129d5daa8ba6a13e2cc8a1da0806388a8') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\""
         comexec "php composer-setup.php --install-dir=$HOME/my/bin --filename=composer"
         comexec "php -r \"unlink('composer-setup.php');\""
     }
@@ -683,3 +683,5 @@ fi
 
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /home/kesoji/my/bin/terraform terraform
+
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
