@@ -416,13 +416,6 @@ if `command -v pet 2>/dev/null 1>&2` ; then
     bindkey '^s' pet-select
 fi
 
-# AWS completion
-if [ -f $HOME/.local/bin/aws_zsh_completer.sh ]; then
-    source "$HOME/.local/bin/aws_zsh_completer.sh"
-elif [ -f $HOME/.pyenv/shims/aws_zsh_completer.sh ]; then
-    source "$(pyenv which aws_zsh_completer.sh)"
-fi
-
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then source $HOME/my/google-cloud-sdk/path.zsh.inc; fi
 
@@ -681,7 +674,71 @@ if [ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/server
     . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
 fi
 
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /home/kesoji/my/bin/terraform terraform
 
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+#########
+# AWS Completer
+#########
+# Source this file to activate auto completion for zsh using the bash
+# compatibility helper.  Make sure to run `compinit` before, which should be
+# given usually.
+#
+# % source /path/to/zsh_complete.sh
+#
+# Typically that would be called somewhere in your .zshrc.
+#
+# Note, the overwrite of _bash_complete() is to export COMP_LINE and COMP_POINT
+# That is only required for zsh <= edab1d3dbe61da7efe5f1ac0e40444b2ec9b9570
+#
+# https://github.com/zsh-users/zsh/commit/edab1d3dbe61da7efe5f1ac0e40444b2ec9b9570
+#
+# zsh relases prior to that version do not export the required env variables!
+
+autoload -Uz bashcompinit
+bashcompinit -i
+
+_bash_complete() {
+  local ret=1
+  local -a suf matches
+  local -x COMP_POINT COMP_CWORD
+  local -a COMP_WORDS COMPREPLY BASH_VERSINFO
+  local -x COMP_LINE="$words"
+  local -A savejobstates savejobtexts
+
+  (( COMP_POINT = 1 + ${#${(j. .)words[1,CURRENT]}} + $#QIPREFIX + $#IPREFIX + $#PREFIX ))
+  (( COMP_CWORD = CURRENT - 1))
+  COMP_WORDS=( $words )
+  BASH_VERSINFO=( 2 05b 0 1 release )
+
+  savejobstates=( ${(kv)jobstates} )
+  savejobtexts=( ${(kv)jobtexts} )
+
+  [[ ${argv[${argv[(I)nospace]:-0}-1]} = -o ]] && suf=( -S '' )
+
+  matches=( ${(f)"$(compgen $@ -- ${words[CURRENT]})"} )
+
+  if [[ -n $matches ]]; then
+    if [[ ${argv[${argv[(I)filenames]:-0}-1]} = -o ]]; then
+      compset -P '*/' && matches=( ${matches##*/} )
+      compset -S '/*' && matches=( ${matches%%/*} )
+      compadd -Q -f "${suf[@]}" -a matches && ret=0
+    else
+      compadd -Q "${suf[@]}" -a matches && ret=0
+    fi
+  fi
+
+  if (( ret )); then
+    if [[ ${argv[${argv[(I)default]:-0}-1]} = -o ]]; then
+      _default "${suf[@]}" && ret=0
+    elif [[ ${argv[${argv[(I)dirnames]:-0}-1]} = -o ]]; then
+      _directories "${suf[@]}" && ret=0
+    fi
+  fi
+
+  return ret
+}
+
+complete -C aws_completer aws
