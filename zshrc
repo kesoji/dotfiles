@@ -5,6 +5,7 @@ fi
 set -o vi
 
 fpath=(~/.zsh/completions $fpath)
+autoload -Uz compinit && compinit -u
 
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
