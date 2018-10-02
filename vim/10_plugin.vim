@@ -3,13 +3,11 @@
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
-Plug 'hashivim/vim-terraform'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
 Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
-Plug 'Shougo/neomru.vim'
 Plug 'scrooloose/nerdcommenter'
 Plug 'majutsushi/tagbar'
 "Plug 'gregsexton/MatchTag'
@@ -19,16 +17,13 @@ Plug 'godlygeek/tabular'
 Plug 'itchyny/lightline.vim'
 Plug 'iamcco/markdown-preview.vim'
 "Plug 'Townk/vim-autoclose'
-Plug 'tyru/restart.vim'
-Plug 'vim-scripts/cisco.vim'
-Plug 'posva/vim-vue'
+"Plug 'vim-scripts/cisco.vim'
 Plug 'bbchung/gtags.vim'
 "Plug 'scrooloose/syntastic'
 Plug 'Yggdroot/indentLine'
 Plug 'easymotion/vim-easymotion'
-Plug 'basyura/twibill.vim'
 Plug 'terryma/vim-expand-region'
-Plug 'Konfekt/FastFold'
+"Plug 'Konfekt/FastFold'
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'janko-m/vim-test'
 Plug 'thinca/vim-quickrun'
@@ -46,19 +41,17 @@ Plug 'mhinz/vim-signify'
 Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
-Plug 'kana/vim-operator-user'
-Plug 'kana/vim-textobj-user'
-Plug 'kana/vim-operator-replace'
-Plug 'kana/vim-textobj-indent'
+"Plug 'kana/vim-textobj-user'
+"Plug 'kana/vim-operator-replace'
+"Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-edgemotion'
+Plug 'kana/vim-operator-user'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
-Plug 'bps/vim-textobj-python'
-Plug 'prabirshrestha/async.vim'
-Plug 'prabirshrestha/vim-lsp'
-Plug 'prabirshrestha/asyncomplete.vim'
-Plug 'prabirshrestha/asyncomplete-lsp.vim'
-Plug 'leafgarland/typescript-vim'
+"Plug 'prabirshrestha/async.vim'
+"Plug 'prabirshrestha/vim-lsp'
+"Plug 'prabirshrestha/asyncomplete.vim'
+"Plug 'prabirshrestha/asyncomplete-lsp.vim'
 if has('mac')
     " Mac: fzf should be installed by Homebrew
     Plug '/usr/local/opt/fzf'
@@ -70,25 +63,31 @@ else
     Plug 'junegunn/fzf'
 endif
 Plug 'junegunn/fzf.vim'
-Plug 'PProvost/vim-ps1', { 'for': ['ps1'] }
-Plug 'Rykka/clickable.vim', { 'for': ['rst'] }
-Plug 'Rykka/riv.vim', { 'for': ['rst'] }
-Plug 'c9s/phpunit.vim', { 'for': ['php'] }
-Plug 'lvht/phpcd.vim', { 'for': 'php', 'do': 'composer install' }
-Plug 'tbastos/vim-lua', { 'for': ['lua'] }
-Plug 'xolox/vim-lua-ftplugin', { 'for': ['lua'] }
-Plug 'elzr/vim-json', { 'for': ['javascript', 'json'] }
-Plug 'fatih/vim-go', { 'for': ['go'], 'do': ':GoInstallBinaries' }
-Plug 'plasticboy/vim-markdown', { 'for': ['markdown'] }
-Plug 'mattn/emmet-vim', { 'for': ['html', 'css'] }
-Plug 'hotchpotch/perldoc-vim', { 'for': ['perl'] }
-Plug 'petdance/vim-perl', { 'for': ['perl'] }
-Plug 'c9s/perlomni.vim', { 'for': ['perl'] }
-Plug 'cespare/vim-toml', { 'for': ['toml'] }
-Plug 'davidhalter/jedi-vim', { 'for': ['python'] }
-"Plug 'lambdalisue/vim-pyenv', { 'for': ['python'] }
+Plug 'posva/vim-vue'
+Plug 'bps/vim-textobj-python'
+Plug 'leafgarland/typescript-vim'
+Plug 'hashivim/vim-terraform'
+Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
+Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
+Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
+Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby'] }
+Plug 'tpope/vim-rails',            { 'for': ['ruby'] }
+Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
+Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
+Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
+Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
+Plug 'fatih/vim-go',               { 'for': ['go'], 'do': ':GoInstallBinaries' }
+Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
+Plug 'mattn/emmet-vim',            { 'for': ['html', 'css'] }
+Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
+Plug 'petdance/vim-perl',          { 'for': ['perl'] }
+Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
+Plug 'cespare/vim-toml',           { 'for': ['toml'] }
+Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
+"Plug 'lambdalisue/vim-pyenv',      { 'for': ['python'] }
+Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
-Plug 'mattn/jscomplete-vim', { 'for': ['javascript'] }
+Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
 " Clolor Scheme
 Plug 'tomasr/molokai'
 Plug 'sjl/badwolf'
@@ -186,48 +185,35 @@ map <space>ob <Plug>(openbrowser-smart-search)
 "<<<Plugin>>> lightline {{{1
 set laststatus=2
 
-"<<<Plugin>>> session {{{1
+
+"<<<Plugin>>> vim-session {{{1
 command! -nargs=* -complete=command OS OpenSession
 command! -nargs=* -complete=command SS SaveSession
 
-"<<<Plugin>>> VimFiler {{{1
-command! V VimFiler
-command! VB VimFilerBufferDir
-command! VC VimFilerCurrentDir
-command! VT VimFilerTab
-nnoremap <F2> :VimFiler -buffer-name=explorer -split -simple -winwidth=40 -toggle -no-quit<CR>
-let g:vimfiler_as_default_explorer = 1
-let g:vimfiler_edit_action = 'tabopen'
-let g:vimfiler_enable_auto_cd = 1
-
-"<<<Plugin>>> vim-session {{{1
-if exists('g:loaded_session')
-    if has('win32') || has('win64')
-        let g:session_directory = $HOME . '/.vim/sessions'
-    endif
-
-    " 現在のディレクトリ直下の .vimsessions/ を取得
-    let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
-    " 存在すれば
-    if isdirectory(s:local_session_directory)
-        " session保存ディレクトリをそのディレクトリの設定
-        let g:session_directory = s:local_session_directory
-        " vimを辞める時に自動保存
-        let g:session_autosave = 'yes'
-        " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
-        let g:session_autoload = 'yes'
-        " 1分間に1回自動保存
-        let g:session_autosave_periodic = 1
-    else
-        let g:session_autosave = 'no'
-        let g:session_autoload = 'no'
-    endif
-    unlet s:local_session_directory
+if has('win32') || has('win64')
+    let g:session_directory = $HOME . '/.vim/sessions'
 endif
+
+" 現在のディレクトリ直下の .vimsessions/ を取得
+let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
+" 存在すれば
+if isdirectory(s:local_session_directory)
+    " session保存ディレクトリをそのディレクトリの設定
+    let g:session_directory = s:local_session_directory
+    " vimを辞める時に自動保存
+    let g:session_autosave = 'yes'
+    " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
+    let g:session_autoload = 'yes'
+    " 1分間に1回自動保存
+    let g:session_autosave_periodic = 1
+else
+    let g:session_autosave = 'no'
+    let g:session_autoload = 'no'
+endif
+unlet s:local_session_directory
 
 "<<<Plugin>>> vim-json {{{1
 let g:vim_json_syntax_conceal = 0
-
 
 ""<<<Plugin>>> syntastic {{{1
 "set statusline+=%#warningmsg#
@@ -286,8 +272,8 @@ let g:memolist_path = "~/.vim/memo"
 augroup VimGoMySettings
     autocmd!
     autocmd FileType go nmap <leader>u <Plug>(go-run)
-    autocmd FileType go nmap <leader>t <Plug>(go-test)
-    autocmd FileType go nmap <leader>f <Plug>(go-test-func)
+    autocmd FileType go nmap <leader>ta <Plug>(go-test)
+    autocmd FileType go nmap <leader>t <Plug>(go-test-func)
     autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
     autocmd FileType go nmap <leader>m <Plug>(go-metalinter)
     autocmd FileType go nnoremap <C-h> :<C-u>GoDeclsDir<cr>
@@ -374,10 +360,12 @@ let g:phpunit_bin = './vendor/bin/phpunit'
 "<<<Plugin>>> ale {{{1
 let g:ale_linters = {
             \ 'php': ['phpstan', 'phpcs', 'php'],
+            \ 'ruby': ['rubocop'],
             \}
 let g:ale_fixers = {
             \ '*': ['remove_trailing_lines', 'trim_whitespace'],
             \ 'php': ['phpcbf'],
+            \ 'ruby': ['rubocop'],
             \}
 let g:ale_open_list = 1
 let g:ale_fix_on_save = 1
@@ -387,3 +375,6 @@ let g:ale_php_phpcs_standard = 'PSR2'
 let g:ale_php_phpcbf_standard = 'PSR2'
 
 nmap <leader>n <Plug>(ale_toggle)
+
+"<<<plugin>>> vim-vue {{{1
+autocmd FileType vue syntax sync fromstart
