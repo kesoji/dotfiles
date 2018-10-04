@@ -743,3 +743,5 @@ _bash_complete() {
 }
 
 complete -C aws_completer aws
+
+export PS1=`echo $PS1 | sed -e 's/|/(AWS:$AWS_PROFILE)|/'`
