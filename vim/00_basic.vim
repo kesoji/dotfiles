@@ -306,9 +306,13 @@ function! UnMinify()
     normal ggVG=
 endfunction
 
-"" CD/LCD - cd to current file dir
+"" CD/LCD - cd to current file dir {{{2
 command! CD cd %:h
 command! LCD lcd %:h
+
+"" SWPCLR - delete swp files {{{2
+command! SWPCLR :execute '!rm -rf ~/.vim/swp/*'
+
 
 " AutoGroup {{{1
 " バイナリ編集(xxd)モード（vim -b での起動、もしくは *.bin ファイルを開くと発動します）

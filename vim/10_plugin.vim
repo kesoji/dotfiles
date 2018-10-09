@@ -99,10 +99,69 @@ Plug 'cocopon/iceberg.vim'
 
 call plug#end()
 
+function! s:is_plugged(name)
+    if exists('g:plugs') && has_key(g:plugs, a:name) && isdirectory(g:plugs[a:name].dir)
+        return 1
+    else
+        return 0
+    endif
+endfunction
+
 "if has('clientserver')
 "    call singleton#enable()
 "    let g:singleton#opener = "edit"
 "endif
+
+"<<<Plugin>>> vim-go {{{1
+augroup VimGoMySettings
+    autocmd!
+    autocmd FileType go nmap <leader>u <Plug>(go-run)
+    autocmd FileType go nmap <leader>ta <Plug>(go-test)
+    autocmd FileType go nmap <leader>t <Plug>(go-test-func)
+    autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
+    autocmd FileType go nmap <leader>m <Plug>(go-metalinter)
+    autocmd FileType go nnoremap <C-h> :<C-u>GoDeclsDir<cr>
+    autocmd FileType go inoremap <C-h> <esc>:<C-u>GoDeclsDir<cr>
+    autocmd FileType go nnoremap <leader>b :<C-u>call <SID>build_go_files()<CR>
+    autocmd Filetype go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
+    autocmd Filetype go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
+    autocmd Filetype go command! -bang AS call go#alternate#Switch(<bang>0, 'split')
+    autocmd Filetype go syntax on
+augroup END
+function! s:build_go_files()
+    let l:file = expand('%')
+    if l:file =~# '^\f\+_test\.go$'
+        call go#test#Test(0, 1)
+    elseif l:file =~# '^\f\+\.go$'
+        call go#cmd#Build(0)
+    endif
+endfunction
+let g:go_fmt_command = "goimports"
+let g:go_fmt_autosave = 1
+let g:go_metalinter_autosave = 0
+let g:go_auto_type_info = 1
+let g:go_auto_sameids = 1
+
+let g:go_highlight_functions = 1
+let g:go_highlight_function_calls = 1
+let g:go_highlight_methods = 1
+let g:go_highlight_structs = 1
+let g:go_highlight_array_whitespace_error = 0
+let g:go_highlight_chan_whitespace_error = 0
+let g:go_highlight_extra_types = 0
+let g:go_highlight_space_tab_error = 0
+let g:go_highlight_trailing_whitespace_error = 0
+let g:go_highlight_operators = 0
+let g:go_highlight_function_arguments = 0
+let g:go_highlight_types = 0
+let g:go_highlight_fields = 0
+let g:go_highlight_build_constraints = 0
+let g:go_highlight_generate_tags = 0
+let g:go_highlight_string_spellcheck = 1
+let g:go_highlight_format_strings = 1
+let g:go_highlight_variable_declarations = 0
+let g:go_highlight_variable_assignments = 0
+
 
 "<<<Plugin>>> vim-sandwitch {{{1
 runtime macros/sandwich/keymap/surround.vim
@@ -114,7 +173,7 @@ endif
 let g:indentLine_faster = 1
 
 "<<<Plugin>>> Operator-flashy {{{1
-if exists('g:operator#flashy#flash_time')
+if s:is_plugged("vim-operator-flashy")
     map  y <Plug>(operator-flashy)
     nmap Y <Plug>(operator-flashy)$
 else
@@ -187,30 +246,33 @@ set laststatus=2
 
 
 "<<<Plugin>>> vim-session {{{1
-command! -nargs=* -complete=command OS OpenSession
-command! -nargs=* -complete=command SS SaveSession
 
-if has('win32') || has('win64')
-    let g:session_directory = $HOME . '/.vim/sessions'
-endif
+if s:is_plugged("vim-session")
+    command! -nargs=* -complete=command OS OpenSession
+    command! -nargs=* -complete=command SS SaveSession
 
-" 現在のディレクトリ直下の .vimsessions/ を取得
-let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
-" 存在すれば
-if isdirectory(s:local_session_directory)
-    " session保存ディレクトリをそのディレクトリの設定
-    let g:session_directory = s:local_session_directory
-    " vimを辞める時に自動保存
-    let g:session_autosave = 'yes'
-    " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
-    let g:session_autoload = 'yes'
-    " 1分間に1回自動保存
-    let g:session_autosave_periodic = 1
-else
-    let g:session_autosave = 'no'
-    let g:session_autoload = 'no'
+    if has('win32') || has('win64')
+        let g:session_directory = $HOME . '/.vim/sessions'
+    endif
+
+    " 現在のディレクトリ直下の .vimsessions/ を取得
+    let s:local_session_directory = xolox#misc#path#merge(getcwd(), '.vimsessions')
+    " 存在すれば
+    if isdirectory(s:local_session_directory)
+        " session保存ディレクトリをそのディレクトリの設定
+        let g:session_directory = s:local_session_directory
+        " vimを辞める時に自動保存
+        let g:session_autosave = 'yes'
+        " 引数なしでvimを起動した時にsession保存ディレクトリのdefault.vimを開く
+        let g:session_autoload = 'yes'
+        " 1分間に1回自動保存
+        let g:session_autosave_periodic = 1
+    else
+        let g:session_autosave = 'no'
+        let g:session_autoload = 'no'
+    endif
+    unlet s:local_session_directory
 endif
-unlet s:local_session_directory
 
 "<<<Plugin>>> vim-json {{{1
 let g:vim_json_syntax_conceal = 0
@@ -267,55 +329,6 @@ nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
-
-"<<<Plugin>>> vim-go {{{1
-augroup VimGoMySettings
-    autocmd!
-    autocmd FileType go nmap <leader>u <Plug>(go-run)
-    autocmd FileType go nmap <leader>ta <Plug>(go-test)
-    autocmd FileType go nmap <leader>t <Plug>(go-test-func)
-    autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
-    autocmd FileType go nmap <leader>m <Plug>(go-metalinter)
-    autocmd FileType go nnoremap <C-h> :<C-u>GoDeclsDir<cr>
-    autocmd FileType go inoremap <C-h> <esc>:<C-u>GoDeclsDir<cr>
-    autocmd FileType go nnoremap <leader>b :<C-u>call <SID>build_go_files()<CR>
-    autocmd Filetype go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
-    autocmd Filetype go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
-    autocmd Filetype go command! -bang AS call go#alternate#Switch(<bang>0, 'split')
-augroup END
-function! s:build_go_files()
-    let l:file = expand('%')
-    if l:file =~# '^\f\+_test\.go$'
-        call go#test#Test(0, 1)
-    elseif l:file =~# '^\f\+\.go$'
-        call go#cmd#Build(0)
-    endif
-endfunction
-let g:go_fmt_command = "goimports"
-let g:go_fmt_autosave = 1
-let g:go_metalinter_autosave = 1
-let g:go_auto_type_info = 1
-let g:go_auto_sameids = 1
-
-let g:go_highlight_functions = 1
-let g:go_highlight_function_calls = 1
-let g:go_highlight_methods = 1
-let g:go_highlight_structs = 1
-let g:go_highlight_array_whitespace_error = 0
-let g:go_highlight_chan_whitespace_error = 0
-let g:go_highlight_extra_types = 0
-let g:go_highlight_space_tab_error = 0
-let g:go_highlight_trailing_whitespace_error = 0
-let g:go_highlight_operators = 0
-let g:go_highlight_function_arguments = 0
-let g:go_highlight_types = 0
-let g:go_highlight_fields = 0
-let g:go_highlight_build_constraints = 0
-let g:go_highlight_generate_tags = 0
-let g:go_highlight_string_spellcheck = 1
-let g:go_highlight_format_strings = 1
-let g:go_highlight_variable_declarations = 0
-let g:go_highlight_variable_assignments = 0
 
 
 "<<<Plugin>>> vim-edgemotion {{{1
