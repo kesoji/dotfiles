@@ -41,7 +41,7 @@ Plug 'mhinz/vim-signify'
 Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
-"Plug 'kana/vim-textobj-user'
+Plug 'kana/vim-textobj-user'
 "Plug 'kana/vim-operator-replace'
 "Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-edgemotion'
