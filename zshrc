@@ -745,8 +745,6 @@ _bash_complete() {
 
 complete -C aws_completer aws
 
-export PS1=`echo $PS1 | sed -e 's/|/(AWS:$AWS_PROFILE)|/'`
-
 # if bash rename "handler" to "handle"
 command_not_found_handler() {
     ####
@@ -842,6 +840,34 @@ command_not_found_handler() {
 
         COUNT=$((COUNT - 1))
     done
+}
+
+
+awssts() {
+    if [[ "$1" == "" ]] ; then
+        echo "トークンコードが無いです"
+    else
+        mfa=`aws iam list-mfa-devices --user-name kesoji | jq '.MFADevices[0].SerialNumber' -r`
+        if [[ $? -ne 0 ]] ; then
+            return
+        fi
+
+        data=`aws sts get-session-token --serial-number $mfa --token-code $1`
+        if [[ $? -ne 0 ]] ; then
+            return
+        fi
+
+        key=`echo $data | jq '.Credentials.AccessKeyId' -r`
+        secret=`echo $data | jq '.Credentials.SecretAccessKey' -r`
+        session=`echo $data | jq '.Credentials.SessionToken' -r`
+
+        unset AWS_PROFILE
+        export AWS_ACCESS_KEY_ID=$key
+        export AWS_SECRET_ACCESS_KEY=$secret
+        export AWS_SESSION_TOKEN=$session
+        export AWS_DEFAULT_REGION=ap-northeast-1
+        export AWS_STS_SESSION="IN-SESSION"
+    fi
 }
 
 export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
