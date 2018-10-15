@@ -233,6 +233,9 @@ nnoremap <Leader>sgv :source $MYGVIMRC<CR>
 noremap + <C-a>
 noremap - <C-x>
 
+noremap gp "0p
+noremap gP "0P
+
 """ Utility
 nnoremap c. q:<UP><CR>
 

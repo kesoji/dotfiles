@@ -295,6 +295,7 @@ if [ "$(uname)" = 'Darwin' ] ; then
 fi
 alias tfa='terraform apply'
 alias tfp='terraform plan'
+alias tfd='terraform destroy'
 alias tfw='terraform workspace'
 
 ## Docker
@@ -842,3 +843,5 @@ command_not_found_handler() {
         COUNT=$((COUNT - 1))
     done
 }
+
+export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
