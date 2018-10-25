@@ -399,4 +399,7 @@ let g:terraform_fmt_on_save = 1
 "<<<plugin>>> vim-ref {{{1
 let g:ref_phpmanual_path = $HOME . '/.vim/refs/php-chunked-xhtml'
 
-command! -nargs=0 RefPhpManualUpdate !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz; rm -f ~/.vim/refs/dl.tgz
+command! -nargs=0 RefPhpManualUpdate call RefPhpManualUpdate()
+function! RefPhpManualUpdate()
+    !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz -C ~/.vim/refs ; rm -f ~/.vim/refs/dl.tgz
+endfunction
