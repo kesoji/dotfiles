@@ -297,6 +297,8 @@ alias tfa='terraform apply'
 alias tfp='terraform plan'
 alias tfd='terraform destroy'
 alias tfw='terraform workspace'
+alias bins='bundle install'
+alias bex='bundle exec'
 
 ## Docker
 command -v docker 2>/dev/null 1>&2
@@ -574,7 +576,7 @@ fi
 
 # php
 function my-php() {
-    local -a ary=("composer" "phpstan" "phpcbf")
+    local -a ary=("composer" "phpstan" "phpcbf" "psysh")
     for v in $ary; do
         commandinstalled $v
     done

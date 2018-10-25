@@ -48,6 +48,7 @@ Plug 'haya14busa/vim-edgemotion'
 Plug 'kana/vim-operator-user'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
+Plug 'thinca/vim-ref'
 "Plug 'prabirshrestha/async.vim'
 "Plug 'prabirshrestha/vim-lsp'
 "Plug 'prabirshrestha/asyncomplete.vim'
@@ -70,7 +71,7 @@ Plug 'hashivim/vim-terraform'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
 Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
-Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby'] }
+"Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby'] }
 Plug 'tpope/vim-rails',            { 'for': ['ruby'] }
 Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
 Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
@@ -394,3 +395,8 @@ autocmd FileType vue syntax sync fromstart
 
 "<<<plugin>>> vim-terraform {{{1
 let g:terraform_fmt_on_save = 1
+
+"<<<plugin>>> vim-ref {{{1
+let g:ref_phpmanual_path = $HOME . '/.vim/refs/php-chunked-xhtml'
+
+command! -nargs=0 RefPhpManualUpdate !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz; rm -f ~/.vim/refs/dl.tgz
