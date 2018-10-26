@@ -386,8 +386,10 @@ let g:ale_fix_on_save = 1
 let g:ale_completion_enabled = 1
 let g:ale_sign_column_always = 1
 let g:ale_php_phpcs_standard = 'PSR2'
+let g:ale_php_phpcs_options = '--exclude=Generic.Files.LineLength.TooLong'
 let g:ale_php_phpcbf_standard = 'PSR2'
 
+nmap <C-a><C-f> <Plug>(ale_fix)
 nmap <leader>n <Plug>(ale_toggle)
 
 "<<<plugin>>> vim-vue {{{1
