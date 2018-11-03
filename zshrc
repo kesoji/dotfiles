@@ -448,6 +448,9 @@ exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
 SCRIPT
     chmod +x ~/my/bin/google-chrome
     fi
+
+    # env-specific command alias
+    alias cl=clip.exe
 fi
 
 function my-colortable (){
