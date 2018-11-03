@@ -5,7 +5,6 @@ fi
 set -o vi
 
 fpath=(~/.zsh/completions $fpath)
-autoload -Uz compinit && compinit -u
 
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
@@ -69,8 +68,6 @@ else
     DIRSTACKSIZE=100
     # can cd with only this str
     cdpath=(.. ~)
-    # enable completion
-    autoload -Uz compinit && compinit -u
     ## ignore case
     zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
     ## minified style
@@ -85,10 +82,11 @@ else
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
 
-
+# enable completion
+autoload -Uz compinit && compinit -u
 # Can source bash completion
-autoload bashcompinit
-bashcompinit
+autoload bashcompinit && bashcompinit
+
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
