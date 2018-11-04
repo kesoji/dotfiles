@@ -140,7 +140,7 @@ nnoremap <Leader><Leader>q :<C-u>qa<CR>
 nnoremap <Leader>Q :<C-u>q!<CR>
 
 """ ベースの動きをスワップ
-noremap ; :
+"noremap ; :
 noremap j gj
 noremap k gk
 noremap gj j

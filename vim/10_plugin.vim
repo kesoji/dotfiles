@@ -117,6 +117,7 @@ endfunction
 augroup VimGoMySettings
     autocmd!
     autocmd FileType go nmap <leader>u <Plug>(go-run)
+    autocmd FileType go nmap <leader>n <Plug>(go-fmt)
     autocmd FileType go nmap <leader>ta <Plug>(go-test)
     autocmd FileType go nmap <leader>t <Plug>(go-test-func)
     autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
@@ -182,8 +183,8 @@ else
 endif
 
 "<<<Plugin>>> fzf {{{1
-nnoremap : :<C-u>Buffers<CR>
 nmap <Space>f [fzf]
+nnoremap [fzf]b :<C-u>Buffers<CR>
 nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
 nnoremap [fzf]t :<C-u>Tags<CR>
@@ -297,11 +298,14 @@ let g:EasyMotion_do_mapping = 0
 let g:EasyMotion_keys = ';HKLYUIOPNM,QWERTASDGZXCVBJF'
 " Show target key with upper case to improve readability
 let g:EasyMotion_use_upper = 1
+let g:EasyMotion_smartcase = 1
 
-map f <Plug>(easymotion-fl)
-map t <Plug>(easymotion-tl)
-map F <Plug>(easymotion-Fl)
-map T <Plug>(easymotion-Tl)
+"map f <Plug>(easymotion-fl)
+"map t <Plug>(easymotion-tl)
+"map F <Plug>(easymotion-Fl)
+"map T <Plug>(easymotion-Tl)
+map <Leader>j <Plug>(easymotion-j)
+map <Leader>k <Plug>(easymotion-k)
 
 " :h easymotion-command-line
 nmap g/ <Plug>(easymotion-sn)
