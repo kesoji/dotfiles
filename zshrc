@@ -551,7 +551,7 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
-    alias rp='cd $(ghq root)/$(ghq list | fzf)'
+    alias g='cd $(ghq root)/$(ghq list | fzf)'
 fi
 
 # Krypton

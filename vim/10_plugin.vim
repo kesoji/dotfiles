@@ -117,7 +117,7 @@ endfunction
 augroup VimGoMySettings
     autocmd!
     autocmd FileType go nmap <leader>u <Plug>(go-run)
-    autocmd FileType go nmap <leader>n <Plug>(go-fmt)
+    autocmd FileType go nnoremap <leader>n :<C-u>GoFmt<cr>
     autocmd FileType go nmap <leader>ta <Plug>(go-test)
     autocmd FileType go nmap <leader>t <Plug>(go-test-func)
     autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
