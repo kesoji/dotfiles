@@ -226,10 +226,10 @@ nnoremap <expr><silent> <C-c> quickrun#is_running() ? quickrun#sweep_sessions() 
 " Markdown {{{1
 
 "<<<Plugin>>> Vim-Markdown [plasticboy/vim-markdown](https://github.com/plasticboy/vim-markdown){{{2
-" let g:vim_markdown_folding_disabled = 1
-let g:vim_markdown_folding_level = 2
-" let g:vim_markdown_emphasis_multiline = 0
-" let g:vim_markdown_conceal = 0
+let g:vim_markdown_folding_disabled = 1
+"let g:vim_markdown_folding_level = 2
+"let g:vim_markdown_emphasis_multiline = 0
+let g:vim_markdown_conceal = 0
 
 "<<<Plugin>>> previm {{{2
 augroup PrevimSettings
