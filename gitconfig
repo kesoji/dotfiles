@@ -20,6 +20,7 @@
 	cim = commit -m
 	ciam = commit -a -m
 	co = checkout
+	cp = cherry-pick
 	pl = pull --prune --rebase
 	plo = pull --prune --rabase origin master
 	ps = push

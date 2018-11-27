@@ -49,6 +49,7 @@ Plug 'kana/vim-operator-user'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'thinca/vim-ref'
+Plug 'joonty/vdebug'
 "Plug 'prabirshrestha/async.vim'
 "Plug 'prabirshrestha/vim-lsp'
 "Plug 'prabirshrestha/asyncomplete.vim'
@@ -68,6 +69,7 @@ Plug 'posva/vim-vue'
 Plug 'bps/vim-textobj-python'
 Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
+Plug 'juliosueiras/vim-terraform-completion'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
 Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
@@ -409,3 +411,13 @@ command! -nargs=0 RefPhpManualUpdate call RefPhpManualUpdate()
 function! RefPhpManualUpdate()
     !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz -C ~/.vim/refs ; rm -f ~/.vim/refs/dl.tgz
 endfunction
+
+"<<<plugin>>> phpcd {{{1
+" 以下のファイルを作ること
+" .phpcd.vim
+" let g:phpcd_autoload_path = 'phpcd_autoload.php'
+"
+" phpcd_autoload.php
+" <?php
+" require 'vendor/autoload.php';
+" require '_ide_helper.php';
