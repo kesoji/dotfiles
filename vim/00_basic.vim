@@ -77,7 +77,7 @@ set spelllang=en,cjk
 """ cursorline is slow..
 " set cursorline
 set history=1000
-set tabstop=4
+"set tabstop=4
 set expandtab
 set smarttab
 set textwidth=0
