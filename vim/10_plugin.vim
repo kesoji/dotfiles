@@ -73,7 +73,7 @@ Plug 'juliosueiras/vim-terraform-completion'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
 Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
-Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
+"Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
 Plug 'c9s/phpunit.vim',            { 'for': ['php'] }

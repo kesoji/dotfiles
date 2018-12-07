@@ -229,6 +229,22 @@ else
 fi
 
 # Pyenv
+if [ -e "${HOME}/.phpenv" ]; then
+    function phpenvinit() {
+        export PHPENV_ROOT="$HOME/.phpenv"
+        export PATH="$PHPENV_ROOT/bin:$PATH"
+        eval "$(phpenv init -)"
+    }
+else
+    echo "phpenv isn't installed: my-phpenvinstall"
+    function my-phpenvinstall() {
+        comexec "git clone https://github.com/phpenv/phpenv.git ~/.phpenv" || return
+        comexec "git clone https://github.com/php-build/php-build ~/.phpenv/plugins/php-build" || return
+        source ~/.zshrc
+    }
+fi
+
+# phpenv
 if [ -e "${HOME}/.pyenv" ]; then
     function pyenvinit() {
         export PYENV_ROOT="$HOME/.pyenv"
