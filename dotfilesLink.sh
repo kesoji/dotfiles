@@ -15,6 +15,7 @@ ln -sf ~/dotfiles/sshrc ~/.sshrc
 ln -sf ~/dotfiles/tigrc ~/.tigrc
 ln -sf ~/dotfiles/inputrc ~/.inputrc
 ln -sf ~/dotfiles/globalrc ~/.globalrc
+ln -sf ~/dotfiles/irbrc ~/.irbrc
 
 # dir
 ln -Tsf ~/dotfiles/sshrc.d ~/.sshrc.d
@@ -38,4 +39,3 @@ if [ ! -s ~/.vim/autoload/plug.vim ] ; then
     curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
         https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 fi
-

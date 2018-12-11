@@ -22,6 +22,7 @@ mklink %USERPROFILE%"\.zshenv" %USERPROFILE%"\dotfiles\zshenv"
 mklink %USERPROFILE%"\.sshrc" %USERPROFILE%"\dotfiles\sshrc"
 mklink %USERPROFILE%"\.tigrc" %USERPROFILE%"\dotfiles\tigrc"
 mklink %USERPROFILE%"\.minttyrc" %USERPROFILE%"\dotfiles\minttyrc"
+mklink %USERPROFILE%"\.irbrc" %USERPROFILE%"\dotfiles\irbrc"
 
 mklink /D %USERPROFILE%"\.vim\rc" %USERPROFILE%"\dotfiles\rc"
 mklink /D %USERPROFILE%"\.vim\snippets" %USERPROFILE%"\dotfiles\snippets"
