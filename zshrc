@@ -354,7 +354,6 @@ alias -g L='| less'
 alias -g H='| head'
 alias -g G='| grep'
 alias -g GI='| grep -ri'
-alias -g C='| clip.exe'
 ## auto expand
 globalias() {
     if [[ $LBUFFER =~ ' [A-Z0-9]+$' ]]; then
@@ -467,6 +466,7 @@ SCRIPT
 
     # env-specific command alias
     alias cl=clip.exe
+    alias -g C='| clip.exe'
 fi
 
 function my-colortable (){
