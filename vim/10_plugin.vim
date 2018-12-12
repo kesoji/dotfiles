@@ -8,6 +8,7 @@ Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
 Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
+Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'majutsushi/tagbar'
 "Plug 'gregsexton/MatchTag'
@@ -422,3 +423,12 @@ endfunction
 " <?php
 " require 'vendor/autoload.php';
 " require '_ide_helper.php';
+
+"<<<plugin>>> vim-tmux-navigator
+let g:tmux_navigator_no_mappings = 1
+"{xxx-Mapping}を指定する
+"nnoremap <silent> {Left-Mapping} :TmuxNavigateLeft<cr>
+"nnoremap <silent> {Down-Mapping} :TmuxNavigateDown<cr>
+"nnoremap <silent> {Up-Mapping} :TmuxNavigateUp<cr>
+"nnoremap <silent> {Right-Mapping} :TmuxNavigateRight<cr>
+"nnoremap <silent> {Previous-Mapping} :TmuxNavigatePrevious<cr>
