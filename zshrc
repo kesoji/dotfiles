@@ -885,9 +885,9 @@ awssts() {
 export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
 
 # PROFILING. If you want to profile zsh initialization,
-# Add this code to the first line of .zshenv
+# Comment-in this code of the first line of
+# ~/.zshenv
 # `zmodload zsh/zprof && zprof`
-# And comment-in below
-#if (which zprof > /dev/null) ;then
-#  zprof | less
-#fi
+if (which zprof > /dev/null) ;then
+  zprof | less
+fi
