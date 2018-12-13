@@ -63,6 +63,9 @@ else
     autoload -Uz colors && colors
     PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
     $ "
+    # enable completion
+    autoload -Uz compinit && compinit -u
+
     setopt auto_cd
     setopt auto_pushd
     DIRSTACKSIZE=100
@@ -82,10 +85,7 @@ else
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
 
-# enable completion
-autoload -Uz compinit && compinit -u
-# Can source bash completion
-autoload bashcompinit && bashcompinit
+autoload -Uz bashcompinit &&bashcompinit -i
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
@@ -694,9 +694,8 @@ fi
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-autoload -U +X bashcompinit && bashcompinit
-complete -o nospace -C /home/kesoji/my/bin/terraform terraform
 
+complete -o nospace -C /home/kesoji/my/bin/terraform terraform
 #########
 # AWS Completer
 #########
@@ -714,9 +713,6 @@ complete -o nospace -C /home/kesoji/my/bin/terraform terraform
 # https://github.com/zsh-users/zsh/commit/edab1d3dbe61da7efe5f1ac0e40444b2ec9b9570
 #
 # zsh relases prior to that version do not export the required env variables!
-
-autoload -Uz bashcompinit
-bashcompinit -i
 
 _bash_complete() {
   local ret=1
@@ -887,3 +883,11 @@ awssts() {
 }
 
 export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
+
+# PROFILING. If you want to profile zsh initialization,
+# Add this code to the first line of .zshenv
+# `zmodload zsh/zprof && zprof`
+# And comment-in below
+#if (which zprof > /dev/null) ;then
+#  zprof | less
+#fi
