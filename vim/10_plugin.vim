@@ -17,6 +17,7 @@ Plug 'xolox/vim-misc'
 Plug 'godlygeek/tabular'
 Plug 'itchyny/lightline.vim'
 Plug 'iamcco/markdown-preview.vim'
+Plug 'jiangmiao/auto-pairs'
 "Plug 'Townk/vim-autoclose'
 "Plug 'vim-scripts/cisco.vim'
 Plug 'bbchung/gtags.vim'
@@ -93,6 +94,9 @@ Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
+Plug 'pangloss/vim-javascript',                { 'for': ['javascript', 'javascript.jsx'] }
+Plug 'othree/yajs',                { 'for': ['javascript'] }
+Plug 'maxmellon/vim-jsx-pretty', { 'for': ['javascript', 'javascript.jsx'] }
 " Clolor Scheme
 Plug 'tomasr/molokai'
 Plug 'sjl/badwolf'
