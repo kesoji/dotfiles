@@ -348,6 +348,7 @@ noremap ,pt <Esc>:%! perltidy -se<CR>
 noremap ,ptv <Esc>:'<,'>! perltidy -se<CR>
 
 " GREP {{{1
+" https://qiita.com/yuku_t/items/0c1aff03949cb1b8fe6b
 augroup grepQuickfixOpen
     autocmd QuickFixCmdPost *grep* cwindow
 augroup END
@@ -356,4 +357,5 @@ if executable('rg')
     set grepformat=%f:%l:%c:%m,%f:%l:%m
 endif
 nnoremap <expr> * ':vimgrep ' . expand('<cword>') . ' %<CR>'
-" https://qiita.com/yuku_t/items/0c1aff03949cb1b8fe6b
+" ack.vim
+let g:ackprg = 'rg --vimgrep --no-heading'
