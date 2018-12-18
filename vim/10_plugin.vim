@@ -84,6 +84,7 @@ Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
 Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
 Plug 'fatih/vim-go',               { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
+Plug 'othree/html5.vim',           { 'for': ['html'] }
 Plug 'mattn/emmet-vim',            { 'for': ['html', 'css'] }
 Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
 Plug 'petdance/vim-perl',          { 'for': ['perl'] }
@@ -91,6 +92,8 @@ Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
 Plug 'cespare/vim-toml',           { 'for': ['toml'] }
 Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
 "Plug 'lambdalisue/vim-pyenv',      { 'for': ['python'] }
+Plug 'pangloss/vim-javascript',    { 'for': ['javascript'] }
+Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
@@ -436,3 +439,6 @@ let g:tmux_navigator_no_mappings = 1
 "nnoremap <silent> {Up-Mapping} :TmuxNavigateUp<cr>
 "nnoremap <silent> {Right-Mapping} :TmuxNavigateRight<cr>
 "nnoremap <silent> {Previous-Mapping} :TmuxNavigatePrevious<cr>
+"
+"<<<plugin>>> vim-jsx-pretty
+let g:vim_jsx_pretty_colorful_config = 1
