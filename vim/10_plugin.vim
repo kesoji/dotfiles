@@ -10,6 +10,7 @@ Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
+Plug 'scrooloose/nerdtree'
 Plug 'majutsushi/tagbar'
 "Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
@@ -368,10 +369,14 @@ if executable('pyls')
     augroup END
 endif
 
-"<<<Plugin>>> NerdCommenter {{{1
+"<<<Plugin>>> NERDCommenter {{{1
 nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
+
+"<<<Plugin>>> NERDTree {{{1
+map <C-e> :NERDTreeToggle<CR>
+imap <C-e> <ESC><C-u>:NERDTreeToggle<CR>
 
 "<<<Plugin>>> UltiSnips {{{1
 let g:UltiSnipsExpandTrigger       = "<tab>"
