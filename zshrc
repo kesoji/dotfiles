@@ -882,6 +882,15 @@ awssts() {
     fi
 }
 
+complete-ssh-host-fzf() {
+    local host="$(egrep -i '^Host\s+.+' ~/.ssh/config $(find ~/.ssh/conf.d -type f 2>/dev/null) | egrep -v '[*?]' | awk '{print $2}' | sort | fzf)"
+
+    [ ! -z "$host" ] && LBUFFER+="$host"
+    zle reset-prompt
+}
+zle -N complete-ssh-host-fzf
+bindkey '^s^s' complete-ssh-host-fzf
+
 export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
 
 # PROFILING. If you want to profile zsh initialization,
