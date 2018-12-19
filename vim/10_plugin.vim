@@ -97,12 +97,10 @@ Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
 "Plug 'lambdalisue/vim-pyenv',      { 'for': ['python'] }
 Plug 'pangloss/vim-javascript',    { 'for': ['javascript'] }
 Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
+"Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
 Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
-Plug 'pangloss/vim-javascript',                { 'for': ['javascript', 'javascript.jsx'] }
-Plug 'othree/yajs',                { 'for': ['javascript'] }
-Plug 'maxmellon/vim-jsx-pretty', { 'for': ['javascript', 'javascript.jsx'] }
 " Clolor Scheme
 Plug 'tomasr/molokai'
 Plug 'sjl/badwolf'
