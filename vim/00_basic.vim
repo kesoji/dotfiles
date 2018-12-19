@@ -200,17 +200,17 @@ vnoremap <silent> <Space><Space> "zy:let @/ = @z<CR>:set hlsearch<CR>
 
 """ Window and Tab operation
 nnoremap s <Nop>
-nnoremap sj <C-w>j
-nnoremap sk <C-w>k
-nnoremap sl <C-w>l
-nnoremap sh <C-w>h
-nnoremap sJ <C-w>J
-nnoremap sK <C-w>K
-nnoremap sL <C-w>L
-nnoremap sH <C-w>H
-nnoremap sr <C-w>r
-nnoremap s= <C-w>=
-nnoremap sw <C-w>w
+"nnoremap sj <C-w>j
+"nnoremap sk <C-w>k
+"nnoremap sl <C-w>l
+"nnoremap sh <C-w>h
+"nnoremap sJ <C-w>J
+"nnoremap sK <C-w>K
+"nnoremap sL <C-w>L
+"nnoremap sH <C-w>H
+"nnoremap sr <C-w>r
+"nnoremap s= <C-w>=
+"nnoremap sw <C-w>w
 nnoremap so <C-w>_<C-w>|
 nnoremap s> <C-w>>
 nnoremap s< <C-w><
