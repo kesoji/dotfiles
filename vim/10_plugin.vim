@@ -43,7 +43,7 @@ Plug 'glidenote/memolist.vim'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 Plug 'mhinz/vim-signify'
-Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer' }
+Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-textobj-user'
