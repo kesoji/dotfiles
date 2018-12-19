@@ -375,7 +375,7 @@ imap <C-_> <ESC>$a<Space><Plug>NERDCommenterInsert
 
 "<<<Plugin>>> UltiSnips {{{1
 let g:UltiSnipsExpandTrigger       = "<tab>"
-let g:UltiSnipsJumpForwardTrigger  = "<tab>"
+let g:UltiSnipsJumpForwardTrigger  = "<c-b>"
 let g:UltiSnipsJumpBackwardTrigger = "<c-z>"
 
 "<<<Plugin>>> YouCompleteMe {{{1
