@@ -21,6 +21,7 @@ Plug 'iamcco/markdown-preview.vim'
 Plug 'mileszs/ack.vim'
 Plug 'thinca/vim-qfreplace'
 Plug 'jiangmiao/auto-pairs'
+Plug 'alvan/vim-closetag'
 "Plug 'Townk/vim-autoclose'
 "Plug 'vim-scripts/cisco.vim'
 Plug 'bbchung/gtags.vim'
@@ -42,6 +43,8 @@ Plug 'vim-scripts/DirDiff.vim'
 Plug 'glidenote/memolist.vim'
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
+Plug 'epilande/vim-es2015-snippets'
+Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
 Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 Plug 'Shougo/vinarise'
@@ -386,7 +389,7 @@ let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
 
 "<<<Plugin>>> Tagbar {{{1
-nnoremap <silent> <leader>e :TagbarToggle<CR>
+nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
 
 "<<<Plugin>>> phpunit {{{1
 let g:phpunit_bin = './vendor/bin/phpunit'
@@ -447,3 +450,9 @@ let g:tmux_navigator_no_mappings = 1
 "
 "<<<plugin>>> vim-jsx-pretty
 let g:vim_jsx_pretty_colorful_config = 1
+
+"<<<plugin>>> vim-closetag
+"let g:closetag_filenames = '*.html,*.xhtml,*.phtml,'
+"let g:closetag_xhtml_filenames = '*.xhtml,*.jsx,*.js'
+let g:closetag_filetypes = 'html,xhtml,phtml,javascript'
+let g:closetag_xhtml_filetypes = 'xhtml,jsx,javascript'
