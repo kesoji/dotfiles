@@ -406,7 +406,7 @@ let g:ale_fixers = {
             \}
 let g:ale_open_list = 1
 let g:ale_fix_on_save = 1
-let g:ale_completion_enabled = 1
+let g:ale_completion_enabled = 0
 let g:ale_sign_column_always = 1
 let g:ale_php_phpcs_standard = 'PSR2'
 let g:ale_php_phpcs_options = '--exclude=Generic.Files.LineLength.TooLong'
