@@ -179,12 +179,14 @@ command -v direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "direnv isn't installed: my-direnvinstall"
     function my-direnvinstall {
-        comexec "git clone git@github.com:direnv/direnv.git" || return
-        comexec "cd direnv" || return
+        local tmpdir=~/__direnv__tmp
+        [[ -d $tmpdir ]] && comexec "rm -rf $tmpdir" || return
+        comexec "git clone git@github.com:direnv/direnv.git $tmpdir" || return
+        comexec "cd $tmpdir" || return
         comexec "make" || return
         comexec "make install DESTDIR=$HOME/my" || return
-        comexec "cd .." || return
-        comexec "rm -rf direnv" || return
+        comexec "cd -" || return
+        comexec "rm -rf $tmpdir" || return
     }
 else
     eval "$(direnv hook zsh)"
@@ -217,15 +219,17 @@ else
     function my-rbenvinstall() {
         comexec "git clone https://github.com/rbenv/rbenv.git ~/.rbenv" || return
         comexec "cd ~/.rbenv && src/configure && make -C src" || return
-        comexec "~/.rbenv/bin/rbenv init" || return
-        comexec "curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash" || return
+        export PATH="$HOME/.rbenv/bin:$PATH"
+        echo '>>> eval $(~/.rbenv/bin/rbenv init -)'
+        eval "$(~/.rbenv/bin/rbenv init -)"
         comexec "mkdir -p ""$(~/.rbenv/bin/rbenv root)""/plugins" || return
         comexec "git clone https://github.com/rbenv/ruby-build.git ""$(~/.rbenv/bin/rbenv root)""/plugins/ruby-build" || return
+        comexec "curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash" || return
         source ~/.zshrc
     }
 fi
 
-# Pyenv
+# phpenv
 if [ -e "${HOME}/.phpenv" ]; then
     function phpenvinit() {
         export PHPENV_ROOT="$HOME/.phpenv"
@@ -241,7 +245,7 @@ else
     }
 fi
 
-# phpenv
+# Pyenv
 if [ -e "${HOME}/.pyenv" ]; then
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
@@ -253,7 +257,8 @@ else
         echo "When you cannot build python, check if there are dependencies."
         echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev"
         echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
-        source ~/.zshrc
+        echo -e "$1: \e[30;41;1mWhen you install python by pyenv, use 'export PYTHON_CONFIGURE_OPTS=\"--enable-shared\"; pyenv install 3.x.x'\e[m"
+        comexec "source ~/.zshrc"
     }
 fi
 
@@ -454,6 +459,7 @@ if [[ $arch =~ "Microsoft" ]]; then
 
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
+        mkdir -p ~/my/bin
         cat << 'SCRIPT' > ~/my/bin/google-chrome
 #!/bin/sh
 exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
@@ -464,6 +470,12 @@ SCRIPT
     # env-specific command alias
     alias cl=clip.exe
     alias -g C='| clip.exe'
+
+    # add repository
+    function my-addaptrepos {
+        comexec "sudo add-apt-repository ppa:jonathonf/vim"
+        comexec "sudo add-apt-repository ppa:longsleep/golang-backports"
+    }
 fi
 
 function my-colortable (){
@@ -524,9 +536,10 @@ command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "gibo isn't installed: my-giboinstall"
     function my-giboinstall (){
-        mkdir -p ~/my/bin;
-        curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo \
-            -so ~/my/bin/gibo && chmod +x ~/my/bin/gibo && ~/my/bin/gibo -u
+        comexec "mkdir -p ~/my/bin" || return
+        comexec "curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo -so ~/my/bin/gibo" || return
+        comexec "chmod +x ~/my/bin/gibo && ~/my/bin/gibo update" || return
+        echo "install finished"
     }
 fi
 
@@ -602,10 +615,10 @@ command -v composer 2>/dev/null 1>&2
 if [[ $? -ne 0 ]]; then
     echo "composer isn't installed: my-composerinstall"
     function my-composerinstall() {
-        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
-        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '93b54496392c062774670ac18b134c3b3a95e5a5e5c8f1a9f115f203b75bf9a129d5daa8ba6a13e2cc8a1da0806388a8') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\""
-        comexec "php composer-setup.php --install-dir=$HOME/my/bin --filename=composer"
-        comexec "php -r \"unlink('composer-setup.php');\""
+        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\"" || return
+        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '93b54496392c062774670ac18b134c3b3a95e5a5e5c8f1a9f115f203b75bf9a129d5daa8ba6a13e2cc8a1da0806388a8') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\"" || return
+        comexec "php composer-setup.php --install-dir=$HOME/my/bin --filename=composer" || return
+        comexec "php -r \"unlink('composer-setup.php');\"" || return
     }
 fi
 
@@ -854,6 +867,8 @@ command_not_found_handler() {
 
         COUNT=$((COUNT - 1))
     done
+
+    return 1
 }
 
 
