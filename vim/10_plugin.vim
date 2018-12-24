@@ -46,7 +46,7 @@ Plug 'honza/vim-snippets'
 Plug 'epilande/vim-es2015-snippets'
 Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
-Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
+Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-textobj-user'
@@ -58,10 +58,11 @@ Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'thinca/vim-ref'
 Plug 'joonty/vdebug'
-"Plug 'prabirshrestha/async.vim'
-"Plug 'prabirshrestha/vim-lsp'
-"Plug 'prabirshrestha/asyncomplete.vim'
-"Plug 'prabirshrestha/asyncomplete-lsp.vim'
+Plug 'prabirshrestha/async.vim'
+Plug 'prabirshrestha/vim-lsp'
+Plug 'prabirshrestha/asyncomplete.vim'
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
+Plug 'natebosch/vim-lsc'
 if has('mac')
     " Mac: fzf should be installed by Homebrew
     Plug '/usr/local/opt/fzf'
@@ -358,17 +359,32 @@ map ek <Plug>(edgemotion-k)
 "<<<Plugin>>> vim-lsp {{{1
 " Python {{{2
 if executable('pyls')
-    " pip install python-language-server
-    augroup LspPython
-        au!
-        autocmd User lsp_setup call lsp#register_server({
-                    \ 'name': 'pyls',
-                    \ 'cmd': {server_info->['pyls']},
-                    \ 'whitelist': ['python'],
-                    \ })
-        autocmd FileType python setlocal omnifunc=lsp#complete
-    augroup END
+  " pip install python-language-server
+  augroup LspPython
+    au!
+    autocmd User lsp_setup call lsp#register_server({
+        \ 'name': 'pyls',
+        \ 'cmd': {server_info->['pyls']},
+        \ 'whitelist': ['python'],
+        \ })
+    autocmd FileType python setlocal omnifunc=lsp#complete
+  augroup END
 endif
+
+" Go {{{2
+if executable('golsp')
+  augroup LspGo
+    au!
+    autocmd User lsp_setup call lsp#register_server({
+        \ 'name': 'go-lang',
+        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
+        \ 'whitelist': ['go'],
+        \ })
+    autocmd FileType go setlocal omnifunc=lsp#complete
+  augroup END
+endif
+let g:lsp_async_completion = 1
+
 
 "<<<Plugin>>> NERDCommenter {{{1
 nmap <C-_> <Plug>NERDCommenterToggle
