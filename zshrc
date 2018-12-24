@@ -314,7 +314,7 @@ alias tfp='terraform plan'
 alias tfd='terraform destroy'
 alias tfw='terraform workspace'
 alias bins='bundle install'
-alias bex='bundle exec'
+alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
 
 ## Docker
