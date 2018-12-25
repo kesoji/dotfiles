@@ -58,6 +58,7 @@ Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'thinca/vim-ref'
 Plug 'joonty/vdebug'
+Plug 'simeji/winresizer'
 Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'prabirshrestha/asyncomplete.vim'
@@ -472,3 +473,6 @@ let g:vim_jsx_pretty_colorful_config = 1
 "let g:closetag_xhtml_filenames = '*.xhtml,*.jsx,*.js'
 let g:closetag_filetypes = 'html,xhtml,phtml,javascript'
 let g:closetag_xhtml_filetypes = 'xhtml,jsx,javascript'
+
+"<<<plugin>>> winresizer {{{1
+let g:winresizer_start_key = '<C-x>'
