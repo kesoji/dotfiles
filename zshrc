@@ -452,10 +452,7 @@ fi
 # if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    # run tmux avoiding nest
-    if [[ -z "$TMUX" ]]; then tmux; fi
-
-    export DOCKER_HOST='tcp://0.0.0.0:2375'
+    #export DOCKER_HOST='tcp://0.0.0.0:2375'
 
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
@@ -464,7 +461,7 @@ if [[ $arch =~ "Microsoft" ]]; then
 #!/bin/sh
 exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
 SCRIPT
-    chmod +x ~/my/bin/google-chrome
+        chmod +x ~/my/bin/google-chrome
     fi
 
     # env-specific command alias
@@ -476,6 +473,27 @@ SCRIPT
         comexec "sudo add-apt-repository ppa:jonathonf/vim"
         comexec "sudo add-apt-repository ppa:longsleep/golang-backports"
     }
+
+    path2dockerrelay="/usr/local/bin/docker-relay"
+    if [[ ! -e $path2dockerrelay ]]; then
+        command -v npiperelay.exe 2>/dev/null 1>&2
+        if [[ $? -eq 0 ]]; then
+            echo "docker-relay is not found and npiperelay is also not found."
+            echo "docker-relay will be created in $path2dockerrelay"
+            echo "you shoud install \`socat\` and \`npiperelay.exe\` (shoud be built on Windows)"
+        fi
+
+        cat << EOS >! /tmp/docker-relay
+#!/bin/sh
+exec socat UNIX-LISTEN:/var/run/docker.sock,fork,group=`id -gn`,umask=007 EXEC:"npiperelay.exe -ep -s //./pipe/docker_engine",nofork
+EOS
+        sudo mv /tmp/docker-relay $path2dockerrelay
+        sudo chown root. $path2dockerrelay
+        sudo chmod +x $path2dockerrelay
+    fi
+
+    # run tmux avoiding nest
+    if [[ -z "$TMUX" ]]; then tmux; fi
 fi
 
 function my-colortable (){
