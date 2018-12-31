@@ -90,7 +90,7 @@ set autoindent
 set smartindent
 augroup fileTypeIndent
     autocmd!
-    autocmd FileType html setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    autocmd FileType html,eruby setlocal tabstop=2 softtabstop=2 shiftwidth=2
     autocmd FileType javascript setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
