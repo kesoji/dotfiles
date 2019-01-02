@@ -480,7 +480,7 @@ SCRIPT
         if [[ $? -eq 0 ]]; then
             echo "docker-relay is not found and npiperelay is also not found."
             echo "docker-relay will be created in $path2dockerrelay"
-            echo "you shoud install \`socat\` and \`npiperelay.exe\` (shoud be built on Windows)"
+            echo "you shoud install \`socat\` and \`npiperelay.exe\` (should be built on Windows: go get -u github.com/jstarks/npiperelay)"
         fi
 
         cat << EOS >! /tmp/docker-relay
