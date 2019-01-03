@@ -927,6 +927,7 @@ zle -N complete-ssh-host-fzf
 bindkey '^s^s' complete-ssh-host-fzf
 
 export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
+AGNOSTER_PROMPT_SEGMENTS[2]=
 
 # PROFILING. If you want to profile zsh initialization,
 # Comment-in this code of the first line of
