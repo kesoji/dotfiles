@@ -101,6 +101,7 @@ Plug 'cespare/vim-toml',           { 'for': ['toml'] }
 Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
 "Plug 'lambdalisue/vim-pyenv',      { 'for': ['python'] }
 Plug 'pangloss/vim-javascript',    { 'for': ['javascript'] }
+Plug 'galooshi/vim-import-js',     { 'for': ['javascript'] }
 Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
@@ -476,3 +477,8 @@ let g:closetag_xhtml_filetypes = 'xhtml,jsx,javascript'
 
 "<<<plugin>>> winresizer {{{1
 let g:winresizer_start_key = '<C-x>'
+
+"<<<plugin>>> vim-js-importer {{{1
+nnoremap <Leader><Leader>j :ImportJSWord<CR>
+nnoremap <Leader><Leader>i :ImportJSFix<CR>
+nnoremap <Leader><Leader>g :ImportJSGoto<CR>
