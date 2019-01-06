@@ -421,6 +421,7 @@ let g:ale_fixers = {
             \ '*': ['remove_trailing_lines', 'trim_whitespace'],
             \ 'php': ['phpcbf'],
             \ 'ruby': ['rubocop'],
+            \ 'javascript': ['prettier', 'eslint'],
             \}
 let g:ale_open_list = 1
 let g:ale_fix_on_save = 1
@@ -429,6 +430,7 @@ let g:ale_sign_column_always = 1
 let g:ale_php_phpcs_standard = 'PSR2'
 let g:ale_php_phpcs_options = '--exclude=Generic.Files.LineLength.TooLong'
 let g:ale_php_phpcbf_standard = 'PSR2'
+let g:ale_javascript_prettier_use_local_config = 1
 
 nmap <C-a><C-f> <Plug>(ale_fix)
 nmap <leader>n <Plug>(ale_toggle)

@@ -144,6 +144,7 @@ nnoremap <Leader>W :<C-u>wq<CR>
 nnoremap <Leader>q :<C-u>q<CR>
 nnoremap <Leader><Leader>q :<C-u>qa<CR>
 nnoremap <Leader>Q :<C-u>q!<CR>
+nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
 
 """ ベースの動きをスワップ
 "noremap ; :
