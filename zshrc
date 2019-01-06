@@ -437,12 +437,6 @@ if `command -v pet 2>/dev/null 1>&2` ; then
     bindkey '^s' pet-select
 fi
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then source $HOME/my/google-cloud-sdk/path.zsh.inc; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then source $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
-
 # kubectl completion
 command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
@@ -936,3 +930,18 @@ AGNOSTER_PROMPT_SEGMENTS[2]=
 if (which zprof > /dev/null) ;then
   zprof | less
 fi
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then . $HOME/my/google-cloud-sdk/path.zsh.inc; fi
+# The next line enables shell command completion for gcloud.
+if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then . $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
+
+command -v tig 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "google cloud sdk is not installed."
+else
+    # Google Cloud SDK / gcloud Completions - installed via apt-get
+    if [ -f '/usr/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/share/google-cloud-sdk/completion.zsh.inc'; fi
+fi
+
+
