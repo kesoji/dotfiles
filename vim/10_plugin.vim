@@ -263,7 +263,28 @@ map <space>ob <Plug>(openbrowser-smart-search)
 
 "<<<Plugin>>> lightline {{{1
 set laststatus=2
+set noshowmode
 
+let g:lightline = {
+      \ 'colorscheme': 'wombat',
+      \ 'component_function': {
+      \   'filename': 'LightLineFileNameWithParentDir'
+      \ }
+      \ }
+
+function! LightLineFileNameWithParentDir()
+    if expand('%:t') ==# ''
+        let s:filename = '[No Name]'
+    else
+        let s:dirfiles = split(expand('%:p'), '/')
+        if len(s:dirfiles) < 2
+            let s:filename = s:dirfiles[0]
+        else
+            let s:filename = s:dirfiles[-2] . '/' . s:dirfiles[-1]
+        endif
+    endif
+    return s:filename
+endfunction
 
 "<<<Plugin>>> vim-session {{{1
 
