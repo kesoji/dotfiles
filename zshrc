@@ -310,6 +310,7 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias :q='exit'
 alias dotcd='cd ~/dotfiles'
 alias dotpl='cd ~/dotfiles; git pull --rebase; cd -'
 alias history='history -i'
