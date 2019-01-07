@@ -275,16 +275,16 @@ let g:lightline = {
 
 function! LightLineFileNameWithParentDir()
     if expand('%:t') ==# ''
-        let s:filename = '[No Name]'
+        let filename = '[No Name]'
     else
-        let s:dirfiles = split(expand('%:p'), '/')
-        if len(s:dirfiles) < 2
-            let s:filename = s:dirfiles[0]
+        let dirfiles = split(expand('%:p'), '/')
+        if len(dirfiles) < 2
+            let filename = dirfiles[0]
         else
-            let s:filename = s:dirfiles[-2] . '/' . s:dirfiles[-1]
+            let filename = dirfiles[-2] . '/' . dirfiles[-1]
         endif
     endif
-    return s:filename
+    return filename
 endfunction
 
 "<<<Plugin>>> vim-session {{{1
