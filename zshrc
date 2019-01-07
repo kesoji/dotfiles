@@ -936,12 +936,10 @@ if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then . $HOME/my/google-cloud-s
 # The next line enables shell command completion for gcloud.
 if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then . $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
 
-command -v tig 2>/dev/null 1>&2
+command -v gcloud 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "google cloud sdk is not installed."
 else
     # Google Cloud SDK / gcloud Completions - installed via apt-get
     if [ -f '/usr/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/share/google-cloud-sdk/completion.zsh.inc'; fi
 fi
-
-
