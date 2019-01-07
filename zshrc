@@ -209,6 +209,18 @@ else
     }
 fi
 
+# n
+command -v n 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "n isn't installed: my-ninstall"
+    function my-ninstall {
+        comexec "sudo git clone https://github.com/tj/n /usr/local/src/n"
+        comexec "cd /usr/local/src/n"
+        comexec "sudo make install"
+        comexec "cd -"
+    }
+fi
+
 # Plenv
 if [ -e "${HOME}/.plenv" ]; then
     export PATH="$HOME/.plenv/bin:$PATH"
