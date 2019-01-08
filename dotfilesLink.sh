@@ -16,6 +16,7 @@ ln -sf ~/dotfiles/tigrc ~/.tigrc
 ln -sf ~/dotfiles/inputrc ~/.inputrc
 ln -sf ~/dotfiles/globalrc ~/.globalrc
 ln -sf ~/dotfiles/irbrc ~/.irbrc
+ln -sf ~/dotfiles/ctags ~/.ctags
 
 # dir
 ln -Tsf ~/dotfiles/sshrc.d ~/.sshrc.d
