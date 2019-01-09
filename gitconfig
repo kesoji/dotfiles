@@ -45,7 +45,8 @@
 	d2 = diff HEAD~2
 	d3 = diff HEAD~3
 	alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
-	subup = submodule update --init --recursive
+	sm = submodule
+	smup = submodule update --init --recursive
 [gui]
 	encoding = utf-8
 [difftool "sourcetree"]
