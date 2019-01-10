@@ -20,8 +20,8 @@ ln -sf ~/dotfiles/irbrc ~/.irbrc
 ln -sf ~/dotfiles/ctags ~/.ctags.d/config.ctags
 
 # dir
-ln -Tsf ~/dotfiles/sshrc.d ~/.sshrc.d
-ln -Tsf ~/dotfiles/vim ~/.vim/config
+ln -sf ~/dotfiles/sshrc.d ~/.sshrc.d
+ln -sf ~/dotfiles/vim ~/.vim/config
 ln -sf ~/dotfiles/rc ~/.vim/
 ln -sf ~/dotfiles/snippets ~/.vim/
 ln -sf ~/dotfiles/after ~/.vim/
