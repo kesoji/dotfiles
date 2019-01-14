@@ -188,6 +188,12 @@ if [[ $? -ne 0 ]] ; then
     echo "Let's install hyperfine benchmark tool!: https://github.com/sharkdp/hyperfine"
 fi
 
+# hexyl
+command -v hexyl 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "Let's install hexyl bindump tool!: https://github.com/sharkdp/hexyl"
+fi
+
 # direnv
 command -v direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
