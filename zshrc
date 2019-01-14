@@ -116,6 +116,14 @@ if command -v lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
 fi
 
+# bat
+command -v bat 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "bat isn't installed: let's visit https://github.com/sharkdp/bat/releases and install!"
+else
+    alias cat='bat'
+fi
+
 # tig
 command -v tig 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then

@@ -81,6 +81,7 @@ Plug 'bps/vim-textobj-python'
 Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
+Plug 'dag/vim-fish'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
 Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
