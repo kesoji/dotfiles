@@ -408,6 +408,19 @@ if executable('golsp')
     autocmd FileType go setlocal omnifunc=lsp#complete
   augroup END
 endif
+
+" PHP {{{2
+if executable('php-language-server.php')
+    augroup LspPHP
+        au!
+        autocmd User lsp_setup call lsp#register_server({
+                    \ 'name': 'php-langserevr',
+                    \ 'cmd': {server_info->['php', $HOME.'/.config/composer/vendor/bin/php-language-server.php']},
+                    \ 'whitelist': ['php'],
+                    \ })
+    augroup END
+endif
+
 let g:lsp_async_completion = 1
 
 
@@ -437,7 +450,7 @@ let g:phpunit_bin = './vendor/bin/phpunit'
 
 "<<<Plugin>>> ale {{{1
 let g:ale_linters = {
-            \ 'php': ['phpstan', 'phpcs', 'php'],
+            \ 'php': ['langserver', 'phpstan', 'phpcs', 'php'],
             \ 'ruby': ['rubocop'],
             \}
 let g:ale_fixers = {
@@ -453,6 +466,8 @@ let g:ale_sign_column_always = 1
 let g:ale_php_phpcs_standard = 'PSR2'
 let g:ale_php_phpcs_options = '--exclude=Generic.Files.LineLength.TooLong'
 let g:ale_php_phpcbf_standard = 'PSR2'
+let g:ale_php_langserver_use_global = 1
+let g:ale_php_langserver_executable = $HOME.'/.config/composer/vendor/bin/php-language-server.php'
 let g:ale_javascript_prettier_use_local_config = 1
 
 nmap <C-a><C-f> <Plug>(ale_fix)
