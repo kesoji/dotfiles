@@ -58,7 +58,7 @@ Plug 'kana/vim-operator-user'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'thinca/vim-ref'
-Plug 'joonty/vdebug'
+Plug 'joonty/vdebug', { 'on': 'VdebugEnable' }
 Plug 'simeji/winresizer'
 Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
