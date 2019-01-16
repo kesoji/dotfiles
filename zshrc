@@ -625,6 +625,24 @@ if [[ $? -ne 0 ]] ; then
 else
     export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
     alias g='cd $(ghq root)/$(ghq list | fzf)'
+    # CTRL-G - Paste ghq path into the command line
+    __fghq() {
+      local rootdir="$(ghq root)"
+      setopt localoptions pipefail 2> /dev/null
+      local repodir="$(ghq list | fzf)"
+      local dir="$rootdir/$repodir/"
+      echo $dir
+    }
+
+    fzf-ghq-widget() {
+      LBUFFER="${LBUFFER}$(__fghq)"
+      local ret=$?
+      zle reset-prompt
+      return $ret
+    }
+    zle     -N   fzf-ghq-widget
+    bindkey '^G' fzf-ghq-widget
+
 fi
 
 # Krypton
