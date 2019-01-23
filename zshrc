@@ -212,6 +212,7 @@ else
     eval "$(direnv hook zsh)"
 fi
 
+### Javascript / Node / Typescript
 # NVM
 if [[ ! -d $HOME/.nvm ]] ; then
     echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
@@ -234,6 +235,21 @@ if [[ $? -ne 0 ]] ; then
         comexec "cd -"
     }
 fi
+
+function mycheck() {
+    my-php
+    my-javascript
+}
+
+function my-javascript() {
+    echo ">>> Javascript <<<"
+    local -a ary=("yarn" "node" "tsc" "tsserver" "eslint")
+    for v in $ary; do
+        commandinstalled $v
+    done
+}
+
+###
 
 # Plenv
 if [ -e "${HOME}/.plenv" ]; then
@@ -668,6 +684,7 @@ fi
 
 # php
 function my-php() {
+    echo ">>> PHP <<<"
     local -a ary=("composer" "phpstan" "phpcbf" "psysh")
     for v in $ary; do
         commandinstalled $v
