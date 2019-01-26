@@ -378,8 +378,8 @@ let g:memolist_path = "~/.vim/memo"
 
 
 "<<<Plugin>>> vim-edgemotion {{{1
-map ej <Plug>(edgemotion-j)
-map ek <Plug>(edgemotion-k)
+"map ej <Plug>(edgemotion-j)
+"map ek <Plug>(edgemotion-k)
 
 "<<<Plugin>>> vim-lsp {{{1
 " Python {{{2
