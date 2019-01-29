@@ -57,6 +57,7 @@ Plug 'haya14busa/vim-edgemotion'
 Plug 'kana/vim-operator-user'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
+Plug 'chr4/nginx.vim'
 Plug 'thinca/vim-ref'
 Plug 'joonty/vdebug', { 'on': 'VdebugEnable' }
 Plug 'simeji/winresizer'
@@ -82,6 +83,7 @@ Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
 Plug 'dag/vim-fish'
+Plug 'pearofducks/ansible-vim'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
 Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
@@ -340,6 +342,9 @@ let g:EasyMotion_keys = ';HKLYUIOPNM,QWERTASDGZXCVBJF'
 " Show target key with upper case to improve readability
 let g:EasyMotion_use_upper = 1
 let g:EasyMotion_smartcase = 1
+" Jump to first match with enter & space
+let g:EasyMotion_enter_jump_first = 1
+let g:EasyMotion_space_jump_first = 1
 
 "map f <Plug>(easymotion-fl)
 "map t <Plug>(easymotion-tl)
@@ -353,14 +358,14 @@ nmap g/ <Plug>(easymotion-sn)
 xmap g/ <Plug>(easymotion-sn)
 omap g/ <Plug>(easymotion-tn)
 
-" Jump to first match with enter & space
-let g:EasyMotion_enter_jump_first = 1
-let g:EasyMotion_space_jump_first = 1
-
 nmap <Space>s <Plug>(easymotion-s2)
 xmap <Space>s <Plug>(easymotion-s2)
 " surround.vimと被らないように
 omap z <Plug>(easymotion-s2)
+
+"<<<Plugin>>> vim-edgemotion {{{1
+map _ <Plug>(edgemotion-j)
+map ^ <Plug>(edgemotion-k)
 
 
 "<<<Plugin>>> expand-region {{{1
@@ -375,11 +380,6 @@ nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
-
-
-"<<<Plugin>>> vim-edgemotion {{{1
-"map ej <Plug>(edgemotion-j)
-"map ek <Plug>(edgemotion-k)
 
 "<<<Plugin>>> vim-lsp {{{1
 " Python {{{2

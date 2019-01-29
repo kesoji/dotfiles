@@ -85,6 +85,17 @@ else
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
 
+
+if [ -e ~/.zsh/z/z.sh ]; then
+    source ~/.zsh/z/z.sh
+else
+    echo "z is not installed: my-zinstall()"
+    function my-zinstall() {
+        comexec "git clone https://github.com/rupa/z ~/.zsh/z"
+        source ~/.zsh//z/z.sh
+    }
+fi
+
 autoload -Uz bashcompinit &&bashcompinit -i
 
 export TERM=xterm-256color
