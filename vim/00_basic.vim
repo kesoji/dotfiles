@@ -90,7 +90,7 @@ set autoindent
 set smartindent
 augroup fileTypeIndent
     autocmd!
-    autocmd FileType html,eruby setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    autocmd FileType html,eruby,ruby setlocal tabstop=2 softtabstop=2 shiftwidth=2
     autocmd FileType javascript setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 " http://itchyny.hatenablog.com/entry/2014/12/25/090000
@@ -129,7 +129,7 @@ set infercase
 "autocmd InsertLeave * set nolist
 
 set wildmenu
-set wildmode=list,longest,full "command-line-modeのリスト表示
+set wildmode=longest,full "command-line-modeのリスト表示
 
 " Mapping {{{1
 let mapleader = "\<Space>"
