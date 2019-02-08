@@ -47,7 +47,7 @@ Plug 'honza/vim-snippets'
 Plug 'epilande/vim-es2015-snippets'
 Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
-Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
+"Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
@@ -88,7 +88,7 @@ Plug 'pearofducks/ansible-vim'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
 Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
-"Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
+Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
 Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
@@ -139,20 +139,35 @@ endfunction
 "<<<Plugin>>> vim-go {{{1
 augroup VimGoMySettings
     autocmd!
-    autocmd FileType go nmap <leader>u <Plug>(go-run)
-    autocmd FileType go nnoremap <leader>n :<C-u>GoFmt<cr>
-    autocmd FileType go nmap <leader>ta <Plug>(go-test)
-    autocmd FileType go nmap <leader>t <Plug>(go-test-func)
-    autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
-    autocmd FileType go nmap <leader>m <Plug>(go-metalinter)
-    autocmd FileType go nnoremap <C-h> :<C-u>GoDeclsDir<cr>
-    autocmd FileType go inoremap <C-h> <esc>:<C-u>GoDeclsDir<cr>
-    autocmd FileType go nnoremap <leader>b :<C-u>call <SID>build_go_files()<CR>
-    autocmd Filetype go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
-    autocmd Filetype go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
-    autocmd Filetype go command! -bang AS call go#alternate#Switch(<bang>0, 'split')
-    autocmd Filetype go syntax on
+    autocmd FileType go nmap <buffer> <leader>u <Plug>(go-run)
+    autocmd FileType go nnoremap <buffer> <leader>n :<C-u>GoFmt<cr>
+    autocmd FileType go nmap <buffer> <leader>ta <Plug>(go-test)
+    autocmd FileType go nmap <buffer> <leader>t <Plug>(go-test-func)
+    autocmd FileType go nmap <buffer> <leader>c <Plug>(go-coverage-toggle)
+    autocmd FileType go nmap <buffer> <leader>m <Plug>(go-metalinter)
+    autocmd FileType go nnoremap <buffer> <C-h> :<C-u>GoDeclsDir<cr>
+    autocmd FileType go inoremap <buffer> <C-h> <esc>:<C-u>GoDeclsDir<cr>
+    autocmd FileType go nnoremap <buffer> <leader>b :<C-u>call <SID>build_go_files()<CR>
+    autocmd FileType go command! -buffer -bang A call go#alternate#Switch(<bang>0, 'edit')
+    autocmd FileType go command! -buffer -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
+    autocmd FileType go command! -buffer -bang AS call go#alternate#Switch(<bang>0, 'split')
+    autocmd FileType go syntax on
 augroup END
+
+if executable('golsp')
+  augroup LspGo
+    autocmd!
+    autocmd User lsp_setup call lsp#register_server({
+        \ 'name': 'go-lang',
+        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
+        \ 'whitelist': ['go'],
+        \ })
+    autocmd FileType go setlocal omnifunc=lsp#complete
+    autocmd FileType go nmap <buffer> <C-]> <Plug>(lsp-definition)
+    autocmd FileType go nmap <buffer> gt <Plug>(lsp-type-definition)
+  augroup END
+endif
+
 function! s:build_go_files()
     let l:file = expand('%')
     if l:file =~# '^\f\+_test\.go$'
@@ -394,19 +409,6 @@ if executable('pyls')
         \ 'whitelist': ['python'],
         \ })
     autocmd FileType python setlocal omnifunc=lsp#complete
-  augroup END
-endif
-
-" Go {{{2
-if executable('golsp')
-  augroup LspGo
-    au!
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'go-lang',
-        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
-        \ 'whitelist': ['go'],
-        \ })
-    autocmd FileType go setlocal omnifunc=lsp#complete
   augroup END
 endif
 

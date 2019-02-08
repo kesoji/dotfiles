@@ -159,6 +159,8 @@ nnoremap <C-]> g<C-]>
 noremap <Leader>h ^
 noremap <Leader>H 0
 noremap <Leader>l $
+noremap <c-i> <c-i>zz
+noremap <c-o> <c-o>zz
 
 """ <ESC>
 inoremap <silent>jj <ESC>

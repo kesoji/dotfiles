@@ -794,10 +794,6 @@ else
     }
 fi
 
-if [ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ]; then
-    . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
-fi
-
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
 
@@ -1022,3 +1018,14 @@ else
     # Google Cloud SDK / gcloud Completions - installed via apt-get
     if [ -f '/usr/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/share/google-cloud-sdk/completion.zsh.inc'; fi
 fi
+
+if [ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ]; then
+    . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
+fi
+
+# tabtab source for serverless package
+# uninstall by removing these lines or running `tabtab uninstall serverless`
+[[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/serverless.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/serverless.zsh
+# tabtab source for sls package
+# uninstall by removing these lines or running `tabtab uninstall sls`
+[[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/sls.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/sls.zsh
