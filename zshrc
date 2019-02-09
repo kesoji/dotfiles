@@ -77,6 +77,16 @@ fi
     #}
 #fi
 
+if [ -e ~/my/src/enhancd/init.sh ]; then
+    source ~/my/src/enhancd/init.sh
+else
+    echo "enhancd is not installed: my-enhancdinstall"
+    function my-enhancdinstall() {
+        comexec "git clone https://github.com/b4b4r07/enhancd ~/my/src/enhancd"
+        comexec "source ~/my/src/enhancd/init.sh"
+    }
+fi
+
 autoload -Uz bashcompinit &&bashcompinit -i
 
 export TERM=xterm-256color
@@ -650,6 +660,10 @@ if [[ $? -ne 0 ]] ; then
 else
     export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
     alias g='cd $(ghq root)/$(ghq list | fzf)'
+    if [ ! -z $ENHANCD_ROOT ]; then
+        alias g='cd -G'
+    fi
+
     # CTRL-G - Paste ghq path into the command line
     __fghq() {
       local rootdir="$(ghq root)"
