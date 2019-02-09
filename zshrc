@@ -247,6 +247,16 @@ if [[ $? -ne 0 ]] ; then
     }
 fi
 
+function myutils() {
+    local -a ary=(
+        "ncdu|Graphical du"
+        "htop|Replacement for top"
+    )
+    for v in $ary; do
+        commandinstalled_withdesc $v
+    done
+}
+
 function mycheck() {
     my-php
     my-javascript
@@ -720,6 +730,19 @@ function commandinstalled() {
     else
         echo -e "$1: \e[30;41;1mnot installed\e[m"
     fi
+}
+
+function commandinstalled_withdesc() {
+    com=${1%%|*}
+    desc=${1##*|}
+    echo -n "$com: "
+    command -v $com 2>/dev/null 1>&2
+    if [[ $? -eq 0 ]]; then
+        echo -en "\e[37;42;1minstalled\e[m"
+    else
+        echo -en "\e[30;41;1mnot installed\e[m"
+    fi
+    echo " [$desc]"
 }
 
 #

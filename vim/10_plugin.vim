@@ -7,7 +7,7 @@ Plug 'mattn/vim-starwars'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
-Plug 'w0rp/ale'
+"Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
