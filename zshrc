@@ -19,25 +19,6 @@ function comexec() {
     echo ">>> $1"; eval $1
 }
 
-#if [[ -e ~/.zplug/init.zsh ]]; then
-#    source ~/.zplug/init.zsh
-#    zplug "greymd/tmux-xpanes"
-#    zplug denysdovhan/spaceship-prompt, use:spaceship.zsh, from:github, as:theme
-#    # Install plugins if there are plugins that have not been installed
-#    if ! zplug check --verbose; then
-#      printf "Install? [y/N]: "
-#      if read -q; then
-#        echo; zplug install
-#      fi
-#    fi
-#    zplug load
-#else
-#    echo "zplug (https://github.com/zplug/zplug) isn't installed: my-zpluginstall"
-#    function my-zpluginstall() {
-#        comexec "curl -sL --proto-redir -all,https https://raw.githubusercontent.com/zplug/installer/master/installer.zsh| zsh"
-#    }
-#fi
-
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
