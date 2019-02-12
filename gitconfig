@@ -20,6 +20,9 @@
 	cim = commit -m
 	ciam = commit -a -m
 	co = checkout
+    com = checkout master
+    cod = checkout develop
+    cos = checkout staging
 	cp = cherry-pick
 	pl = pull --prune --rebase
 	plo = pull --prune --rabase origin master

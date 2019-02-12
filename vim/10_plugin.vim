@@ -7,7 +7,7 @@ Plug 'mattn/vim-starwars'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
-"Plug 'w0rp/ale'
+Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
@@ -48,7 +48,7 @@ Plug 'epilande/vim-es2015-snippets'
 Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
 "Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
-"Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
+Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-textobj-user'
