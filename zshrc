@@ -402,6 +402,16 @@ alias drmca='docker ps -aq | xargs docker rm'
 alias drmia='docker images -aq | xargs docker rmi'
 alias dco='docker-compose'
 
+command -v docui 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "docui isn't installed: my-docuiinstall"
+    function my-docuiinstall() {
+        comexec "ghq get https://github.com/skanehira/docui"
+        comexec "cd ~/go/src/github.com/skanehira/docui"
+        comexec "GO111MODULE=on go install"
+    }
+fi
+
 ## Git
 alias gst='git status'
 alias ga='git add'
@@ -507,7 +517,7 @@ fi
 # if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    export DOCKER_HOST='tcp://0.0.0.0:2375'
+    #export DOCKER_HOST='tcp://0.0.0.0:2375'
 
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
