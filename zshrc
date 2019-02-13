@@ -196,6 +196,17 @@ if [[ $? -ne 0 ]] ; then
     echo "Let's install hexyl bindump tool!: https://github.com/sharkdp/hexyl"
 fi
 
+# asciinema
+command -v asciinema 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "asciinema isn't installed: my-asciinemainstall"
+    function my-asciinemainstall() {
+        comexec "sudo apt-add-repository ppa:zanchey/asciinema"
+        comexec "sudo apt-get update"
+        comexec "sudo apt-get install asciinema"
+    }
+fi
+
 # direnv
 command -v direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
