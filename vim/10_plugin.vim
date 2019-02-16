@@ -154,12 +154,12 @@ augroup VimGoMySettings
     autocmd FileType go syntax on
 augroup END
 
-if executable('golsp')
+if executable('gopls')
   augroup LspGo
     autocmd!
     autocmd User lsp_setup call lsp#register_server({
         \ 'name': 'go-lang',
-        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
+        \ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
         \ 'whitelist': ['go'],
         \ })
     autocmd FileType go setlocal omnifunc=lsp#complete
@@ -464,6 +464,8 @@ let g:ale_fixers = {
             \}
 let g:ale_open_list = 1
 let g:ale_fix_on_save = 1
+let g:ale_lint_on_text_changed = 'never'
+let g:ale_lint_on_enter = 0
 let g:ale_completion_enabled = 0
 let g:ale_sign_column_always = 1
 let g:ale_php_phpcs_standard = 'PSR2'
