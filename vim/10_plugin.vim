@@ -12,6 +12,7 @@ Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'scrooloose/nerdtree'
+Plug 'mechatroner/rainbow_csv'
 Plug 'majutsushi/tagbar'
 "Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
