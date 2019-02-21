@@ -194,3 +194,4 @@ catch
 endtry
 
 set guioptions-=T
+set rop=type:directx
