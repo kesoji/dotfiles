@@ -193,5 +193,11 @@ catch
     " nothing to do
 endtry
 
+" No toolbar
 set guioptions-=T
+" No scrollbar
+set guioptions-=r
+set guioptions-=R
+set guioptions-=l
+set guioptions-=L
 set rop=type:directx
