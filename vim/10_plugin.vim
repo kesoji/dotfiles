@@ -245,6 +245,8 @@ let g:jedi#popup_on_dot = 1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
 let g:quickrun_config = {
             \   "_" : {
+            \       "runner" : "vimproc",
+            \       "runner/vimproc/updatetime" : 50,
             \       "outputter/buffer/split" : ":rightbelow vertical",
             \       "outputter/buffer/close_on_empty" : 1,
             \       "outputter" : "error",
