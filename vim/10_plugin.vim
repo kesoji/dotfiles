@@ -93,6 +93,7 @@ Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
 Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
+Plug 'phpactor/phpactor', {'for': 'php', 'do': 'composer install'}
 Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
 Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
 Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
@@ -537,3 +538,15 @@ let g:winresizer_start_key = '<C-x>'
 nnoremap <Leader><Leader>j :ImportJSWord<CR>
 nnoremap <Leader><Leader>i :ImportJSFix<CR>
 nnoremap <Leader><Leader>g :ImportJSGoto<CR>
+
+"<<<plugin>>> phpactor {{{1
+nmap <Leader>mm :call phpactor#ContextMenu()<CR>
+nmap <Leader>nn :call phpactor#Navigate()<CR>
+
+if g:phpactorLoaded == 1
+  augroup phpactor
+    autocmd!
+    autocmd FileType php setlocal omnifunc=phpactor#Complete
+    autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
+  augroup END
+endif
