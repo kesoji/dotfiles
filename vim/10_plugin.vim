@@ -543,10 +543,8 @@ nnoremap <Leader><Leader>g :ImportJSGoto<CR>
 nmap <Leader>mm :call phpactor#ContextMenu()<CR>
 nmap <Leader>nn :call phpactor#Navigate()<CR>
 
-if g:phpactorLoaded == 1
-  augroup phpactor
+augroup phpactor
     autocmd!
     autocmd FileType php setlocal omnifunc=phpactor#Complete
     autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
-  augroup END
-endif
+augroup END
