@@ -84,6 +84,7 @@ Plug 'bps/vim-textobj-python'
 Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
+Plug 'jremmen/vim-ripgrep'
 Plug 'dag/vim-fish'
 Plug 'pearofducks/ansible-vim'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
@@ -228,13 +229,19 @@ nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
 nnoremap [fzf]t :<C-u>Tags<CR>
 
-command! -bang -nargs=* Rg
+command! -bang -nargs=* Gr
   \ call fzf#vim#grep(
   \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
   \   <bang>0 ? fzf#vim#with_preview('up:60%')
   \           : fzf#vim#with_preview('right:50%:hidden', '?'),
   \   <bang>0)
-nnoremap <expr> g* ':Rg ' . expand('<cword>') . '<CR>'
+command! -bang -nargs=* Gri
+  \ call fzf#vim#grep(
+  \   'rg -i --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+  \   <bang>0 ? fzf#vim#with_preview('up:60%')
+  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+  \   <bang>0)
+nnoremap <expr> g* ':Gr ' . expand('<cword>') . '<CR>'
 
 "<<<Plugin>>> jedi-vim {{{1
 let g:jedi#auto_initialization = 1
