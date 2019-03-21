@@ -1,6 +1,7 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 
 set background=dark
+set termguicolors
 " these setting are overridden by .gvimrc.
 try
     colorscheme gruvbox
