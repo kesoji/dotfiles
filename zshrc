@@ -95,6 +95,8 @@ export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
+# add Pulumi to the PATH
+export PATH=$PATH:$HOME/.pulumi/bin
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 export LDFLAGS="-L/usr/lib64 -L$HOME/my/lib $LDFLAGS"
