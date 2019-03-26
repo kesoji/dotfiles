@@ -383,9 +383,11 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
     alias ls='ls -G'
 fi
+alias tf='terraform'
 alias tfa='terraform apply'
 alias tfp='terraform plan'
 alias tfd='terraform destroy'
+alias tfi='terraform import'
 alias tfw='terraform workspace'
 alias bins='bundle install'
 alias be='bundle exec'
