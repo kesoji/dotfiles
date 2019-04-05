@@ -51,6 +51,7 @@
     alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
     sm = submodule
     smup = submodule update --init --recursive
+    fa = fetch --all
     sb = show-branch
 [gui]
     encoding = utf-8
