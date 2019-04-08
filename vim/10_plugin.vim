@@ -162,7 +162,7 @@ if executable('gopls')
     autocmd!
     autocmd User lsp_setup call lsp#register_server({
         \ 'name': 'go-lang',
-        \ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
+        \ 'cmd': {server_info->['gopls']},
         \ 'whitelist': ['go'],
         \ })
     autocmd FileType go setlocal omnifunc=lsp#complete
@@ -179,6 +179,7 @@ function! s:build_go_files()
         call go#cmd#Build(0)
     endif
 endfunction
+let g:go_def_mode = 'gopls'
 let g:go_fmt_command = "goimports"
 let g:go_fmt_autosave = 1
 let g:go_metalinter_autosave = 0
