@@ -473,6 +473,7 @@ let g:ale_fixers = {
             \ 'php': ['phpcbf'],
             \ 'ruby': ['rubocop'],
             \ 'javascript': ['prettier', 'eslint'],
+            \ 'autohotkey': [],
             \}
 let g:ale_open_list = 1
 let g:ale_fix_on_save = 1
