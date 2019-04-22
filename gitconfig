@@ -20,6 +20,8 @@
     ci = commit
     cim = commit -m
     ciam = commit -a -m
+    cia = commit -a
+    ciaa = commit -a --amend
     co = checkout
     com = checkout master
     cod = checkout develop
