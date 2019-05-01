@@ -1,4 +1,10 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
+"
+if empty(glob('~/.vim/autoload/plug.vim'))
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
 
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
