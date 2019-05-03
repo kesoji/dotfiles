@@ -86,12 +86,15 @@ endif
 "
 " ウインドウの幅
 "set columns=80
-set columns=9999
+"set columns=9999
+set columns=240
 " ウインドウの高さ
 "set lines=25
-set lines=999
+"set lines=999
+set lines=60
 " コマンドラインの高さ(GUI使用時)
-set cmdheight=2
+"set cmdheight=2
+set cmdheight=1
 " カラースキーム(GUI使用時)
 set background=dark
 try
