@@ -1,8 +1,11 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 "
 if empty(glob('~/.vim/autoload/plug.vim'))
-  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
-    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  if has("win64")
+    silent exec "!curl -fLo " . expand('~/vimfiles/autoload/plug.vim') . " --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  else
+    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  endif
   autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
 
