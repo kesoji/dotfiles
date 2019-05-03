@@ -6,33 +6,33 @@ set fileformats=unix,dos,mac
 scriptencoding utf-8
 
 if has('vim_starting')
-    unlet! skip_defaults_vim
-    source $VIMRUNTIME/defaults.vim
+  unlet! skip_defaults_vim
+  source $VIMRUNTIME/defaults.vim
 
-    " Avoid Duplication
-    set fileencodings+=cp932
-    set clipboard+=autoselect,unnamed
-    let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
-    let $PATH = expand("~/.plenv/shims") . ":" . $PATH
+  " Avoid Duplication
+  set fileencodings+=cp932
+  set clipboard+=autoselect,unnamed
+  let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
+  let $PATH = expand("~/.plenv/shims") . ":" . $PATH
 
-    if has('win32') || has('win64')
-        set directory=$TMP
-        set backupdir=$TMP
-        set undodir=$HOME/.vim/undo
-        set runtimepath^=$HOME/.vim,$HOME/.vim/after
-        set viminfo+=n$HOME/.viminfo
+  if has('win32') || has('win64')
+    set directory=$TMP
+    set backupdir=$TMP
+    set undodir=$HOME/.vim/undo
+    set runtimepath^=$HOME/.vim,$HOME/.vim/after
+    set viminfo+=n$HOME/.viminfo
 
-        source $HOME/.vim/mswin.vim
+    source $HOME/.vim/mswin.vim
 
-        " Disable mswin.vim's C-V mapping
-        " imap <C-V> <C-V>
-        cmap <C-V> <C-V>
-    else
-        " Mac or Linux
-        set directory=~/.vim/swp
-        set backupdir=~/.vim/backup
-        set undodir=~/.vim/undo
-    endif
+    " Disable mswin.vim's C-V mapping
+    " imap <C-V> <C-V>
+    cmap <C-V> <C-V>
+  else
+    " Mac or Linux
+    set directory=~/.vim/swp
+    set backupdir=~/.vim/backup
+    set undodir=~/.vim/undo
+  endif
 endif
 
 set autowrite
