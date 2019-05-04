@@ -1,23 +1,18 @@
 " vim: foldmethod=marker foldcolumn=3 foldlevel=0 fenc=utf-8
 "
 if empty(glob('~/.vim/autoload/plug.vim'))
+  if !executable("curl")
+    echoerr "You have to install curl or first install vim-plug yourself!"
+    "execute 'q!'
+  endif
+  echo "Installing Vim-Plug..."
+  echo ""
   if has("win64")
     silent exec "!curl -fLo " . expand('~/vimfiles/autoload/plug.vim') . " --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
   else
     silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
   endif
   autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
-endif
-
-if !filereadable(expand('~/.vim/autoload/plug.vim'))
-  if !executable("curl")
-    echoerr "You have to install curl or first install vim-plug yourself!"
-    execute "q!"
-  endif
-  echo "Installing Vim-Plug..."
-  echo ""
-  silent !\curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-  autocmd VimEnter * PlugInstall
 endif
 
 " Plugin Manager Settings {{{1
