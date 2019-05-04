@@ -19,6 +19,7 @@ endif
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
 Plug 'mattn/vim-starwars'
+Plug 'qpkorr/vim-renamer'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
