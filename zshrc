@@ -746,10 +746,23 @@ command -v composer 2>/dev/null 1>&2
 if [[ $? -ne 0 ]]; then
     echo "composer isn't installed: my-composerinstall"
     function my-composerinstall() {
-        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\"" || return
-        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '93b54496392c062774670ac18b134c3b3a95e5a5e5c8f1a9f115f203b75bf9a129d5daa8ba6a13e2cc8a1da0806388a8') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\"" || return
-        comexec "php composer-setup.php --install-dir=$HOME/my/bin --filename=composer" || return
-        comexec "php -r \"unlink('composer-setup.php');\"" || return
+        echo 'getting signature'
+        EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
+        echo 'got signature ' $EXPECTED_SIGNATURE
+        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
+        echo 'checking signature'
+        ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+        echo 'got signature ' $ACTUAL_SIGNATURE
+
+        if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
+        then
+            echo 'ERROR: Invalid installer signature'
+            comexec "rm composer-setup.php" || return
+            return
+        fi
+
+        comexec "php composer-setup.php --quiet --install-dir=$HOME/my/bin --filename=composer" || return
+        comexec "rm -f composer-setup.php" || return
     }
 fi
 
