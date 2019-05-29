@@ -728,7 +728,7 @@ fi
 # php
 function my-php() {
     echo ">>> PHP <<<"
-    local -a ary=("composer" "phpstan" "phpcbf" "psysh")
+    local -a ary=("composer" "phpstan:phpstan/phpstan" "phpcbf:squizlabs/PHP_CodeSniffer" "psysh:psy/psysh")
     for v in $ary; do
         commandinstalled $v
     done
@@ -759,7 +759,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 function commandinstalled() {
-    command -v $1 2>/dev/null 1>&2
+    command -v ${1%:*} 2>/dev/null 1>&2
     if [[ $? -eq 0 ]]; then
         echo -e "$1: \e[37;42;1minstalled\e[m"
     else
