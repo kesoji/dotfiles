@@ -384,6 +384,7 @@ alias tfi='terraform import'
 alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
+alias clswp='rm -rf ~/.vim/swp/*'
 
 ## Docker
 command -v docker 2>/dev/null 1>&2

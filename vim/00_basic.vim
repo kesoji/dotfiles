@@ -131,6 +131,8 @@ set infercase
 set wildmenu
 set wildmode=longest,full "command-line-modeのリスト表示
 
+set diffopt=internal,filler,algorithm:histogram,indent-heuristic
+
 " Advanced Mapping (only in vim, not in IdeaVim) {{{1
 let mapleader = "\<Space>"
 
