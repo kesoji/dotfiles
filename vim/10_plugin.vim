@@ -129,7 +129,6 @@ Plug 'galooshi/vim-import-js',     { 'for': ['javascript'] }
 Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
-Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
 " Clolor Scheme
 Plug 'tomasr/molokai'
