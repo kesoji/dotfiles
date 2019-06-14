@@ -94,6 +94,7 @@ export XDG_CONFIG_HOME=$HOME/.config
 
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
+export PATH=/usr/local/go/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 # add Pulumi to the PATH
 export PATH=$PATH:$HOME/.pulumi/bin
@@ -409,6 +410,7 @@ fi
 alias drmca='docker ps -aq | xargs docker rm'
 alias drmia='docker images -aq | xargs docker rmi'
 alias dco='docker-compose'
+alias dcolf='docker-compose logs -f'
 
 command -v docui 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
