@@ -64,7 +64,7 @@ Plug 'honza/vim-snippets'
 Plug 'epilande/vim-es2015-snippets'
 Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
-Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
+"Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
@@ -110,6 +110,7 @@ Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
 Plug 'phpactor/phpactor', {'for': 'php', 'do': 'composer install'}
+Plug 'jwalton512/vim-blade', {'for': 'php' }
 Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
 Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
 Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
@@ -129,7 +130,6 @@ Plug 'galooshi/vim-import-js',     { 'for': ['javascript'] }
 Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
-Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
 " Clolor Scheme
 Plug 'tomasr/molokai'

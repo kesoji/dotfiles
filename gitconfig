@@ -55,6 +55,7 @@
     smup = submodule update --init --recursive
     fa = fetch --all
     sb = show-branch
+    emptycommit = commit --allow-empty -m
 [gui]
     encoding = utf-8
 [difftool "sourcetree"]

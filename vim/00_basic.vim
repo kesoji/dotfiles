@@ -131,52 +131,10 @@ set infercase
 set wildmenu
 set wildmode=longest,full "command-line-modeのリスト表示
 
-" Mapping {{{1
+set diffopt=internal,filler,algorithm:histogram,indent-heuristic
+
+" Advanced Mapping (only in vim, not in IdeaVim) {{{1
 let mapleader = "\<Space>"
-
-""" Editing
-"xでレジスタに入れない
-nnoremap x "_x
-
-""" 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
-nnoremap <Leader>w :<C-u>w<CR>
-nnoremap <Leader>W :<C-u>wq<CR>
-nnoremap <Leader>q :<C-u>q<CR>
-nnoremap <Leader><Leader>q :<C-u>qa<CR>
-nnoremap <Leader>Q :<C-u>q!<CR>
-nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
-
-""" ベースの動きをスワップ
-"noremap ; :
-noremap j gj
-noremap k gk
-noremap gj j
-noremap gk k
-"tagsジャンプの時に複数ある時は一覧表示
-nnoremap <C-]> g<C-]>
-
-""" Moving
-noremap <Leader>h ^
-noremap <Leader>H 0
-noremap <Leader>l $
-noremap <c-i> <c-i>zz
-noremap <c-o> <c-o>zz
-
-""" <ESC>
-inoremap <silent>jj <ESC>
-inoremap <silent>jk <ESC>
-inoremap <silent>jl <ESC><Right>
-
-""" Location List / QuickFix
-""" MEMO: Use [q, ]q for QuickFix! ([l, ]l can also be used for Location List.)
-nnoremap <C-n> :lne<CR>
-nnoremap <C-p> :lp<CR>
-nnoremap <Leader>a :cclose<CR>
-nnoremap <Leader><Leader>a :lclose<CR>
-
-""" Tab mapping
-nnoremap <S-Tab> <<
-inoremap <S-Tab> <C-d>
 
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
@@ -185,77 +143,10 @@ nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, ''
 inoremap <expr> <C-j> pumvisible() ? "\<Down>" : "\<C-x>\<C-o>"
 inoremap <expr> <Tab> pumvisible() ? "\<CR>" : "\<Tab>"
 
-""" Search and Replace
-noremap  n nzzzv
-noremap  N Nzzzv
-nnoremap / /\v
-nnoremap ? ?\v
-cnoremap s// s//
-cnoremap g// g//
-cnoremap v// v//
-nnoremap gs :<C-u>%s/\v//g<Left><Left><Left><C-f>i
-vnoremap gs :s/\v//g<Left><Left><Left><C-f>i
-vnoremap gsg y:%s/\v<C-r>"//gc<Left><Left><Left><C-f>i
-nnoremap <Leader>vp :vim  ** \| cw<Left><Left><Left><Left><Left><Left><Left><Left>
-nnoremap <Esc><Esc> :<C-u>nohlsearch<CR>
-nnoremap <silent> <Space><Space> "zyiw:let @/ = '\<' . @z . '\>'<CR>:set hlsearch<CR>
-vnoremap <silent> <Space><Space> "zy:let @/ = @z<CR>:set hlsearch<CR>
-
-""" Window and Tab operation
-nnoremap s <Nop>
-"nnoremap sj <C-w>j
-"nnoremap sk <C-w>k
-"nnoremap sl <C-w>l
-"nnoremap sh <C-w>h
-"nnoremap sJ <C-w>J
-"nnoremap sK <C-w>K
-"nnoremap sL <C-w>L
-"nnoremap sH <C-w>H
-"nnoremap sr <C-w>r
-"nnoremap s= <C-w>=
-"nnoremap sw <C-w>w
-nnoremap so <C-w>_<C-w>|
-nnoremap s> <C-w>>
-nnoremap s< <C-w><
-nnoremap s+ <C-w>+
-nnoremap s- <C-w>-
-nnoremap sO <C-w>=
-nnoremap sN :<C-u>bn<CR>
-nnoremap sP :<C-u>bp<CR>
-nnoremap sn gt
-nnoremap sp gT
-for n in range(1, 9)
-    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
-endfor
-nnoremap st :<C-u>tabnew<CR>
-nnoremap sx :<C-u>tabclose<CR>
-"nnoremap ss :<C-u>sp<CR>
-"nnoremap sv :<C-u>vs<CR>
-nnoremap sq :<C-u>q<CR>
-nnoremap sQ :<C-u>bd<CR>
-
 nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <Leader>sv :source $MYVIMRC<CR>
 nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <Leader>sgv :source $MYGVIMRC<CR>
-
-noremap + <C-a>
-noremap - <C-x>
-
-noremap gp "0p
-noremap gP "0P
-
-""" Utility
-nnoremap c. q:<UP><CR>
-
-""" Command Mode
-cnoremap <C-n> <Down>
-cnoremap <C-p> <Up>
-"cnoremap <C-b> <Left>
-"cnoremap <C-f> <Right>
-cnoremap <C-a> <Home>
-cnoremap <C-e> <End>
-"cnoremap <C-d> <Del>
 
 """ Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a
@@ -266,11 +157,6 @@ set pastetoggle=<F12>
 :cabbrev ga3 g/^/ if (line(".") % 3 == 1) <BAR>
 :cabbrev ga4 g/^/ if (line(".") % 4 == 1) <BAR>
 :cabbrev ga5 g/^/ if (line(".") % 5 == 1) <BAR>
-
-""" Hack
-"ビジュアルモードで連続ペースト
-vnoremap <expr> p 'pgv"'.v:register.'y`>'
-vnoremap <expr> P 'Pgv"'.v:register.'y`>'
 
 "User Defined Command {{{1
 "" ForceOverwrite - force write if readonly
