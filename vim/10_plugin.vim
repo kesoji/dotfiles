@@ -223,7 +223,7 @@ let g:go_highlight_variable_declarations = 0
 let g:go_highlight_variable_assignments = 0
 
 
-"<<<Plugin>>> vim-sandwitch {{{1
+"<<<Plugin>>> vim-sandwich {{{1
 runtime macros/sandwich/keymap/surround.vim
 
 "<<<Plugin>>> IndentLine {{{1
@@ -566,3 +566,7 @@ augroup phpactor
     autocmd FileType php setlocal omnifunc=phpactor#Complete
     autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
 augroup END
+
+"<<<plugin>>> asyncomplete {{{1
+" see readme of asyncomplete
+set shortmess+=c
