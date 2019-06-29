@@ -139,10 +139,6 @@ let mapleader = "\<Space>"
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
-""" Completion
-inoremap <expr> <C-j> pumvisible() ? "\<Down>" : "\<C-x>\<C-o>"
-inoremap <expr> <Tab> pumvisible() ? "\<CR>" : "\<Tab>"
-
 nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <Leader>sv :source $MYVIMRC<CR>
 nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
