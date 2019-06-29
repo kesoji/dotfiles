@@ -4,6 +4,8 @@ fi
 
 set -o vi
 
+export LANG=en_US.UTF-8
+
 fpath=(~/.zsh/completions $fpath)
 
 HISTFILE=~/.zsh_history
