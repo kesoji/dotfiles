@@ -249,18 +249,24 @@ nnoremap [fzf]f :<C-u>Files<CR>
 nnoremap [fzf]t :<C-u>Tags<CR>
 
 command! -bang -nargs=* Gr
-  \ call fzf#vim#grep(
-  \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
-  \   <bang>0 ? fzf#vim#with_preview('up:60%')
-  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
-  \   <bang>0)
+      \ call fzf#vim#grep(
+      \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+      \   <bang>0 ? fzf#vim#with_preview('up:60%')
+      \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+      \   <bang>0)
 command! -bang -nargs=* Gri
-  \ call fzf#vim#grep(
-  \   'rg -i --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
-  \   <bang>0 ? fzf#vim#with_preview('up:60%')
-  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
-  \   <bang>0)
+      \ call fzf#vim#grep(
+      \   'rg -i --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+      \   <bang>0 ? fzf#vim#with_preview('up:60%')
+      \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+      \   <bang>0)
 nnoremap <expr> g* ':Gr ' . expand('<cword>') . '<CR>'
+
+command! -nargs=0 Fq
+      \ call fzf#run({
+      \   'source': 'ghq list --full-path',
+      \   'sink': 'cd'
+      \ })
 
 "<<<Plugin>>> jedi-vim {{{1
 let g:jedi#auto_initialization = 1
