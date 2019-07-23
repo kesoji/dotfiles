@@ -38,7 +38,7 @@
     gra = log --graph --branches --pretty=format:'%C(yellow)%h%C(cyan)%d%Creset %s %C(green)- %an, %cr%Creset'
     unstage = reset HEAD --
     destroy = reset --hard HEAD --
-    purge = !git reset --hard HEAD -- && git clean -f
+    purge = !git reset --hard HEAD -- && git clean -fd
     ignoreupdate = "!git rm --cached `git ls-files --full-name -i --exclude-from=.gitignore`"
     hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
     lp = log -p
