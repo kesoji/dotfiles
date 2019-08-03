@@ -29,8 +29,10 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'scrooloose/nerdtree'
 Plug 'mechatroner/rainbow_csv'
-Plug 'majutsushi/tagbar'
-"Plug 'gregsexton/MatchTag'
+"Plug 'majutsushi/tagbar'
+" Replacement for tagbar
+Plug 'liuchengxu/vista.vim'
+Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
 Plug 'godlygeek/tabular'
@@ -481,7 +483,7 @@ let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
 
 "<<<Plugin>>> Tagbar {{{1
-nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
+"nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
 
 "<<<Plugin>>> phpunit {{{1
 let g:phpunit_bin = './vendor/bin/phpunit'
