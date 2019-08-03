@@ -262,7 +262,7 @@ command! -bang -nargs=* Gri
       \   <bang>0)
 nnoremap <expr> g* ':Gr ' . expand('<cword>') . '<CR>'
 
-command! -nargs=0 ghq
+command! -nargs=0 Ghq
       \ call fzf#run({
       \   'source': 'ghq list --full-path',
       \   'sink': 'cd'
