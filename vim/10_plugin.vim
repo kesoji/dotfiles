@@ -120,7 +120,7 @@ Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
 Plug 'fatih/vim-go',               { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
 Plug 'othree/html5.vim',           { 'for': ['html'] }
-Plug 'mattn/emmet-vim',            { 'for': ['html', 'css'] }
+Plug 'mattn/emmet-vim',            { 'for': ['html', 'css', 'blade'] }
 Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
 Plug 'petdance/vim-perl',          { 'for': ['perl'] }
 Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
@@ -567,14 +567,14 @@ nnoremap <Leader><Leader>i :ImportJSFix<CR>
 nnoremap <Leader><Leader>g :ImportJSGoto<CR>
 
 "<<<plugin>>> phpactor {{{1
-nmap <Leader>mm :call phpactor#ContextMenu()<CR>
-nmap <Leader>nn :call phpactor#Navigate()<CR>
+"nmap <Leader>mm :call phpactor#ContextMenu()<CR>
+"nmap <Leader>nn :call phpactor#Navigate()<CR>
 
-augroup phpactor
-    autocmd!
-    autocmd FileType php setlocal omnifunc=phpactor#Complete
-    autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
-augroup END
+"augroup phpactor
+    "autocmd!
+    "autocmd FileType php setlocal omnifunc=phpactor#Complete
+    "autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
+"augroup END
 
 "<<<plugin>>> asyncomplete {{{1
 " see readme of asyncomplete
