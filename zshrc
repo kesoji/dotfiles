@@ -339,6 +339,18 @@ else
     }
 fi
 
+# Pipenv
+command -v pipenv 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+    export PIPENV_VENV_IN_PROJECT=1
+else
+    echo "pipenv isn't installed: my-pyenvinstall"
+    function my-pipenvinstall() {
+        echo "Using pyenv environment"
+        comexec "pip install --user pipenv"
+    }
+fi
+
 if [ -e /usr/share/zsh/site-functions/ ]; then
     fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
