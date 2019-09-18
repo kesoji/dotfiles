@@ -332,7 +332,7 @@ command -v pipenv 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
     export PIPENV_VENV_IN_PROJECT=1
 else
-    echo "pipenv isn't installed: my-pyenvinstall"
+    echo "pipenv isn't installed: my-pipenvinstall"
     function my-pipenvinstall() {
         echo "Using pyenv environment"
         comexec "pip install --user pipenv"
