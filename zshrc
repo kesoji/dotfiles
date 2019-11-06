@@ -542,7 +542,7 @@ fi
 # if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    #export DOCKER_HOST='tcp://0.0.0.0:2375'
+    export DOCKER_HOST='tcp://0.0.0.0:2375'
 
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
