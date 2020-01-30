@@ -393,33 +393,32 @@ nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 let g:memolist_path = "~/.vim/memo"
 
 "<<<Plugin>>> vim-lsp {{{1
-" Python {{{2
-if executable('pyls')
-  " pip install python-language-server
-  augroup LspPython
-    au!
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'pyls',
-        \ 'cmd': {server_info->['pyls']},
-        \ 'whitelist': ['python'],
-        \ })
-    autocmd FileType python setlocal omnifunc=lsp#complete
-  augroup END
+"https://mattn.kaoriya.net/software/vim/20191231213507.htm
+if empty(globpath(&rtp, 'autoload/lsp.vim'))
+  finish
 endif
 
-" PHP {{{2
-if executable('php-language-server.php')
-    augroup LspPHP
-        au!
-        autocmd User lsp_setup call lsp#register_server({
-                    \ 'name': 'php-langserevr',
-                    \ 'cmd': {server_info->['php', $HOME.'/.config/composer/vendor/bin/php-language-server.php']},
-                    \ 'whitelist': ['php'],
-                    \ })
-    augroup END
-endif
+function! s:on_lsp_buffer_enabled() abort
+  setlocal omnifunc=lsp#complete
+  setlocal signcolumn=yes
+  nmap <buffer> gd <plug>(lsp-definition)
+  nmap <buffer> <f2> <plug>(lsp-rename)
+  inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"
+endfunction
 
-let g:lsp_async_completion = 1
+augroup lsp_install
+  au!
+  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+command! LspDebug let lsp_log_verbose=1 | let lsp_log_file = expand('~/lsp.log')
+
+let g:lsp_diagnostics_enabled = 1
+let g:lsp_diagnostics_echo_cursor = 1
+let g:asyncomplete_auto_popup = 1
+let g:asyncomplete_auto_completeopt = 0
+let g:asyncomplete_popup_delay = 200
+let g:lsp_text_edit_enabled = 1
+"let g:lsp_async_completion = 1
 
 
 "<<<Plugin>>> NERDCommenter {{{1
