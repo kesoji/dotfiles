@@ -151,20 +151,6 @@ endfunction
 "    let g:singleton#opener = "edit"
 "endif
 
-if executable('gopls')
-  augroup LspGo
-    autocmd!
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'go-lang',
-        \ 'cmd': {server_info->['gopls']},
-        \ 'whitelist': ['go'],
-        \ })
-    autocmd FileType go setlocal omnifunc=lsp#complete
-    autocmd FileType go nmap <buffer> <C-]> <Plug>(lsp-definition)
-    autocmd FileType go nmap <buffer> gt <Plug>(lsp-type-definition)
-  augroup END
-endif
-
 function! s:build_go_files()
     let l:file = expand('%')
     if l:file =~# '^\f\+_test\.go$'
