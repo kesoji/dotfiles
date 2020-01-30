@@ -18,12 +18,15 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'mattn/vim-goimports'
 Plug 'mattn/vim-starwars'
+"Plug 'w0rp/ale'
+"Plug 'honza/vim-snippets'
+Plug 'SirVer/ultisnips'
 Plug 'qpkorr/vim-renamer'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
-Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
@@ -61,10 +64,6 @@ Plug 'vim-scripts/open-browser.vim'
 Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'vim-scripts/DirDiff.vim'
 Plug 'glidenote/memolist.vim'
-Plug 'SirVer/ultisnips'
-Plug 'honza/vim-snippets'
-Plug 'epilande/vim-es2015-snippets'
-Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
 "Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
@@ -117,7 +116,6 @@ Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
 Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
 Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
 Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
-Plug 'fatih/vim-go',               { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
 Plug 'othree/html5.vim',           { 'for': ['html'] }
 Plug 'mattn/emmet-vim',            { 'for': ['html', 'css', 'blade'] }
@@ -125,11 +123,6 @@ Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
 Plug 'petdance/vim-perl',          { 'for': ['perl'] }
 Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
 Plug 'cespare/vim-toml',           { 'for': ['toml'] }
-Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
-"Plug 'lambdalisue/vim-pyenv',      { 'for': ['python'] }
-Plug 'pangloss/vim-javascript',    { 'for': ['javascript'] }
-Plug 'galooshi/vim-import-js',     { 'for': ['javascript'] }
-Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
@@ -156,24 +149,6 @@ endfunction
 "    call singleton#enable()
 "    let g:singleton#opener = "edit"
 "endif
-
-"<<<Plugin>>> vim-go {{{1
-augroup VimGoMySettings
-    autocmd!
-    autocmd FileType go nmap <buffer> <leader>u <Plug>(go-run)
-    autocmd FileType go nnoremap <buffer> <leader>n :<C-u>GoFmt<cr>
-    autocmd FileType go nmap <buffer> <leader>ta <Plug>(go-test)
-    autocmd FileType go nmap <buffer> <leader>t <Plug>(go-test-func)
-    autocmd FileType go nmap <buffer> <leader>c <Plug>(go-coverage-toggle)
-    autocmd FileType go nmap <buffer> <leader>m <Plug>(go-metalinter)
-    autocmd FileType go nnoremap <buffer> <C-h> :<C-u>GoDeclsDir<cr>
-    autocmd FileType go inoremap <buffer> <C-h> <esc>:<C-u>GoDeclsDir<cr>
-    autocmd FileType go nnoremap <buffer> <leader>b :<C-u>call <SID>build_go_files()<CR>
-    autocmd FileType go command! -buffer -bang A call go#alternate#Switch(<bang>0, 'edit')
-    autocmd FileType go command! -buffer -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
-    autocmd FileType go command! -buffer -bang AS call go#alternate#Switch(<bang>0, 'split')
-    autocmd FileType go syntax on
-augroup END
 
 if executable('gopls')
   augroup LspGo
@@ -270,10 +245,6 @@ command! -nargs=0 Ghq
       \   'sink': 'cd'
       \ })
 
-"<<<Plugin>>> jedi-vim {{{1
-let g:jedi#auto_initialization = 1
-let g:jedi#rename_command = "<leader>R"
-let g:jedi#popup_on_dot = 1
 
 "<<<Plugin>>> quickrun {{{1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
