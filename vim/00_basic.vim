@@ -76,6 +76,13 @@ set spelllang=en,cjk
 
 """ cursorline is slow..
 "set cursorline
+augroup delayCursorLine
+  let s:cur_f = 0
+  autocmd WinEnter * setlocal cursorline | let s:cur_f = 0
+  autocmd WinLeave * setlocal nocursorline
+  autocmd CursorHold,CursorHoldI * setlocal cursorline | let s:cur_f = 1
+  autocmd CursorMoved,CursorMovedI * if s:cur_f | setlocal nocursorline | endif
+augroup END
 set history=1000
 set expandtab
 set smarttab

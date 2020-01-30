@@ -12,6 +12,7 @@
 [commit]
     verbose = true
 [alias]
+    aa = add .
     s = status
     st = status
     ss = status -s
