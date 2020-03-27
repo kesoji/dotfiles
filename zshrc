@@ -396,6 +396,15 @@ alias tfw='terraform workspace'
 alias tfwl='terraform workspace list'
 alias tfws='terraform workspace select'
 alias tfi='terraform import'
+alias gf='terragrunt'
+alias gfa='terragrunt apply'
+alias gfp='terragrunt plan'
+alias gfd='terragrunt destroy'
+alias gfi='terragrunt import'
+alias gfw='terragrunt workspace'
+alias gfwl='terragrunt workspace list'
+alias gfws='terragrunt workspace select'
+alias gfi='terragrunt import'
 alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
@@ -1116,3 +1125,6 @@ fi
 # tabtab source for slss package
 # uninstall by removing these lines or running `tabtab uninstall slss`
 [[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh
+
+export PATH="$HOME/.phpenv/bin:$PATH"
+eval "$(phpenv init -)"
