@@ -469,27 +469,6 @@ function cssh() {
 }
 alias ssh='cssh '
 
-# SSHRC
-command -v sshrc 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "sshrc isn't installed: my-sshrcinstall"
-    function my-sshrcinstall (){
-        comexec "wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc" || return
-        comexec "chmod +x sshrc" || return
-        comexec "sudo mv sshrc /usr/local/bin/sshrc" || return
-    }
-else
-    alias ssh='csshrc'
-    alias sshrc='csshrc '
-    function csshrc() {
-        sshrc $*
-        tmux selectp -P 'fg=default,bg=default'
-    }
-    # Completion
-    compdef sshrc=ssh
-    compdef csshrc=ssh
-fi
-
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
