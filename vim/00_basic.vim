@@ -140,6 +140,8 @@ set wildmode=longest,full "command-line-modeのリスト表示
 
 set diffopt=internal,filler,algorithm:histogram,indent-heuristic
 
+set nostartofline
+
 " Advanced Mapping (only in vim, not in IdeaVim) {{{1
 let mapleader = "\<Space>"
 

@@ -7,7 +7,7 @@
     editor = vim
     excludesfile = ~/.gitignore_global
     quotepath = false
-    autocrlf = false
+    autocrlf = input
     filemode = false
 [commit]
     verbose = true
