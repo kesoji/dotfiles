@@ -18,19 +18,26 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'andymass/vim-matchup'
+Plug 'mattn/vim-lsp-settings'
+Plug 'mattn/vim-goimports'
 Plug 'mattn/vim-starwars'
+"Plug 'w0rp/ale'
+"Plug 'honza/vim-snippets'
+Plug 'SirVer/ultisnips'
 Plug 'qpkorr/vim-renamer'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
-Plug 'w0rp/ale'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'scrooloose/nerdtree'
 Plug 'mechatroner/rainbow_csv'
-Plug 'majutsushi/tagbar'
-"Plug 'gregsexton/MatchTag'
+"Plug 'majutsushi/tagbar'
+" Replacement for tagbar
+Plug 'liuchengxu/vista.vim'
+Plug 'gregsexton/MatchTag'
 Plug 'xolox/vim-session'
 Plug 'xolox/vim-misc'
 Plug 'godlygeek/tabular'
@@ -59,12 +66,8 @@ Plug 'vim-scripts/open-browser.vim'
 Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'vim-scripts/DirDiff.vim'
 Plug 'glidenote/memolist.vim'
-Plug 'SirVer/ultisnips'
-Plug 'honza/vim-snippets'
-Plug 'epilande/vim-es2015-snippets'
-Plug 'epilande/vim-react-snippets'
 Plug 'mhinz/vim-signify'
-Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
+"Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
 Plug 'machakann/vim-sandwich'
@@ -110,26 +113,20 @@ Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
 Plug 'phpactor/phpactor', {'for': 'php', 'do': 'composer install'}
+Plug 'jwalton512/vim-blade', {'for': 'php' }
 Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
 Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
 Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
 Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
-Plug 'fatih/vim-go',               { 'for': ['go'], 'do': ':GoInstallBinaries' }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
 Plug 'othree/html5.vim',           { 'for': ['html'] }
-Plug 'mattn/emmet-vim',            { 'for': ['html', 'css'] }
+Plug 'mattn/emmet-vim',            { 'for': ['html', 'css', 'blade'] }
 Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
 Plug 'petdance/vim-perl',          { 'for': ['perl'] }
 Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
 Plug 'cespare/vim-toml',           { 'for': ['toml'] }
-Plug 'davidhalter/jedi-vim',       { 'for': ['python'] }
-"Plug 'lambdalisue/vim-pyenv',      { 'for': ['python'] }
-Plug 'pangloss/vim-javascript',    { 'for': ['javascript'] }
-Plug 'galooshi/vim-import-js',     { 'for': ['javascript'] }
-Plug 'maxmellon/vim-jsx-pretty',   { 'for': ['javascript'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
-Plug 'myhere/vim-nodejs-complete', { 'for': ['javascript'] }
 Plug 'mattn/jscomplete-vim',       { 'for': ['javascript'] }
 " Clolor Scheme
 Plug 'tomasr/molokai'
@@ -155,38 +152,6 @@ endfunction
 "    let g:singleton#opener = "edit"
 "endif
 
-"<<<Plugin>>> vim-go {{{1
-augroup VimGoMySettings
-    autocmd!
-    autocmd FileType go nmap <buffer> <leader>u <Plug>(go-run)
-    autocmd FileType go nnoremap <buffer> <leader>n :<C-u>GoFmt<cr>
-    autocmd FileType go nmap <buffer> <leader>ta <Plug>(go-test)
-    autocmd FileType go nmap <buffer> <leader>t <Plug>(go-test-func)
-    autocmd FileType go nmap <buffer> <leader>c <Plug>(go-coverage-toggle)
-    autocmd FileType go nmap <buffer> <leader>m <Plug>(go-metalinter)
-    autocmd FileType go nnoremap <buffer> <C-h> :<C-u>GoDeclsDir<cr>
-    autocmd FileType go inoremap <buffer> <C-h> <esc>:<C-u>GoDeclsDir<cr>
-    autocmd FileType go nnoremap <buffer> <leader>b :<C-u>call <SID>build_go_files()<CR>
-    autocmd FileType go command! -buffer -bang A call go#alternate#Switch(<bang>0, 'edit')
-    autocmd FileType go command! -buffer -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
-    autocmd FileType go command! -buffer -bang AS call go#alternate#Switch(<bang>0, 'split')
-    autocmd FileType go syntax on
-augroup END
-
-if executable('gopls')
-  augroup LspGo
-    autocmd!
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'go-lang',
-        \ 'cmd': {server_info->['gopls']},
-        \ 'whitelist': ['go'],
-        \ })
-    autocmd FileType go setlocal omnifunc=lsp#complete
-    autocmd FileType go nmap <buffer> <C-]> <Plug>(lsp-definition)
-    autocmd FileType go nmap <buffer> gt <Plug>(lsp-type-definition)
-  augroup END
-endif
-
 function! s:build_go_files()
     let l:file = expand('%')
     if l:file =~# '^\f\+_test\.go$'
@@ -196,6 +161,7 @@ function! s:build_go_files()
     endif
 endfunction
 let g:go_def_mode = 'gopls'
+let g:go_info_mode = 'gopls'
 let g:go_fmt_command = "goimports"
 let g:go_fmt_autosave = 1
 let g:go_metalinter_autosave = 0
@@ -223,7 +189,7 @@ let g:go_highlight_variable_declarations = 0
 let g:go_highlight_variable_assignments = 0
 
 
-"<<<Plugin>>> vim-sandwitch {{{1
+"<<<Plugin>>> vim-sandwich {{{1
 runtime macros/sandwich/keymap/surround.vim
 
 "<<<Plugin>>> IndentLine {{{1
@@ -248,23 +214,25 @@ nnoremap [fzf]f :<C-u>Files<CR>
 nnoremap [fzf]t :<C-u>Tags<CR>
 
 command! -bang -nargs=* Gr
-  \ call fzf#vim#grep(
-  \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
-  \   <bang>0 ? fzf#vim#with_preview('up:60%')
-  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
-  \   <bang>0)
+      \ call fzf#vim#grep(
+      \   'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+      \   <bang>0 ? fzf#vim#with_preview('up:60%')
+      \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+      \   <bang>0)
 command! -bang -nargs=* Gri
-  \ call fzf#vim#grep(
-  \   'rg -i --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
-  \   <bang>0 ? fzf#vim#with_preview('up:60%')
-  \           : fzf#vim#with_preview('right:50%:hidden', '?'),
-  \   <bang>0)
+      \ call fzf#vim#grep(
+      \   'rg -i --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+      \   <bang>0 ? fzf#vim#with_preview('up:60%')
+      \           : fzf#vim#with_preview('right:50%:hidden', '?'),
+      \   <bang>0)
 nnoremap <expr> g* ':Gr ' . expand('<cword>') . '<CR>'
 
-"<<<Plugin>>> jedi-vim {{{1
-let g:jedi#auto_initialization = 1
-let g:jedi#rename_command = "<leader>R"
-let g:jedi#popup_on_dot = 1
+command! -nargs=0 Ghq
+      \ call fzf#run({
+      \   'source': 'ghq list --full-path',
+      \   'sink': 'cd'
+      \ })
+
 
 "<<<Plugin>>> quickrun {{{1
 "[quickrun.vim について語る - C++でゲームプログラミング](http://d.hatena.ne.jp/osyo-manga/20130311/1363012363)
@@ -426,33 +394,32 @@ nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 let g:memolist_path = "~/.vim/memo"
 
 "<<<Plugin>>> vim-lsp {{{1
-" Python {{{2
-if executable('pyls')
-  " pip install python-language-server
-  augroup LspPython
-    au!
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'pyls',
-        \ 'cmd': {server_info->['pyls']},
-        \ 'whitelist': ['python'],
-        \ })
-    autocmd FileType python setlocal omnifunc=lsp#complete
-  augroup END
+"https://mattn.kaoriya.net/software/vim/20191231213507.htm
+if empty(globpath(&rtp, 'autoload/lsp.vim'))
+  finish
 endif
 
-" PHP {{{2
-if executable('php-language-server.php')
-    augroup LspPHP
-        au!
-        autocmd User lsp_setup call lsp#register_server({
-                    \ 'name': 'php-langserevr',
-                    \ 'cmd': {server_info->['php', $HOME.'/.config/composer/vendor/bin/php-language-server.php']},
-                    \ 'whitelist': ['php'],
-                    \ })
-    augroup END
-endif
+function! s:on_lsp_buffer_enabled() abort
+  setlocal omnifunc=lsp#complete
+  setlocal signcolumn=yes
+  nmap <buffer> gd <plug>(lsp-definition)
+  nmap <buffer> <f2> <plug>(lsp-rename)
+  inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"
+endfunction
 
-let g:lsp_async_completion = 1
+augroup lsp_install
+  au!
+  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+command! LspDebug let lsp_log_verbose=1 | let lsp_log_file = expand('~/lsp.log')
+
+let g:lsp_diagnostics_enabled = 1
+let g:lsp_diagnostics_echo_cursor = 1
+let g:asyncomplete_auto_popup = 1
+let g:asyncomplete_auto_completeopt = 0
+let g:asyncomplete_popup_delay = 200
+let g:lsp_text_edit_enabled = 1
+"let g:lsp_async_completion = 1
 
 
 "<<<Plugin>>> NERDCommenter {{{1
@@ -474,7 +441,7 @@ let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
 
 "<<<Plugin>>> Tagbar {{{1
-nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
+"nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
 
 "<<<Plugin>>> phpunit {{{1
 let g:phpunit_bin = './vendor/bin/phpunit'
@@ -558,11 +525,15 @@ nnoremap <Leader><Leader>i :ImportJSFix<CR>
 nnoremap <Leader><Leader>g :ImportJSGoto<CR>
 
 "<<<plugin>>> phpactor {{{1
-nmap <Leader>mm :call phpactor#ContextMenu()<CR>
-nmap <Leader>nn :call phpactor#Navigate()<CR>
+"nmap <Leader>mm :call phpactor#ContextMenu()<CR>
+"nmap <Leader>nn :call phpactor#Navigate()<CR>
 
-augroup phpactor
-    autocmd!
-    autocmd FileType php setlocal omnifunc=phpactor#Complete
-    autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
-augroup END
+"augroup phpactor
+    "autocmd!
+    "autocmd FileType php setlocal omnifunc=phpactor#Complete
+    "autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
+"augroup END
+
+"<<<plugin>>> asyncomplete {{{1
+" see readme of asyncomplete
+set shortmess+=c

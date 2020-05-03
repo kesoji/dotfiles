@@ -7,11 +7,12 @@
     editor = vim
     excludesfile = ~/.gitignore_global
     quotepath = false
-	autocrlf = true
+    autocrlf = input
     filemode = false
 [commit]
     verbose = true
 [alias]
+    aa = add .
     s = status
     st = status
     ss = status -s
@@ -38,6 +39,7 @@
     gra = log --graph --branches --pretty=format:'%C(yellow)%h%C(cyan)%d%Creset %s %C(green)- %an, %cr%Creset'
     unstage = reset HEAD --
     destroy = reset --hard HEAD --
+    purge = !git reset --hard HEAD -- && git clean -fd
     ignoreupdate = "!git rm --cached `git ls-files --full-name -i --exclude-from=.gitignore`"
     hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
     lp = log -p
@@ -55,6 +57,7 @@
     smup = submodule update --init --recursive
     fa = fetch --all
     sb = show-branch
+    emptycommit = commit --allow-empty -m
 [gui]
     encoding = utf-8
 [difftool "sourcetree"]

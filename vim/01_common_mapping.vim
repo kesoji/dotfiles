@@ -22,7 +22,7 @@ noremap gj j
 noremap gk k
 
 "tagsジャンプの時に複数ある時は一覧表示
-nnoremap <C-]> g<C-]>
+"nnoremap <C-]> g<C-]>
 
 noremap + <C-a>
 noremap - <C-x>

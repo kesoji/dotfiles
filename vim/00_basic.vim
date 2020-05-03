@@ -76,6 +76,13 @@ set spelllang=en,cjk
 
 """ cursorline is slow..
 "set cursorline
+augroup delayCursorLine
+  let s:cur_f = 0
+  autocmd WinEnter * setlocal cursorline | let s:cur_f = 0
+  autocmd WinLeave * setlocal nocursorline
+  autocmd CursorHold,CursorHoldI * setlocal cursorline | let s:cur_f = 1
+  autocmd CursorMoved,CursorMovedI * if s:cur_f | setlocal nocursorline | endif
+augroup END
 set history=1000
 set expandtab
 set smarttab
@@ -131,15 +138,15 @@ set infercase
 set wildmenu
 set wildmode=longest,full "command-line-modeのリスト表示
 
+set diffopt=internal,filler,algorithm:histogram,indent-heuristic
+
+set nostartofline
+
 " Advanced Mapping (only in vim, not in IdeaVim) {{{1
 let mapleader = "\<Space>"
 
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
-
-""" Completion
-inoremap <expr> <C-j> pumvisible() ? "\<Down>" : "\<C-x>\<C-o>"
-inoremap <expr> <Tab> pumvisible() ? "\<CR>" : "\<Tab>"
 
 nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <Leader>sv :source $MYVIMRC<CR>

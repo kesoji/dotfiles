@@ -4,6 +4,8 @@ fi
 
 set -o vi
 
+export LANG=en_US.UTF-8
+
 fpath=(~/.zsh/completions $fpath)
 
 HISTFILE=~/.zsh_history
@@ -94,6 +96,7 @@ export XDG_CONFIG_HOME=$HOME/.config
 
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
+export PATH=/usr/local/go/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 # add Pulumi to the PATH
 export PATH=$PATH:$HOME/.pulumi/bin
@@ -133,13 +136,12 @@ command -v tig 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "tig isn't installed: my-tiginstall"
     function my-tiginstall() {
-        olddir=`pwd`
         comexec "mkdir -p ~/my/{src,bin}" || return
-        comexec "pushd ~/my/src; git clone https://github.com/jonas/tig; cd tig" || return
+        comexec "pushd ~/my/src; git clone https://github.com/jonas/tig; pushd tig" || return
         comexec "make configure" || return
         comexec "./configure --prefix=$HOME/my LDLIBS=-lncursesw CPPFLAGS=-DHAVE_NCURSESW_CURSES_H" || return
         comexec "make; make install" || return
-        cd $olddir
+        comexec "popd; popd" || return
     }
 fi
 
@@ -164,12 +166,12 @@ if command -v diff-highlight >/dev/null ; then
 else
     echo "diff-highlight isn't installed: my-diff-highlightinstall"
     function my-diff-highlightinstall() {
-        dhworkdir="temp_git_diffhighlightinstall"
-        comexec "git clone --depth 1 https://github.com/git/git $dhworkdir" || return
-        comexec "cd $dhworkdir/contrib/diff-highlight" || return
+        workdir="temp_git_diffhighlightinstall"
+        comexec "git clone --depth 1 https://github.com/git/git $workdir" || return
+        comexec "pushd $workdir/contrib/diff-highlight" || return
         comexec "make" || return
         comexec "sudo cp diff-highlight /usr/local/bin" || return
-        comexec "cd; rm -rf $dhworkdir" || return
+        comexec "popd; rm -rf $workdir" || return
     }
 fi
 
@@ -178,18 +180,25 @@ command -v git-secrets 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "git-secrets isn't installed: my-git-secretsinstall"
     function my-git-secretsinstall() {
-        dhworkdir="temp_git_gitsecretsinstall"
-        comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $dhworkdir" || return
-        comexec "cd $dhworkdir" || return
+        workdir="temp_git_gitsecretsinstall"
+        comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $workdir" || return
+        comexec "pushd $workdir" || return
         comexec "sudo make install" || return
-        comexec "cd; rm -rf $dhworkdir" || return
+        comexec "popd; rm -rf $workdir" || return
     }
 fi
 
 # hyperfine
 command -v hyperfine 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "Let's install hyperfine benchmark tool!: https://github.com/sharkdp/hyperfine"
+    echo "hyperfine benchmark tool is not installed: my-hyperfineinstall"
+    function my-hyperfineinstall() {
+        downloadurl=$(curl https://api.github.com/repos/sharkdp/hyperfine/releases | jq '.[0].assets[] | select(.name | test("hyperfine_.+amd64.deb")) | .browser_download_url' -r )
+        comexec "wget $downloadurl" || return
+        filename=${downloadurl##*/}
+        comexec "sudo dpkg -i $filename" || return
+        comexec "rm -f $filename" || return
+    }
 fi
 
 # hexyl
@@ -214,14 +223,13 @@ command -v direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "direnv isn't installed: my-direnvinstall"
     function my-direnvinstall {
-        local tmpdir=~/__direnv__tmp
-        [[ -d $tmpdir ]] && comexec "rm -rf $tmpdir" || return
+        tmpdir=~/__direnv__tmp
+        [[ -d $tmpdir ]] && comexec "rm -rf $tmpdir"
         comexec "git clone git@github.com:direnv/direnv.git $tmpdir" || return
-        comexec "cd $tmpdir" || return
+        comexec "pushd $tmpdir" || return
         comexec "make" || return
         comexec "make install DESTDIR=$HOME/my" || return
-        comexec "cd -" || return
-        comexec "rm -rf $tmpdir" || return
+        comexec "popd; rm -rf $tmpdir" || return
     }
 else
     eval "$(direnv hook zsh)"
@@ -229,15 +237,15 @@ fi
 
 ### Javascript / Node / Typescript
 # NVM
-if [[ ! -d $HOME/.nvm ]] ; then
-    echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
-else
-    function nvminit() {
-        export NVM_DIR="$HOME/.nvm"
-        \. "$NVM_DIR/nvm.sh"
-        \. "$NVM_DIR/bash_completion"
-    }
-fi
+#if [[ ! -d $HOME/.nvm ]] ; then
+#    echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
+#else
+#    function nvminit() {
+#        export NVM_DIR="$HOME/.nvm"
+#        \. "$NVM_DIR/nvm.sh"
+#        \. "$NVM_DIR/bash_completion"
+#    }
+#fi
 
 # n
 command -v n 2>/dev/null 1>&2
@@ -245,9 +253,9 @@ if [[ $? -ne 0 ]] ; then
     echo "n isn't installed: my-ninstall"
     function my-ninstall {
         comexec "sudo git clone https://github.com/tj/n /usr/local/src/n"
-        comexec "cd /usr/local/src/n"
+        comexec "pushd /usr/local/src/n"
         comexec "sudo make install"
-        comexec "cd -"
+        comexec "popd"
     }
 fi
 
@@ -302,22 +310,6 @@ else
     }
 fi
 
-# phpenv
-if [ -e "${HOME}/.phpenv" ]; then
-    function phpenvinit() {
-        export PHPENV_ROOT="$HOME/.phpenv"
-        export PATH="$PHPENV_ROOT/bin:$PATH"
-        eval "$(phpenv init -)"
-    }
-else
-    echo "phpenv isn't installed: my-phpenvinstall"
-    function my-phpenvinstall() {
-        comexec "git clone https://github.com/phpenv/phpenv.git ~/.phpenv" || return
-        comexec "git clone https://github.com/php-build/php-build ~/.phpenv/plugins/php-build" || return
-        source ~/.zshrc
-    }
-fi
-
 # Pyenv
 if [ -e "${HOME}/.pyenv" ]; then
     export PYENV_ROOT="$HOME/.pyenv"
@@ -332,6 +324,18 @@ else
         echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
         echo -e "$1: \e[30;41;1mWhen you install python by pyenv, use 'export PYTHON_CONFIGURE_OPTS=\"--enable-shared\"; pyenv install 3.x.x'\e[m"
         comexec "source ~/.zshrc"
+    }
+fi
+
+# Pipenv
+command -v pipenv 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+    export PIPENV_VENV_IN_PROJECT=1
+else
+    echo "pipenv isn't installed: my-pipenvinstall"
+    function my-pipenvinstall() {
+        echo "Using pyenv environment"
+        comexec "pip install --user pipenv"
     }
 fi
 
@@ -392,9 +396,19 @@ alias tfw='terraform workspace'
 alias tfwl='terraform workspace list'
 alias tfws='terraform workspace select'
 alias tfi='terraform import'
+alias gf='terragrunt'
+alias gfa='terragrunt apply'
+alias gfp='terragrunt plan'
+alias gfd='terragrunt destroy'
+alias gfi='terragrunt import'
+alias gfw='terragrunt workspace'
+alias gfwl='terragrunt workspace list'
+alias gfws='terragrunt workspace select'
+alias gfi='terragrunt import'
 alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
+alias clswp='rm -rf ~/.vim/swp/*'
 
 ## Docker
 command -v docker 2>/dev/null 1>&2
@@ -419,14 +433,16 @@ fi
 alias drmca='docker ps -aq | xargs docker rm'
 alias drmia='docker images -aq | xargs docker rmi'
 alias dco='docker-compose'
+alias dcolf='docker-compose logs -f'
 
 command -v docui 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "docui isn't installed: my-docuiinstall"
     function my-docuiinstall() {
         comexec "ghq get https://github.com/skanehira/docui"
-        comexec "cd ~/go/src/github.com/skanehira/docui"
+        comexec "pushd ~/go/src/github.com/skanehira/docui"
         comexec "GO111MODULE=on go install"
+        comexec "popd"
     }
 fi
 
@@ -461,27 +477,6 @@ function cssh() {
     tmux selectp -P 'fg=default,bg=default'
 }
 alias ssh='cssh '
-
-# SSHRC
-command -v sshrc 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "sshrc isn't installed: my-sshrcinstall"
-    function my-sshrcinstall (){
-        comexec "wget https://raw.githubusercontent.com/Russell91/sshrc/master/sshrc" || return
-        comexec "chmod +x sshrc" || return
-        comexec "sudo mv sshrc /usr/local/bin/sshrc" || return
-    }
-else
-    alias ssh='csshrc'
-    alias sshrc='csshrc '
-    function csshrc() {
-        sshrc $*
-        tmux selectp -P 'fg=default,bg=default'
-    }
-    # Completion
-    compdef sshrc=ssh
-    compdef csshrc=ssh
-fi
 
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -535,7 +530,7 @@ fi
 # if wsl
 arch=`uname -a`
 if [[ $arch =~ "Microsoft" ]]; then
-    #export DOCKER_HOST='tcp://0.0.0.0:2375'
+    export DOCKER_HOST='tcp://0.0.0.0:2375'
 
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
@@ -546,6 +541,7 @@ exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
 SCRIPT
         chmod +x ~/my/bin/google-chrome
     fi
+    export BROWSER=$HOME/my/bin/google-chrome
 
     # env-specific command alias
     alias cl=clip.exe
@@ -719,7 +715,8 @@ if [[ $? -ne 0 ]] ; then
     function my-kryptoninstall (){
         if [[ "$(uname -a)" =~ "Microsoft" ]]; then
             comexec "go get github.com/kryptco/kr" || return
-            comexec "cd ~/go/src/github.com/kryptco/kr && make install && kr restart" || return
+            comexec "pushd ~/go/src/github.com/kryptco/kr && make install && kr restart" || return
+            comexec "popd" || return
         else
             comexec "curl https://krypt.co/kr | sh" || return
         fi
@@ -736,7 +733,7 @@ fi
 # php
 function my-php() {
     echo ">>> PHP <<<"
-    local -a ary=("composer" "phpstan" "phpcbf" "psysh")
+    local -a ary=("composer" "phpstan:phpstan/phpstan" "phpcbf:squizlabs/PHP_CodeSniffer" "psysh:psy/psysh")
     for v in $ary; do
         commandinstalled $v
     done
@@ -746,15 +743,28 @@ command -v composer 2>/dev/null 1>&2
 if [[ $? -ne 0 ]]; then
     echo "composer isn't installed: my-composerinstall"
     function my-composerinstall() {
-        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\"" || return
-        comexec "php -r \"if (hash_file('SHA384', 'composer-setup.php') === '93b54496392c062774670ac18b134c3b3a95e5a5e5c8f1a9f115f203b75bf9a129d5daa8ba6a13e2cc8a1da0806388a8') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;\"" || return
-        comexec "php composer-setup.php --install-dir=$HOME/my/bin --filename=composer" || return
-        comexec "php -r \"unlink('composer-setup.php');\"" || return
+        echo 'getting signature'
+        EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
+        echo 'got signature ' $EXPECTED_SIGNATURE
+        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
+        echo 'checking signature'
+        ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+        echo 'got signature ' $ACTUAL_SIGNATURE
+
+        if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
+        then
+            echo 'ERROR: Invalid installer signature'
+            comexec "rm composer-setup.php" || return
+            return
+        fi
+
+        comexec "php composer-setup.php --quiet --install-dir=$HOME/my/bin --filename=composer" || return
+        comexec "rm -f composer-setup.php" || return
     }
 fi
 
 function commandinstalled() {
-    command -v $1 2>/dev/null 1>&2
+    command -v ${1%:*} 2>/dev/null 1>&2
     if [[ $? -eq 0 ]]; then
         echo -e "$1: \e[37;42;1minstalled\e[m"
     else
@@ -1066,7 +1076,15 @@ if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then . $HOME/my/google-c
 
 command -v gcloud 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "google cloud sdk is not installed."
+    echo "google cloud sdk is not installed. my-googlecloudsdkinstall"
+    function my-googlecloudsdkinstall(){
+        export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
+        comexec "echo CLOUD_SDK_REPO is $CLOUD_SDK_REPO" || return
+        comexec "echo \"deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main\" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list" || return
+        comexec "curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -" || return
+        comexec "sudo apt-get update && sudo apt-get install google-cloud-sdk" || return
+        echo "installed. see https://cloud.google.com/sdk/downloads?hl=JA#apt-get for other components"
+    }
 else
     # Google Cloud SDK / gcloud Completions - installed via apt-get
     if [ -f '/usr/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/share/google-cloud-sdk/completion.zsh.inc'; fi
@@ -1086,3 +1104,6 @@ fi
 # tabtab source for slss package
 # uninstall by removing these lines or running `tabtab uninstall slss`
 [[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh
+
+export PATH="$HOME/.phpenv/bin:$PATH"
+eval "$(phpenv init -)"
