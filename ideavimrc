@@ -1,3 +1,4 @@
+set multiple-cursors
 set surround
 "set clipboard        "clipboard options
 "set digraph          "enable the entering of digraphs in Insert mode
