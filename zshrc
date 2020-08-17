@@ -154,7 +154,17 @@ if [[ $? -ne 0 ]] ; then
         export PATH=$GOROOT/bin:$PATH
         export PATH=${GOPATH:-$HOME/go/bin}:$PATH
     else
-        echo "go isn't installed"
+        echo "go isn't installed: run my-goinstall"
+        function my-goinstall() {
+            lsb_release -a 2>&1 | grep -q Ubuntu
+            if [[ $? -ne 0 ]] ; then
+                echo "Install manually."
+                return
+            fi
+            comexec "sudo add-apt-repository ppa:longsleep/golang-backports" || return
+            comexec "sudo apt update" || return
+            comexec "sudo apt install golang-go" || return
+        }
     fi
 else
     export PATH=${GOPATH:-$HOME/go/bin}:$PATH
@@ -627,6 +637,13 @@ else
 fi
 
 # ssh_agent
+if [[ ! -v SSH_AGENT_PID ]] ; then
+    echo -n "Starting ssh-agent... "
+    eval $(ssh-agent)
+else
+    echo "ssh-agent is already started"
+fi
+
 function my-sshkeyadd (){
     eval $(ssh-agent -t 6h)
     ssh-add ~/.ssh/id_ed25519_work
