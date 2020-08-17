@@ -1104,6 +1104,3 @@ fi
 # tabtab source for slss package
 # uninstall by removing these lines or running `tabtab uninstall slss`
 [[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh
-
-export PATH="$HOME/.phpenv/bin:$PATH"
-eval "$(phpenv init -)"
