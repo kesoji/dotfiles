@@ -156,6 +156,11 @@ if [[ $? -ne 0 ]] ; then
     else
         echo "go isn't installed: run my-goinstall"
         function my-goinstall() {
+            command -v lsb_release 2>/dev/null 1>&2
+            if [[ $? -ne 0 ]] ; then
+                echo "Install manually."
+                return
+            fi
             lsb_release -a 2>&1 | grep -q Ubuntu
             if [[ $? -ne 0 ]] ; then
                 echo "Install manually."
