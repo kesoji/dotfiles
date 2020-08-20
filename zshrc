@@ -514,7 +514,10 @@ else
         #--color info:108,prompt:109,spinner:108,pointer:168,marker:168
         #'
     else
-        echo "You should install ripgrep(rg)"
+        echo "ripgrep(rg) isn't installed: my-rginstall"
+        function my-rginstall() {
+            comexec "sudo apt-get install ripgrep" || return
+        }
     fi
 fi
 
@@ -644,13 +647,12 @@ fi
 # ssh_agent
 if [[ ! -v SSH_AGENT_PID ]] ; then
     echo -n "Starting ssh-agent... "
-    eval $(ssh-agent)
+    eval $(ssh-agent -t 6h)
 else
     echo "ssh-agent is already started"
 fi
 
 function my-sshkeyadd (){
-    eval $(ssh-agent -t 6h)
     ssh-add ~/.ssh/id_ed25519_work
 }
 function my-sshkeyadd_agentoff (){
