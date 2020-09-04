@@ -1,3 +1,6 @@
+# remove windows PATH for WSL 2
+export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
+
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
@@ -424,6 +427,8 @@ alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
 alias clswp='rm -rf ~/.vim/swp/*'
+alias nanounixt='date +%s%3N'
+alias unixt='date +%s'
 
 ## Docker
 command -v docker 2>/dev/null 1>&2
@@ -547,8 +552,8 @@ fi
 
 # if wsl
 arch=`uname -a`
-if [[ $arch =~ "Microsoft" ]]; then
-    export DOCKER_HOST='tcp://0.0.0.0:2375'
+if [[ $arch =~ "microsoft" ]]; then
+    # export DOCKER_HOST='tcp://0.0.0.0:2375'
 
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
@@ -598,6 +603,7 @@ EOS
             tmux -2
         fi
     fi
+
 fi
 
 function my-colortable (){
@@ -1128,3 +1134,7 @@ fi
 # tabtab source for slss package
 # uninstall by removing these lines or running `tabtab uninstall slss`
 [[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh
+
+
+ export PATH="$HOME/.phpenv/bin:$PATH"
+ eval "$(phpenv init -)"
