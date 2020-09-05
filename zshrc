@@ -595,7 +595,7 @@ EOS
     fi
 
     # run tmux avoiding nest
-    if [[ -z "$TMUX" ]]; then
+    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" ]]; then
         check=`tmux ls 2>&1`
         if [[ $? -eq 0 ]]; then
             echo $check | grep -q "no session" && tmux -2 || tmux -2 a
