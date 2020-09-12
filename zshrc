@@ -455,12 +455,10 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt-key fingerprint 0EBFCD88"
         comexec "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\""
         comexec "sudo apt-get update"
-        comexec "sudo apt-get install docker-ce"
-        DOCKER_COMPOSE_VERSION=1.22.0
-        comexec "curl -L \"https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)\" -o $HOME/my/bin/docker-compose"
-        comexec "chmod +x $HOME/my/bin/docker-compose"
-        comexec "mkdir -p ~/.zsh/completions"
-        comexec "curl -L https://raw.githubusercontent.com/docker/compose/$DOCKER_COMPOSE_VERSION/contrib/completion/zsh/_docker-compose > ~/.zsh/completions/_docker-compose"
+        comexec "sudo apt-get install docker-ce docker-compose"
+        comexec "sudo usermod -aG docker $USER"
+        #comexec "mkdir -p ~/.zsh/completions"
+        #comexec "curl -L https://raw.githubusercontent.com/docker/compose/$DOCKER_COMPOSE_VERSION/contrib/completion/zsh/_docker-compose > ~/.zsh/completions/_docker-compose"
 
     }
 fi
