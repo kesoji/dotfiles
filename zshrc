@@ -30,18 +30,6 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
 
     if [[ -z "${ZPREZTODIR}" ]]; then
         echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR isn't found."
-    else
-        if [[ ! -d "${ZPREZTODIR}/contrib" ]]; then
-            echo "prezto contrib isn't installed: my-preztocontribinstall"
-            function my-preztocontribinstall (){
-                comexec "pushd $ZPREZTODIR"
-                comexec "git clone https://github.com/belak/prezto-contrib contrib"
-                comexec "pushd contrib"
-                comexec "git submodule init"
-                comexec "git submodule update"
-                comexec "popd; popd"
-            }
-        fi
     fi
 else
     # PROMPT
