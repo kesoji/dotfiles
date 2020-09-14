@@ -584,6 +584,9 @@ SCRIPT
         fi
     fi
 
+    # docker wsl tweak
+    export PATH="$PATH:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin"
+
 fi
 
 function my-colortable (){
@@ -669,20 +672,6 @@ function switch-back-ctrl-z () {
 }
 zle -N switch-back-ctrl-z
 bindkey '^z' switch-back-ctrl-z
-
-# hub
-if command -v hub >/dev/null 2>&1; then
-    # disable because sometimes git breaks...
-    #function git(){hub "$@"}
-    :
-else
-    echo "hub isn't installed: my-hubinstall"
-    function my-hubinstall (){
-        comexec "go get github.com/github/hub" || return
-        comexec "mkdir -m 755 -p ~/.zsh/completions" || return
-        comexec "cp ~/${GOPATH:-go}/src/github.com/github/hub/etc/hub.zsh_completion ~/.zsh/completions/_hub" || return
-    }
-fi
 
 # ghq
 command -v ghq 2>/dev/null 1>&2
