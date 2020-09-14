@@ -92,6 +92,7 @@ else
     }
 fi
 
+
 autoload -Uz bashcompinit &&bashcompinit -i
 
 export TERM=xterm-256color
@@ -124,6 +125,19 @@ export LESS="-R -M -i -W -x4"
 export LESSGLOBALTAGS=global
 if command -v lesspipe.sh > /dev/null; then
     export LESSOPEN='| /usr/bin/env lesspipe.sh %s 2>&-'
+fi
+
+# gh cli
+command -v gh 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "gh isn't installed: my-ghinstall"
+    function my-ghinstall() {
+        comexec "sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0" || return
+        comexec "sudo apt-add-repository -u https://cli.github.com/packages" || return
+        comexec "sudo apt install gh" || return
+    }
+else
+    eval "$(gh completion -s zsh)"
 fi
 
 # bat
