@@ -1,3 +1,4 @@
+" https://qiita.com/sei40kr/items/09e7e92eb7686f9b5950
 set multiple-cursors
 set surround
 "set clipboard        "clipboard options
@@ -48,3 +49,14 @@ nnoremap <Space>O :action GotoFile<CR>
 "nnoremap <Space>h :action QuickJavaDoc<CR>
 nnoremap [c :<C-u>action VcsShowPrevChangeMarker<CR>
 nnoremap ]c :<C-u>action VcsShowNextChangeMarker<CR>
+
+nnoremap <C-o> :<C-u>action Back<CR>
+nnoremap <C-i> :<C-u>action Forward<CR>
+nnoremap <C-S-o> <C-o>
+nnoremap <C-S-i> <C-i>
+
+nnoremap <Space><Space> :<C-u>action AceAction<CR>
+
+nnoremap <Space>a :<C-u>action GotoAction<CR>
+nnoremap <Space>G :<C-u>action Generate<CR>
+nnoremap <Space>r :<C-u>action Refactorings.QuickListPopupAction<CR>
