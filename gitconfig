@@ -27,6 +27,7 @@
     com = checkout master
     cod = checkout develop
     cos = checkout staging
+    sw = switch
     cp = cherry-pick
     pl = pull --prune --rebase
     plo = pull --prune --rabase origin master
