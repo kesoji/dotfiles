@@ -562,6 +562,27 @@ if [[ $? -eq 0 ]] ; then
     source <(kubectl completion zsh)
 fi
 
+# ssh_agent
+if [[ ! -v SSH_AGENT_PID ]] ; then
+    echo -n "Starting ssh-agent... "
+    eval $(ssh-agent -t 6h)
+else
+    echo "ssh-agent is already started"
+fi
+
+function my-sshkeyadd (){
+    ssh-add ~/.ssh/id_ed25519_work
+}
+function my-sshkeyadd_agentoff (){
+    eval $(ssh-agent -k)
+}
+
+ssh-add -l 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "adding ssh key to agent."
+    my-sshkeyadd
+fi
+
 # if wsl
 arch=`uname -a`
 if [[ $arch =~ "microsoft" ]]; then
@@ -644,22 +665,6 @@ else
     export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
-# ssh_agent
-if [[ ! -v SSH_AGENT_PID ]] ; then
-    echo -n "Starting ssh-agent... "
-    eval $(ssh-agent -t 6h)
-else
-    echo "ssh-agent is already started"
-fi
-
-function my-sshkeyadd (){
-    ssh-add ~/.ssh/id_ed25519_work
-}
-function my-sshkeyadd_agentoff (){
-    eval $(ssh-agent -k)
-}
-
-# gibo
 command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "gibo isn't installed: my-giboinstall"
