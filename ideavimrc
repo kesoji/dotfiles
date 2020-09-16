@@ -46,3 +46,5 @@ nnoremap <Space>O :action GotoFile<CR>
 "nnoremap <Space>j :action RecentFiles<CR>
 "nnoremap <Space>k :action FileStructurePopup<CR>
 "nnoremap <Space>h :action QuickJavaDoc<CR>
+nnoremap [c :<C-u>action VcsShowPrevChangeMarker<CR>
+nnoremap ]c :<C-u>action VcsShowNextChangeMarker<CR>
