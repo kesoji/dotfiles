@@ -9,8 +9,8 @@
 この文章はNGである。
 であるとですますが混在のエラーが↑にでているはず。
 
-Java Scriptはすばらしいです。
-これはエラーになってほしいんですがpeer dependancyが云々でうまくいかなかった。
+JavaScriptはエラーになりません。
+Java Scriptはエラーになります。
 
 これはErrorになります。
 これは Error になります。
