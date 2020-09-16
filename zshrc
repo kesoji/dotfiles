@@ -567,8 +567,12 @@ function my-sshkeyadd_agentoff (){
 
 ssh-add -l 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "adding ssh key to agent."
-    my-sshkeyadd
+    echo
+    echo "skip adding ssh-key? (y/N)"
+    if read -q ; then
+    else
+        my-sshkeyadd
+    fi
 fi
 
 # if wsl
