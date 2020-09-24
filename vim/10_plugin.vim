@@ -190,6 +190,8 @@ let g:go_highlight_format_strings = 1
 let g:go_highlight_variable_declarations = 0
 let g:go_highlight_variable_assignments = 0
 
+"<<<Plugin>>> vaffle {{{1
+nnoremap FJ :Vaffle<CR>
 
 "<<<Plugin>>> vim-sandwich {{{1
 runtime macros/sandwich/keymap/surround.vim
