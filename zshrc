@@ -559,7 +559,7 @@ else
 fi
 
 function my-sshkeyadd (){
-    ssh-add ~/.ssh/id_ed25519_work
+    ssh-add -t 72h ~/.ssh/id_ed25519_work
 }
 function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
