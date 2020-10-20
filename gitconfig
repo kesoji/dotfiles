@@ -69,10 +69,6 @@
     trustExitCode = true
 [url "https://"]
     insteadOf = git://
-[credential]
-	helper = manager
-[include]
-    path = ~/.gitconfig.local
 [pager]
     log  = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
     show = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
@@ -81,11 +77,17 @@
     diffFilter = (diff-highlight 2>/dev/null || cat)
 [diff]
     compactionHeuristic = true
-[filter "lfs"]
-    clean = git-lfs clean -- %f
-    smudge = git-lfs smudge -- %f
-    process = git-lfs filter-process
-    required = true
 [merge]
 	conflictstyle = diff3
 	tool = vimdiff
+[include]
+    path = ~/.gitconfig.local
+# Windowsだとだいたいこれ入る？ 1
+# [credential]
+# 	helper = manager
+# Windowsだとだいたいこれ入る？ 2
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
