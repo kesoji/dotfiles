@@ -114,10 +114,6 @@ Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
 Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
 Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
-Plug 'phpactor/phpactor', {'for': 'php', 'do': 'composer install'}
-Plug 'jwalton512/vim-blade', {'for': 'php' }
-Plug 'c9s/phpunit.vim',            { 'for': ['php'] }
-Plug 'lvht/phpcd.vim',             { 'for': ['php'], 'do': 'composer install' }
 Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
 Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
@@ -447,8 +443,6 @@ let g:ycm_key_list_previous_completion = ['<Up>']
 "<<<Plugin>>> Tagbar {{{1
 "nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
 
-"<<<Plugin>>> phpunit {{{1
-let g:phpunit_bin = './vendor/bin/phpunit'
 
 "<<<Plugin>>> ale {{{1
 let g:ale_linters = {
@@ -492,16 +486,6 @@ function! RefPhpManualUpdate()
     !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz -C ~/.vim/refs ; rm -f ~/.vim/refs/dl.tgz
 endfunction
 
-"<<<plugin>>> phpcd {{{1
-" 以下のファイルを作ること
-" .phpcd.vim
-" let g:phpcd_autoload_path = 'phpcd_autoload.php'
-"
-" phpcd_autoload.php
-" <?php
-" require 'vendor/autoload.php';
-" require '_ide_helper.php';
-
 "<<<plugin>>> vim-tmux-navigator
 let g:tmux_navigator_no_mappings = 1
 "{xxx-Mapping}を指定する
@@ -528,15 +512,6 @@ nnoremap <Leader><Leader>j :ImportJSWord<CR>
 nnoremap <Leader><Leader>i :ImportJSFix<CR>
 nnoremap <Leader><Leader>g :ImportJSGoto<CR>
 
-"<<<plugin>>> phpactor {{{1
-"nmap <Leader>mm :call phpactor#ContextMenu()<CR>
-"nmap <Leader>nn :call phpactor#Navigate()<CR>
-
-"augroup phpactor
-    "autocmd!
-    "autocmd FileType php setlocal omnifunc=phpactor#Complete
-    "autocmd FileType php nmap <buffer> <C-]> :call phpactor#GotoDefinition()<CR>
-"augroup END
 
 "<<<plugin>>> asyncomplete {{{1
 " see readme of asyncomplete
