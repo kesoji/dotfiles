@@ -348,8 +348,9 @@ else
     echo "pyenv isn't installed: my-pyenvinstall"
     function my-pyenvinstall() {
         comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv" || return
-        echo "When you cannot build python, check if there are dependencies."
-        echo "> sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev"
+        comexec "git clone https://github.com/yyuu/pyenv-virtualenv.git ~/.pyenv/plugins/pyenv-virtualenv" || return
+        echo "Install python dependencies"
+        comexec "sudo apt-get install -y libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev" || return
         echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
         echo -e "$1: \e[30;41;1mWhen you install python by pyenv, use 'export PYTHON_CONFIGURE_OPTS=\"--enable-shared\"; pyenv install 3.x.x'\e[m"
         comexec "source ~/.zshrc"
