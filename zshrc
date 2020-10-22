@@ -1101,31 +1101,6 @@ if (which zprof > /dev/null) ;then
   zprof | less
 fi
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f $HOME/my/google-cloud-sdk/path.zsh.inc ]; then . $HOME/my/google-cloud-sdk/path.zsh.inc; fi
-# The next line enables shell command completion for gcloud.
-if [ -f $HOME/my/google-cloud-sdk/completion.zsh.inc ]; then . $HOME/my/google-cloud-sdk/completion.zsh.inc; fi
-
-command -v gcloud 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "google cloud sdk is not installed. my-googlecloudsdkinstall"
-    function my-googlecloudsdkinstall(){
-        export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
-        comexec "echo CLOUD_SDK_REPO is $CLOUD_SDK_REPO" || return
-        comexec "echo \"deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main\" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list" || return
-        comexec "curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -" || return
-        comexec "sudo apt-get update && sudo apt-get install google-cloud-sdk" || return
-        echo "installed. see https://cloud.google.com/sdk/downloads?hl=JA#apt-get for other components"
-    }
-else
-    # Google Cloud SDK / gcloud Completions - installed via apt-get
-    if [ -f '/usr/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/usr/share/google-cloud-sdk/completion.zsh.inc'; fi
-fi
-
-if [ -f /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ]; then
-    . /usr/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
-fi
-
 # tabtab source for serverless package
 # uninstall by removing these lines or running `tabtab uninstall serverless`
 [[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/serverless.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/serverless.zsh
