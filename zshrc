@@ -30,7 +30,7 @@ command -v make 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "I think this is first installation. Installing gcc, make..."
     comexec "sudo apt -y update"
-    comexec "sudo apt -y install build-essential git"
+    comexec "sudo apt -y install build-essential git unzip"
 fi
 
 # Source Prezto.
