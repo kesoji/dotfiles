@@ -24,6 +24,15 @@ function comexec() {
     echo ">>> $1"; eval $1
 }
 
+
+# essentials
+command -v make 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "I think this is first installation. Installing gcc, make..."
+    comexec "sudo apt -y update"
+    comexec "sudo apt -y install build-essential git"
+fi
+
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
