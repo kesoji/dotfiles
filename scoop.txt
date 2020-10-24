@@ -1,0 +1,6 @@
+scoop bucked add extras
+scoop bucked add versions
+scoop install 7zip
+scoop install ripgrep
+scoop install gh
+scoop install fzf
