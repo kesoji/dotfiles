@@ -403,6 +403,10 @@ function! s:on_lsp_buffer_enabled() abort
   setlocal omnifunc=lsp#complete
   setlocal signcolumn=yes
   nmap <buffer> gd <plug>(lsp-definition)
+  nmap <buffer> <C-]> <plug>(lsp-definition)
+  nmap <buffer> gr <plug>(lsp-references)
+  nmap <buffer> gt <plug>(lsp-type-definition)
+  nmap <buffer> gi <plug>(lsp-implementation)
   nmap <buffer> <f2> <plug>(lsp-rename)
   inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"
 endfunction
@@ -419,7 +423,11 @@ let g:asyncomplete_auto_popup = 1
 let g:asyncomplete_auto_completeopt = 0
 let g:asyncomplete_popup_delay = 200
 let g:lsp_text_edit_enabled = 1
+let g:lsp_preview_float = 1
+let g:lsp_diagnostics_float_cursor = 1
 "let g:lsp_async_completion = 1
+
+let g:lsp_settings_filetype_go = ['gopls', 'golangci-lint-langserver']
 
 
 "<<<Plugin>>> NERDCommenter {{{1

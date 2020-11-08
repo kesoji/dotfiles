@@ -417,15 +417,6 @@ if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
     alias ls='ls -G'
 fi
-alias tf='terraform'
-alias tfa='terraform apply'
-alias tfp='terraform plan'
-alias tfd='terraform destroy'
-alias tfi='terraform import'
-alias tfw='terraform workspace'
-alias tfwl='terraform workspace list'
-alias tfws='terraform workspace select'
-alias tfi='terraform import'
 alias gf='terragrunt'
 alias gfa='terragrunt apply'
 alias gfp='terragrunt plan'
@@ -442,6 +433,27 @@ alias clswp='rm -rf ~/.vim/swp/*'
 alias nanounixt='date +%s%3N'
 alias unixt='date +%s'
 
+## Terraform
+command -v terraform 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "terraform isn't installed: my-terraforminstall (CURRENTLY ONLY IN UBUNTU)"
+    function my-terraforminstall() {
+        comexec "curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -"
+        comexec "sudo apt-add-repository 'deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main'"
+        comexec "sudo apt-get update && sudo apt-get install terraform"
+    }
+else
+    alias tf='terraform'
+    alias tfa='terraform apply'
+    alias tfp='terraform plan'
+    alias tfd='terraform destroy'
+    alias tfi='terraform import'
+    alias tfw='terraform workspace'
+    alias tfwl='terraform workspace list'
+    alias tfws='terraform workspace select'
+    alias tfi='terraform import'
+fi
+
 ## Docker
 command -v docker 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -457,13 +469,13 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo usermod -aG docker $USER"
         #comexec "mkdir -p ~/.zsh/completions"
         #comexec "curl -L https://raw.githubusercontent.com/docker/compose/$DOCKER_COMPOSE_VERSION/contrib/completion/zsh/_docker-compose > ~/.zsh/completions/_docker-compose"
-
     }
+else
+    alias drmca='docker ps -aq | xargs docker rm'
+    alias drmia='docker images -aq | xargs docker rmi'
+    alias dco='docker-compose'
+    alias dcolf='docker-compose logs -f'
 fi
-alias drmca='docker ps -aq | xargs docker rm'
-alias drmia='docker images -aq | xargs docker rmi'
-alias dco='docker-compose'
-alias dcolf='docker-compose logs -f'
 
 command -v docui 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
