@@ -607,7 +607,7 @@ if [[ $arch =~ "microsoft" ]]; then
         mkdir -p ~/my/bin
         cat << 'SCRIPT' > ~/my/bin/google-chrome
 #!/bin/sh
-exec /mnt/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe "$@"
+exec /mnt/c/Program\ Files/Google/Chrome/Application/chrome.exe "$@"
 SCRIPT
         chmod +x ~/my/bin/google-chrome
     fi
