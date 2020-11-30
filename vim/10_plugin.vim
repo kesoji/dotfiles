@@ -21,8 +21,6 @@ call plug#begin('~/.vim/plugged')
 Plug 'cocopon/vaffle.vim'
 Plug 'lighttiger2505/sqls.vim'
 Plug 'andymass/vim-matchup'
-Plug 'mattn/vim-lsp-settings'
-Plug 'mattn/vim-goimports'
 Plug 'mattn/vim-starwars'
 "Plug 'w0rp/ale'
 "Plug 'honza/vim-snippets'
@@ -85,10 +83,13 @@ Plug 'thinca/vim-ref'
 Plug 'joonty/vdebug', { 'on': 'VdebugEnable' }
 Plug 'simeji/winresizer'
 Plug 'prabirshrestha/async.vim'
-Plug 'prabirshrestha/vim-lsp'
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
-Plug 'natebosch/vim-lsc'
+Plug 'prabirshrestha/vim-lsp'
+Plug 'mattn/vim-lsp-settings'
+Plug 'mattn/vim-goimports'
+Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
+"Plug 'natebosch/vim-lsc'
 if has('mac')
     " Mac: fzf should be installed by Homebrew
     Plug '/usr/local/opt/fzf'
@@ -149,7 +150,45 @@ endfunction
 "    call singleton#enable()
 "    let g:singleton#opener = "edit"
 "endif
+"
+"<<<Plugin>>> vim-lsp {{{1
+"https://mattn.kaoriya.net/software/vim/20191231213507.htm
+if empty(globpath(&rtp, 'autoload/lsp.vim'))
+  finish
+endif
 
+function! s:on_lsp_buffer_enabled() abort
+  setlocal omnifunc=lsp#complete
+  setlocal signcolumn=yes
+  nmap <buffer> gd <plug>(lsp-definition)
+  nmap <buffer> <C-]> <plug>(lsp-definition)
+  nmap <buffer> gr <plug>(lsp-references)
+  nmap <buffer> gt <plug>(lsp-type-definition)
+  nmap <buffer> gi <plug>(lsp-implementation)
+  nmap <buffer> <f2> <plug>(lsp-rename)
+  nmap <buffer> <S-k> <plug>(lsp-hover)
+  inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"
+endfunction
+
+augroup lsp_install
+  au!
+  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+command! LspDebug let lsp_log_verbose=1 | let lsp_log_file = expand('~/lsp.log')
+
+let g:lsp_diagnostics_enabled = 1
+let g:lsp_diagnostics_echo_cursor = 1
+let g:asyncomplete_auto_popup = 1
+let g:asyncomplete_auto_completeopt = 0
+let g:asyncomplete_popup_delay = 200
+let g:lsp_text_edit_enabled = 1
+let g:lsp_preview_float = 1
+let g:lsp_diagnostics_float_cursor = 1
+"let g:lsp_async_completion = 1
+
+let g:lsp_settings_filetype_go = ['gopls', 'golangci-lint-langserver']
+
+"<<<Plugin>>> vim-go {{{1
 function! s:build_go_files()
     let l:file = expand('%')
     if l:file =~# '^\f\+_test\.go$'
@@ -392,42 +431,6 @@ nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
-
-"<<<Plugin>>> vim-lsp {{{1
-"https://mattn.kaoriya.net/software/vim/20191231213507.htm
-if empty(globpath(&rtp, 'autoload/lsp.vim'))
-  finish
-endif
-
-function! s:on_lsp_buffer_enabled() abort
-  setlocal omnifunc=lsp#complete
-  setlocal signcolumn=yes
-  nmap <buffer> gd <plug>(lsp-definition)
-  nmap <buffer> <C-]> <plug>(lsp-definition)
-  nmap <buffer> gr <plug>(lsp-references)
-  nmap <buffer> gt <plug>(lsp-type-definition)
-  nmap <buffer> gi <plug>(lsp-implementation)
-  nmap <buffer> <f2> <plug>(lsp-rename)
-  inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"
-endfunction
-
-augroup lsp_install
-  au!
-  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
-augroup END
-command! LspDebug let lsp_log_verbose=1 | let lsp_log_file = expand('~/lsp.log')
-
-let g:lsp_diagnostics_enabled = 1
-let g:lsp_diagnostics_echo_cursor = 1
-let g:asyncomplete_auto_popup = 1
-let g:asyncomplete_auto_completeopt = 0
-let g:asyncomplete_popup_delay = 200
-let g:lsp_text_edit_enabled = 1
-let g:lsp_preview_float = 1
-let g:lsp_diagnostics_float_cursor = 1
-"let g:lsp_async_completion = 1
-
-let g:lsp_settings_filetype_go = ['gopls', 'golangci-lint-langserver']
 
 
 "<<<Plugin>>> NERDCommenter {{{1
