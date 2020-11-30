@@ -87,6 +87,7 @@ Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'mattn/vim-lsp-settings'
+" don't forget to install goimports itself
 Plug 'mattn/vim-goimports'
 Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
 "Plug 'natebosch/vim-lsc'
@@ -179,7 +180,7 @@ command! LspDebug let lsp_log_verbose=1 | let lsp_log_file = expand('~/lsp.log')
 let g:lsp_diagnostics_enabled = 1
 let g:lsp_diagnostics_echo_cursor = 1
 let g:asyncomplete_auto_popup = 1
-let g:asyncomplete_auto_completeopt = 0
+"let g:asyncomplete_auto_completeopt = 0
 let g:asyncomplete_popup_delay = 200
 let g:lsp_text_edit_enabled = 1
 let g:lsp_preview_float = 1
@@ -443,9 +444,8 @@ map <C-e> :NERDTreeToggle<CR>
 imap <C-e> <ESC><C-u>:NERDTreeToggle<CR>
 
 "<<<Plugin>>> UltiSnips {{{1
-let g:UltiSnipsExpandTrigger       = "<tab>"
-let g:UltiSnipsJumpForwardTrigger  = "<c-b>"
-let g:UltiSnipsJumpBackwardTrigger = "<c-z>"
+let g:UltiSnipsJumpForwardTrigger = "<c-f>"
+let g:UltiSnipsJumpBackwardTrigger = "<c-b>"
 
 "<<<Plugin>>> YouCompleteMe {{{1
 let g:ycm_key_list_select_completion = ['<Down>']
