@@ -59,9 +59,10 @@
     alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
     sm = submodule
     smup = submodule update --init --recursive
-    fa = fetch --all
+    fa = fetch --all --prune
     sb = show-branch
     emptycommit = commit --allow-empty -m
+    delete-merged-branches = !git branch --merged | grep -v \\* | egrep -v '(main|master|staging)' | xargs -I % git branch -d %
 [gui]
     encoding = utf-8
 [difftool "sourcetree"]
