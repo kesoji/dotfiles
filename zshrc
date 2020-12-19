@@ -96,6 +96,7 @@ export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
+export PATH=$HOME/development/flutter/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH
 export PATH=/usr/local/go/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
@@ -581,7 +582,11 @@ else
 fi
 
 function my-sshkeyadd (){
-    ssh-add -t 72h ~/.ssh/id_ed25519_work
+    if [ "$(uname)" = 'Darwin' ] ; then
+        ssh-add -K ~/.ssh/id_ed25519_work
+    else
+        ssh-add -t 72h ~/.ssh/id_ed25519_work
+    fi
 }
 function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
@@ -623,20 +628,23 @@ SCRIPT
         comexec "sudo add-apt-repository ppa:longsleep/golang-backports"
     }
 
-    # run tmux avoiding nest
-    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" ]]; then
-        check=`tmux ls 2>&1`
-        if [[ $? -eq 0 ]]; then
-            echo $check | grep -q "no session" && tmux -2 || tmux -2 a
-        else
-            tmux -2
-        fi
-    fi
-
     # docker wsl tweak
     export PATH="$PATH:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin"
 
 fi
+
+
+# run tmux avoiding nest
+# intellijはintellij側に設定する
+if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
+    check=`tmux ls 2>&1`
+    if [[ $? -eq 0 ]]; then
+        echo $check | grep -q "no session" && tmux -2 || tmux -2 a
+    else
+        tmux -2
+    fi
+fi
+
 
 function my-colortable (){
     for i in {0..255}; do
