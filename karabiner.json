@@ -17,8 +17,28 @@
                 "rules": [
                     {
                         "description": "Change ¥ to Alt+¥",
+                        "conditions": [
+                            {
+                                "type": "frontmost_application_if",
+                                "bundle_identifiers": [
+                                    "^com\\.microsoft\\.VSCode",
+                                    "^com\\.googlecode\\.iterm2",
+                                    "^com\\.jetbrains\\"
+                                ]
+                            }
+                        ],
                         "manipulators": [
                             {
+                                "conditions": [
+                                    {
+                                        "type": "frontmost_application_if",
+                                        "bundle_identifiers": [
+                                            "^com\\.microsoft\\.VSCode",
+                                            "^com\\.googlecode\\.iterm2",
+                                            "^com\\.jetbrains\\"
+                                        ]
+                                    }
+                                ],
                                 "from": {
                                     "key_code": "international3"
                                 },
@@ -38,6 +58,16 @@
                         "description": "Change Alt+¥ to ¥",
                         "manipulators": [
                             {
+                                "conditions": [
+                                    {
+                                        "type": "frontmost_application_if",
+                                        "bundle_identifiers": [
+                                            "^com\\.microsoft\\.VSCode",
+                                            "^com\\.googlecode\\.iterm2",
+                                            "^com\\.jetbrains\\"
+                                        ]
+                                    }
+                                ],
                                 "from": {
                                     "key_code": "international3",
                                     "modifiers": {

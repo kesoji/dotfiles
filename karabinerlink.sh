@@ -1,3 +1,3 @@
 #!/bin/sh
 
-ln -sf karabiner.json ~/.config/karabiner/karabiner.json
+ln -sf ~/dotfiles/karabiner.json ~/.config/karabiner/karabiner.json
