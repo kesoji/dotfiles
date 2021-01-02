@@ -5,6 +5,17 @@ if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
 
+# run tmux avoiding nest
+# intellijはintellij側に設定する
+if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
+    check=`tmux ls 2>&1`
+    if [[ $? -eq 0 ]]; then
+        echo $check | grep -q "no session" && tmux -2 || tmux -2 a
+    else
+        tmux -2
+    fi
+fi
+
 set -o vi
 
 export LANG=en_US.UTF-8
@@ -633,17 +644,6 @@ SCRIPT
 
 fi
 
-
-# run tmux avoiding nest
-# intellijはintellij側に設定する
-if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
-    check=`tmux ls 2>&1`
-    if [[ $? -eq 0 ]]; then
-        echo $check | grep -q "no session" && tmux -2 || tmux -2 a
-    else
-        tmux -2
-    fi
-fi
 
 
 function my-colortable (){
