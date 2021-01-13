@@ -91,16 +91,17 @@ Plug 'mattn/vim-lsp-settings'
 Plug 'mattn/vim-goimports'
 Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
 "Plug 'natebosch/vim-lsc'
-if has('mac')
-    " Mac: fzf should be installed by Homebrew
-    Plug '/usr/local/opt/fzf'
-elseif !has('win32') && !has('win64')
-    " Linux
-    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-else
-    " Windows: fzf should be placed in PATH
-    Plug 'junegunn/fzf'
-endif
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+"if has('mac')
+"    " Mac: fzf should be installed by Homebrew
+"    Plug '/usr/local/opt/fzf'
+"elseif !has('win32') && !has('win64')
+"    " Linux
+"    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+"else
+"    " Windows: fzf should be placed in PATH
+"    Plug 'junegunn/fzf'
+"endif
 Plug 'junegunn/fzf.vim'
 Plug 'posva/vim-vue'
 Plug 'bps/vim-textobj-python'
@@ -152,6 +153,9 @@ endfunction
 "    let g:singleton#opener = "edit"
 "endif
 "
+"<<<Plugin>>> vista {{{1
+nnoremap VV :<c-u>Vista!!<CR>
+
 "<<<Plugin>>> vim-lsp {{{1
 "https://mattn.kaoriya.net/software/vim/20191231213507.htm
 if empty(globpath(&rtp, 'autoload/lsp.vim'))
@@ -251,7 +255,9 @@ nmap <Space>f [fzf]
 nnoremap [fzf]b :<C-u>Buffers<CR>
 nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
-nnoremap [fzf]t :<C-u>Tags<CR>
+if s:is_plugged("vista.vim")
+    nnoremap [fzf]t :<C-u>Vista finder<CR>
+endif
 
 command! -bang -nargs=* Gr
       \ call fzf#vim#grep(

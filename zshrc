@@ -16,7 +16,7 @@ if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij"
     fi
 fi
 
-set -o vi
+# set -o vi
 
 export LANG=en_US.UTF-8
 
