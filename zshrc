@@ -5,6 +5,37 @@ if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
 
+
+###### SSH Setting #######
+function my-sshkeyadd (){
+    if [ "$(uname)" = 'Darwin' ] ; then
+        ssh-add -K ~/.ssh/id_ed25519_work
+    else
+        ssh-add -t 72h ~/.ssh/id_ed25519_work
+    fi
+}
+function my-sshkeyadd_agentoff (){
+    eval $(ssh-agent -k)
+}
+
+# ssh_agent
+if [[ ! -v SSH_AGENT_PID ]] ; then
+    echo -n "Starting ssh-agent... "
+    eval $(ssh-agent -t 24h)
+else
+    echo "ssh-agent is already started"
+fi
+ssh-add -l 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo
+    echo "skip adding ssh-key? (y/N)"
+    if read -q ; then
+    else
+        my-sshkeyadd
+    fi
+fi
+###### SSH Setting #######
+
 # run tmux avoiding nest
 # intellijはintellij側に設定する
 if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
@@ -583,35 +614,6 @@ fi
 command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
     source <(kubectl completion zsh)
-fi
-
-# ssh_agent
-if [[ ! -v SSH_AGENT_PID ]] ; then
-    echo -n "Starting ssh-agent... "
-    eval $(ssh-agent -t 6h)
-else
-    echo "ssh-agent is already started"
-fi
-
-function my-sshkeyadd (){
-    if [ "$(uname)" = 'Darwin' ] ; then
-        ssh-add -K ~/.ssh/id_ed25519_work
-    else
-        ssh-add -t 72h ~/.ssh/id_ed25519_work
-    fi
-}
-function my-sshkeyadd_agentoff (){
-    eval $(ssh-agent -k)
-}
-
-ssh-add -l 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo
-    echo "skip adding ssh-key? (y/N)"
-    if read -q ; then
-    else
-        my-sshkeyadd
-    fi
 fi
 
 # if wsl
