@@ -1,6 +1,7 @@
 " https://qiita.com/sei40kr/items/09e7e92eb7686f9b5950
 set multiple-cursors
 set surround
+set ideajoin
 "set clipboard        "clipboard options
 "set digraph          "enable the entering of digraphs in Insert mode
 "set gdefault         "the :substitute flag 'g' is default on
