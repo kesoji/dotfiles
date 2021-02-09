@@ -722,7 +722,7 @@ command -v ghq 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "ghq isn't installed: my-ghqinstall"
     function my-ghqinstall (){
-        comexec "go get github.com/motemen/ghq" || return
+        comexec "go get github.com/x-motemen/ghq" || return
     }
 else
     export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
