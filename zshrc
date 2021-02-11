@@ -428,16 +428,6 @@ fi
 #    fpath=(${ZDOTDIR:-$HOME}/.zsh-completions $fpath)
 #fi
 
-# GTAGS
-# if [ `command -v global` ]; then
-#     _global_complete() {
-#         local cur
-#         cur=${COMP_WORDS[COMP_CWORD]}
-#         COMPREPLY=(`global -c $cur`)
-#     }
-#     complete -F _global_complete global
-# fi
-
 setopt correct
 setopt no_beep
 setopt hist_no_store

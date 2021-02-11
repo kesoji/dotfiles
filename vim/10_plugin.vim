@@ -49,7 +49,6 @@ Plug 'jiangmiao/auto-pairs'
 Plug 'alvan/vim-closetag'
 "Plug 'Townk/vim-autoclose'
 "Plug 'vim-scripts/cisco.vim'
-Plug 'bbchung/gtags.vim'
 "Plug 'scrooloose/syntastic'
 Plug 'Yggdroot/indentLine'
 Plug 'easymotion/vim-easymotion'
@@ -430,11 +429,6 @@ map ^ <Plug>(edgemotion-k)
 vmap v <Plug>(expand_region_expand)
 vmap <C-v> <Plug>(expand_region_shrink)
 
-"<<<Plugin>>> Gtags {{{1
-nnoremap <C-g> :Gtags -g
-nnoremap <C-h> :Gtags -f %<CR>
-nnoremap <C-j> :GtagsCursor<CR>
-nnoremap <C-k> :Gtags -r <C-r><C-w><CR>
 
 "<<<Plugin>>> memolist {{{1
 let g:memolist_path = "~/.vim/memo"
