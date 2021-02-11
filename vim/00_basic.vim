@@ -120,7 +120,8 @@ set ignorecase
 set smartcase
 set wrapscan    "default
 
-set ambiwidth=double
+" I want to set this 'double' but vim-signify shows error (2021/02/11) ...
+set ambiwidth=single
 
 set belloff=all
 
