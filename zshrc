@@ -489,9 +489,9 @@ if [[ $? -ne 0 ]] ; then
 else
     alias tf='terraform'
     alias tfa='terraform apply'
-    alias tfanor='terraform apply --refresh=no'
+    alias tfanor='terraform apply -refresh=false'
     alias tfp='terraform plan'
-    alias tfpnor='terraform plan --refresh=no'
+    alias tfpnor='terraform plan -refresh=false'
     alias tfd='terraform destroy'
     alias tfi='terraform import'
     alias tfw='terraform workspace'
