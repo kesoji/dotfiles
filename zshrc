@@ -489,13 +489,17 @@ if [[ $? -ne 0 ]] ; then
 else
     alias tf='terraform'
     alias tfa='terraform apply'
+    alias tfanor='terraform apply --refresh=no'
     alias tfp='terraform plan'
+    alias tfpnor='terraform plan --refresh=no'
     alias tfd='terraform destroy'
     alias tfi='terraform import'
     alias tfw='terraform workspace'
     alias tfwl='terraform workspace list'
     alias tfws='terraform workspace select'
     alias tfi='terraform import'
+    export TF_CLI_ARGS_plan="--parallelism=20"
+    export TF_CLI_ARGS_apply="--parallelism=20"
 fi
 
 ## Docker
