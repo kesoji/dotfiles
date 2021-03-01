@@ -154,6 +154,7 @@ endfunction
 "
 "<<<Plugin>>> vista {{{1
 nnoremap VV :<c-u>Vista!!<CR>
+let g:vista_default_executive = 'vim_lsp'
 
 "<<<Plugin>>> vim-lsp {{{1
 "https://mattn.kaoriya.net/software/vim/20191231213507.htm
@@ -201,10 +202,9 @@ function! s:build_go_files()
         call go#cmd#Build(0)
     endif
 endfunction
-let g:go_def_mode = 'gopls'
-let g:go_info_mode = 'gopls'
 let g:go_fmt_command = "goimports"
 let g:go_fmt_autosave = 1
+let g:go_metalinter_command = "golangci-lint"
 let g:go_metalinter_autosave = 0
 let g:go_auto_type_info = 1
 let g:go_auto_sameids = 1
