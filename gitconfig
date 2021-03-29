@@ -88,12 +88,3 @@
 	tool = vimdiff
 [include]
 	path = ~/.gitconfig.local
-# Windowsだとだいたいこれ入る？ 1
-[credential]
-	helper = manager-core
-# Windowsだとだいたいこれ入る？ 2
-[filter "lfs"]
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
-	process = git-lfs filter-process
-	required = true

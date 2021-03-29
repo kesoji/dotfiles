@@ -181,6 +181,14 @@ else
     eval "$(gh completion -s zsh)"
 fi
 
+# lazygit
+command -v lazygit 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "lazygit isn't installed"
+else
+    alias lg='lazygit'
+fi
+
 # bat
 command -v bat 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -1131,3 +1139,4 @@ fi
 
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /usr/bin/terraform terraform
+export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
