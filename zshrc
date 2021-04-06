@@ -83,6 +83,10 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
     if [[ -z "${ZPREZTODIR}" ]]; then
         echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR isn't found."
     fi
+
+    autoload -Uz promptinit
+    promptinit
+    prompt steeef
 else
     # PROMPT
     autoload -U promptinit
@@ -110,8 +114,6 @@ else
     ## message
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
-
-
 #if [ -e ~/.zsh/z/z.sh ]; then
     #source ~/.zsh/z/z.sh
 #else
