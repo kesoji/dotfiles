@@ -1128,17 +1128,10 @@ if (which zprof > /dev/null) ;then
   zprof | less
 fi
 
-# tabtab source for serverless package
-# uninstall by removing these lines or running `tabtab uninstall serverless`
-[[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/serverless.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/serverless.zsh
-# tabtab source for sls package
-# uninstall by removing these lines or running `tabtab uninstall sls`
-[[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/sls.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/sls.zsh
-
-# tabtab source for slss package
-# uninstall by removing these lines or running `tabtab uninstall slss`
-[[ -f /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh ]] && . /home/kesoji/.config/yarn/global/node_modules/tabtab/.completions/slss.zsh
-
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /usr/bin/terraform terraform
 export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
+
+# tabtab source for packages
+# uninstall by removing these lines
+[[ -f ~/.config/tabtab/__tabtab.zsh ]] && . ~/.config/tabtab/__tabtab.zsh || true
