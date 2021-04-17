@@ -142,7 +142,6 @@ export XDG_CONFIG_HOME=$HOME/.config
 
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/development/flutter/bin:$PATH
-export FLUTTER_ROOT=$HOME/development/flutter
 export PATH=$HOME/.yarn/bin:$PATH
 export PATH=/usr/local/go/bin:$PATH
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
