@@ -813,10 +813,13 @@ fi
 # fd-find
 command -v fdfind 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "fd isn't installed: my-fdinstall"
-    function my-fdinstall() {
-        comexec "sudo apt install fd-find" || return
-    }
+    command -v fd 2>/dev/null 1>&2
+    if [[ $? -ne 0 ]] ; then
+        echo "fd isn't installed: my-fdinstall"
+        function my-fdinstall() {
+            comexec "sudo apt install fd-find" || return
+        }
+    fi
 else
     alias fd='fdfind'
 fi
