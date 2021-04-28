@@ -53,6 +53,10 @@ set -o emacs
 export LANG=en_US.UTF-8
 
 fpath=(~/.zsh/completions $fpath)
+if [[ -s ~/.stripe/stripe-completion.zsh ]]; then
+    fpath=(~/.stripe $fpath)
+    autoload -Uz compinit && compinit -i
+fi
 
 HISTFILE=~/.zsh_history
 HISTSIZE=20000
@@ -341,6 +345,11 @@ if [[ $? -ne 0 ]] ; then
         comexec "popd"
     }
 fi
+
+# nvm
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 function myutils() {
     local -a ary=(
