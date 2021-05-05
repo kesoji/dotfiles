@@ -90,3 +90,5 @@
 	tool = vimdiff
 [include]
 	path = ~/.gitconfig.local
+[pull]
+	rebase = false
