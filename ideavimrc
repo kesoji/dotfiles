@@ -2,7 +2,7 @@
 set multiple-cursors
 set surround
 set ideajoin
-"set clipboard        "clipboard options
+set clipboard        "clipboard options
 "set digraph          "enable the entering of digraphs in Insert mode
 "set gdefault         "the :substitute flag 'g' is default on
 "set history          "number of command-lines that are remembered
