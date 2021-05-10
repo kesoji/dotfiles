@@ -15,7 +15,7 @@
 	filemode = false
 [commit]
 	verbose = true
-	gpgsign = true
+	#gpgsign = true
 [fetch]
     prune = true
 [alias]
@@ -92,3 +92,5 @@
 	tool = vimdiff
 [include]
 	path = ~/.gitconfig.local
+[pull]
+	rebase = false
