@@ -144,6 +144,7 @@ autoload -Uz bashcompinit &&bashcompinit -i
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
+export PATH=$HOME/.tfenv/bin:$PATH
 export PATH=$HOME/.config/composer/vendor/bin:$PATH
 export PATH=$HOME/development/flutter/bin:$PATH
 export PATH=$HOME/.yarn/bin:$PATH

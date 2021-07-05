@@ -27,6 +27,7 @@ Plug 'mattn/vim-starwars'
 Plug 'SirVer/ultisnips'
 Plug 'qpkorr/vim-renamer'
 Plug 'tpope/vim-unimpaired'
+Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
 Plug 'Shougo/vimproc.vim', { 'do': 'make' }
@@ -34,6 +35,7 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'scrooloose/nerdtree'
 Plug 'mechatroner/rainbow_csv'
+
 "Plug 'majutsushi/tagbar'
 " Replacement for tagbar
 Plug 'liuchengxu/vista.vim'
@@ -69,6 +71,7 @@ Plug 'mhinz/vim-signify'
 "Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
+
 Plug 'machakann/vim-sandwich'
 Plug 'kana/vim-textobj-user'
 "Plug 'kana/vim-operator-replace'
@@ -450,6 +453,7 @@ let g:UltiSnipsJumpBackwardTrigger = "<c-b>"
 "<<<Plugin>>> YouCompleteMe {{{1
 let g:ycm_key_list_select_completion = ['<Down>']
 let g:ycm_key_list_previous_completion = ['<Up>']
+
 
 "<<<Plugin>>> Tagbar {{{1
 "nnoremap <silent> <leader><leader>e :TagbarToggle<CR>
