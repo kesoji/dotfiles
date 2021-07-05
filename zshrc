@@ -325,15 +325,8 @@ fi
 
 ### Javascript / Node / Typescript
 # NVM
-#if [[ ! -d $HOME/.nvm ]] ; then
-#    echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
-#else
-#    function nvminit() {
-#        export NVM_DIR="$HOME/.nvm"
-#        \. "$NVM_DIR/nvm.sh"
-#        \. "$NVM_DIR/bash_completion"
-#    }
-#fi
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
 
 # n
 command -v n 2>/dev/null 1>&2
@@ -346,11 +339,6 @@ if [[ $? -ne 0 ]] ; then
         comexec "popd"
     }
 fi
-
-# nvm
-export NVM_DIR="$HOME/.config/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 function myutils() {
     local -a ary=(
