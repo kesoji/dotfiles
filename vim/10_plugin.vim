@@ -92,26 +92,13 @@ Plug 'mattn/vim-lsp-settings'
 " don't forget to install goimports itself
 Plug 'mattn/vim-goimports'
 Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
-"Plug 'natebosch/vim-lsc'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-"if has('mac')
-"    " Mac: fzf should be installed by Homebrew
-"    Plug '/usr/local/opt/fzf'
-"elseif !has('win32') && !has('win64')
-"    " Linux
-"    Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-"else
-"    " Windows: fzf should be placed in PATH
-"    Plug 'junegunn/fzf'
-"endif
 Plug 'junegunn/fzf.vim'
 Plug 'posva/vim-vue'
 Plug 'bps/vim-textobj-python'
 Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
-Plug 'jremmen/vim-ripgrep'
-Plug 'dag/vim-fish'
 Plug 'pearofducks/ansible-vim'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
