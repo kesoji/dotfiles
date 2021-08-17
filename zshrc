@@ -395,7 +395,7 @@ fi
 if [ -e "${HOME}/.pyenv" ]; then
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init - --no-rehash)"
+    eval "$(pyenv init --path)"
 else
     echo "pyenv isn't installed: my-pyenvinstall"
     function my-pyenvinstall() {
@@ -423,6 +423,16 @@ fi
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
     fpath=(/usr/share/zsh/sites-functions $fpath)
+fi
+
+# j
+
+# jump
+command -v jump 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+    eval "$(jump shell)"
+else
+    echo "jump isn't installed"
 fi
 
 
