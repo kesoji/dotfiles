@@ -1,10 +1,14 @@
-# remove windows PATH for WSL 2
-export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
-
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
 
+# remove windows PATH for WSL 2
+export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
+
+# add homebrew PATH in head for Mac
+if [ "$(uname)" = 'Darwin' ] ; then
+    export PATH="/opt/homebrew/bin:$PATH"
+fi
 
 ###### SSH Setting #######
 function my-sshkeyadd (){
