@@ -488,6 +488,11 @@ alias browsh='docker run --rm -it browsh/browsh'
 alias clswp='rm -rf ~/.vim/swp/*'
 alias nanounixt='date +%s%3N'
 alias unixt='date +%s'
+function zipp() {
+    DIR=$1
+    command rm -f $DIR.zip
+    command zip -r $DIR.zip $DIR -x "*.DS_Store"
+}
 
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
