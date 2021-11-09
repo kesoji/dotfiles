@@ -94,7 +94,5 @@
 	path = ~/.gitconfig.local
 [pull]
 	rebase = false
-[credential "helperselector"]
-	selected = manager-core
 [ghq]
 	root = ~/go/src
