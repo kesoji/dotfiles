@@ -184,8 +184,9 @@ command -v gh 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "gh isn't installed: my-ghinstall"
     function my-ghinstall() {
-        comexec "sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0" || return
-        comexec "sudo apt-add-repository -u https://cli.github.com/packages" || return
+        comexec "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg"
+        comexec 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null'
+        comexec "sudo apt update"
         comexec "sudo apt install gh" || return
     }
 else
