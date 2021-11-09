@@ -223,6 +223,15 @@ if [[ $? -ne 0 ]] ; then
     }
 fi
 
+# lazygit
+command -v lazygit 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "lazygit isn't installed: my-lazygitinstall"
+    function my-lazygitinstall() {
+        comexec "go install github.com/jesseduffield/lazygit@latest" || return
+    }
+fi
+
 # go
 command -v go 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
