@@ -504,30 +504,47 @@ function zipp() {
     command zip -r $DIR.zip $DIR -x "*.DS_Store"
 }
 
-## Terraform
-command -v terraform 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "terraform isn't installed: my-terraforminstall (CURRENTLY ONLY IN UBUNTU)"
-    function my-terraforminstall() {
-        comexec "curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -"
-        comexec "sudo apt-add-repository 'deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main'"
-        comexec "sudo apt-get update && sudo apt-get install terraform"
+## Tfenv
+if [[ ! -e $HOME/.tfenv ]] ; then
+    echo "tfenv isn't installed: my-tfenvinstall (CURRENTLY ONLY IN UBUNTU)"
+    function my-tfenvinstall() {
+        comexec "git clone https://github.com/tfutils/tfenv.git ~/.tfenv"
     }
 else
-    alias tf='terraform'
-    alias tfa='terraform apply'
-    alias tfanor='terraform apply -refresh=false'
-    alias tfp='terraform plan'
-    alias tfpnor='terraform plan -refresh=false'
-    alias tfd='terraform destroy'
-    alias tfi='terraform import'
-    alias tfw='terraform workspace'
-    alias tfwl='terraform workspace list'
-    alias tfws='terraform workspace select'
-    alias tfi='terraform import'
-    export TF_CLI_ARGS_plan="--parallelism=20"
-    export TF_CLI_ARGS_apply="--parallelism=20"
+    export PATH="$HOME/.tfenv/bin:$PATH"
+    ## Terraform
+    command -v terraform 2>/dev/null 1>&2
+    if [[ $? -ne 0 ]] ; then
+        echo "terraform isn't installed: use tfenv to install"
+    else
+        alias tf='terraform'
+        alias tfa='terraform apply'
+        alias tfanor='terraform apply -refresh=false'
+        alias tfp='terraform plan'
+        alias tfpnor='terraform plan -refresh=false'
+        alias tfd='terraform destroy'
+        alias tfi='terraform import'
+        alias tfw='terraform workspace'
+        alias tfwl='terraform workspace list'
+        alias tfws='terraform workspace select'
+        alias tfi='terraform import'
+        export TF_CLI_ARGS_plan="--parallelism=20"
+        export TF_CLI_ARGS_apply="--parallelism=20"
+    fi
 fi
+
+## saml2aws
+command -v saml2aws 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "saml2aws isn't installed: my-saml2awsinstall"
+    function my-saml2awsinstall() {
+        CURRENT_VERSION=$(curl -Ls https://api.github.com/repos/Versent/saml2aws/releases/latest | grep 'tag_name' | cut -d'v' -f2 | cut -d'"' -f1)
+        comexec "wget -c https://github.com/Versent/saml2aws/releases/download/v${CURRENT_VERSION}/saml2aws_${CURRENT_VERSION}_linux_amd64.tar.gz -O - | tar -xzv -C ~/my/bin"
+        comexec "chmod u+x ~/my/bin/saml2aws"
+        comexec "hash -r"
+    }
+fi
+
 
 ## Docker
 command -v docker 2>/dev/null 1>&2
@@ -664,8 +681,11 @@ SCRIPT
     export BROWSER=$HOME/my/bin/google-chrome
 
     # env-specific command alias
-    alias cl=clip.exe
-    alias -g C='| clip.exe'
+    clip=$(/mnt/c/Windows/System32/wsl.exe wslpath C:/Windows/System32/clip.exe)
+    alias clip=$clip
+    alias pbcopy=$clip
+    alias cl=$clip
+    alias -g C="| $clip"
 
     # add repository
     function my-addaptrepos {
