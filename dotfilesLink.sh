@@ -28,6 +28,9 @@ ln -sf ~/dotfiles/after ~/.vim/
 ln -sf ~/dotfiles/memo ~/.vim/
 ln -sf ~/dotfiles/template ~/.vim/
 
+# .config
+ln -sf ~/dotfiles/dotconfig/rsync ~/.config/
+
 # zplezto
 [ -d ~/.zprezto ] || git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
 #for rcfile in ${ZDOTDIR:-$HOME}/.zprezto/runcoms/z*; do
