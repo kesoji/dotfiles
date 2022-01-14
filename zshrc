@@ -10,6 +10,8 @@ if [ "$(uname)" = 'Darwin' ] ; then
     export PATH="/opt/homebrew/bin:$PATH"
 fi
 
+export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
+
 ###### SSH Setting #######
 function my-sshkeyadd (){
     if [ "$(uname)" = 'Darwin' ] ; then
@@ -148,14 +150,6 @@ autoload -Uz bashcompinit &&bashcompinit -i
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
-export PATH=$HOME/.tfenv/bin:$PATH
-export PATH=$HOME/.config/composer/vendor/bin:$PATH
-export PATH=$HOME/development/flutter/bin:$PATH
-export PATH=$HOME/.yarn/bin:$PATH
-export PATH=/usr/local/go/bin:$PATH
-export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
-# add Pulumi to the PATH
-export PATH=$PATH:$HOME/.pulumi/bin
 export MANPATH=$HOME/my/share/man:$MANPATH
 export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
 export LDFLAGS="-L/usr/lib64 -L$HOME/my/lib $LDFLAGS"
@@ -191,14 +185,6 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     eval "$(gh completion -s zsh)"
-fi
-
-# lazygit
-command -v lazygit 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "lazygit isn't installed"
-else
-    alias lg='lazygit'
 fi
 
 # bat
@@ -239,8 +225,9 @@ if [[ $? -ne 0 ]] ; then
     function my-lazygitinstall() {
         comexec "go install github.com/jesseduffield/lazygit@latest" || return
     }
+else
+    alias lg='lazygit'
 fi
-
 # go
 command -v go 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -865,6 +852,8 @@ if [[ $? -ne 0 ]]; then
         comexec "php composer-setup.php --quiet --install-dir=$HOME/my/bin --filename=composer" || return
         comexec "rm -f composer-setup.php" || return
     }
+else
+    export PATH=$HOME/.config/composer/vendor/bin:$PATH
 fi
 
 # fd-find
