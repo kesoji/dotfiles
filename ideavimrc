@@ -2,7 +2,7 @@
 set multiple-cursors
 set surround
 set ideajoin
-set clipboard        "clipboard options
+set clipboard+=unnamed        "clipboard options
 "set digraph          "enable the entering of digraphs in Insert mode
 "set gdefault         "the :substitute flag 'g' is default on
 "set history          "number of command-lines that are remembered
@@ -37,7 +37,7 @@ nnoremap <Leader>ev :<C-u>vsplit ~/.ideavimrc<CR>
 nnoremap <Leader>sv :<C-u>source ~/.ideavimrc<CR>
 
 "" IDE actions
-nnoremap / :action Find<CR>
+"nnoremap / :action Find<CR>
 "nnoremap n :action FindNext<CR>
 "nnoremap N :action FindPrevious<CR>
 "nnoremap U :action $Redo<CR>
@@ -51,8 +51,12 @@ nnoremap <Space>O :action GotoFile<CR>
 nnoremap [c :<C-u>action VcsShowPrevChangeMarker<CR>
 nnoremap ]c :<C-u>action VcsShowNextChangeMarker<CR>
 
-nnoremap <C-o> :<C-u>action Back<CR>
-nnoremap <C-i> :<C-u>action Forward<CR>
+"" Tab Navigation
+nnoremap H gT
+nnoremap L gt
+
+"nnoremap <C-o> :<C-u>action Back<CR>s
+"nnoremap <C-i> :<C-u>action Forward<CR>
 nnoremap <C-S-o> <C-o>
 nnoremap <C-S-i> <C-i>
 

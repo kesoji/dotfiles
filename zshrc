@@ -13,7 +13,7 @@ fi
 ###### SSH Setting #######
 function my-sshkeyadd (){
     if [ "$(uname)" = 'Darwin' ] ; then
-        ssh-add -K ~/.ssh/id_ed25519_work
+        ssh-add --apple-use-keychain ~/.ssh/id_ed25519_work
     else
         ssh-add -t 72h ~/.ssh/id_ed25519_work
     fi
@@ -477,6 +477,7 @@ setopt hist_no_store
 alias :q='exit'
 alias dotcd='cd ~/dotfiles'
 alias dotpl='cd ~/dotfiles; git pull --rebase; cd -'
+alias rsync='noglob rsync --exclude-from=${HOME}/.config/rsync/exclude'
 alias history='history -i'
 alias c.='cd ..'
 alias ls='ls -F --color'

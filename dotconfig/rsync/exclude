@@ -1,0 +1,14 @@
+._*
+.DS_Store
+.Trash
+.Trashes
+.Spotlight-*
+.hidden
+.vol
+.localized
+*~
+*.o
+*.out
+*.pyc
+*.zhistory
+known_hosts
