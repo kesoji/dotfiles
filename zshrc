@@ -209,6 +209,15 @@ else
     alias cat='bat'
 fi
 
+# asdf
+if [[ ! -e $HOME/.asdf ]] ; then
+    echo "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf";
+else
+    . $HOME/.asdf/asdf.sh
+    fpath=(${ASDF_DIR}/completions $fpath)
+    autoload -Uz compinit && compinit
+fi
+
 # tig
 command -v tig 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
