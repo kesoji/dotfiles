@@ -6,6 +6,8 @@
 .hidden
 .vol
 .localized
+.gitignore
+.gitkeep
 *~
 *.o
 *.out
