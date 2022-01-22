@@ -47,7 +47,11 @@ fi
 if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
     check=`tmux ls 2>&1`
     if [[ $? -eq 0 ]]; then
-        echo $check | grep -q "no session" && tmux -2 || tmux -2 a
+        if [[ -z $check ]]; then
+            tmux -2
+        else
+            echo $check | grep -q "no session" && tmux -2 || tmux -2 a
+        fi
     else
         tmux -2
     fi
