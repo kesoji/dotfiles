@@ -13,6 +13,7 @@
 	quotepath = false
 	autocrlf = input
 	filemode = false
+	symlinks = true
 [commit]
 	verbose = true
 	#gpgsign = true
