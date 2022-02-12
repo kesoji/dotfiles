@@ -18,6 +18,7 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'mg979/vim-visual-multi'
 Plug 'cocopon/vaffle.vim'
 Plug 'lighttiger2505/sqls.vim'
 Plug 'andymass/vim-matchup'
