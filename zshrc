@@ -5,14 +5,16 @@ fi
 # remove windows PATH for WSL 2
 export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
 
-# add homebrew PATH in head for Mac
 if [ "$(uname)" = 'Darwin' ] ; then
-    export PATH="/opt/homebrew/bin:$PATH"
+    command -v brew 2>/dev/null 1>&2
+    if [[ $? -ne 0 ]]; then
+        echo "Homebrew is not installed."
+    fi
 fi
 
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 
-###### SSH Setting #######
+###### SSH Setting ######
 function my-sshkeyadd (){
     if [ "$(uname)" = 'Darwin' ] ; then
         ssh-add --apple-use-keychain ~/.ssh/id_ed25519_work
@@ -40,25 +42,35 @@ if [[ $? -ne 0 ]] ; then
         my-sshkeyadd
     fi
 fi
-###### SSH Setting #######
+#===== SSH Setting ======
 
-# run tmux avoiding nest
-# intellijはintellij側に設定する
-if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
-    check=`tmux ls 2>&1`
-    if [[ $? -eq 0 ]]; then
-        if [[ -z $check ]]; then
-            tmux -2
+command -v tmux 2>/dev/null 1>&2
+if [[ $? -ne 0 ]]; then
+    echo "tmux is not installed: my-tmuxinstall"
+    function my-tmuxinstall() {
+        if [ "$(uname)" = 'Darwin' ] ; then
+            brew install tmux
         else
-            echo $check | grep -q "no session" && tmux -2 || tmux -2 a
+            sudo apt -y install tmux
         fi
-    else
-        tmux -2
+    }
+else
+    alias tmux='tmux -2'
+    alias tma='tmux -2 a'
+    # run tmux avoiding nest / intellijはintellij側に設定する
+    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
+        check=`tmux ls 2>&1`
+        if [[ $? -eq 0 ]]; then
+            if [[ -z $check ]]; then
+                tmux -2
+            else
+                echo $check | grep -q "no session" && tmux -2 || tmux -2 a
+            fi
+        else
+            tmux -2
+        fi
     fi
 fi
-
-#set -o vi
-set -o emacs
 
 export LANG=en_US.UTF-8
 
@@ -150,6 +162,10 @@ fi
 
 
 autoload -Uz bashcompinit &&bashcompinit -i
+
+# 20220213 zpreztoより前に置くなぜかおかしくなる
+#set -o vi
+set -o emacs
 
 export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
@@ -468,7 +484,7 @@ setopt hist_no_store
 
 # Alias
 alias :q='exit'
-alias dotcd='cd ~/dotfiles'
+alias dcd='cd ~/dotfiles'
 alias dotpl='cd ~/dotfiles; git pull --rebase; cd -'
 alias rsync='noglob rsync --exclude-from=${HOME}/.config/rsync/exclude'
 alias history='history -i'
@@ -478,8 +494,6 @@ alias ll='ls -l'
 alias la='ls -la'
 alias vi='vim'
 alias c='clear'
-alias tmux='tmux -2'
-alias tma='tmux -2 a'
 alias ap='ansible-playbook'
 if [ "$(uname)" = 'Darwin' ] ; then
     alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
@@ -776,7 +790,7 @@ command -v ghq 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "ghq isn't installed: my-ghqinstall"
     function my-ghqinstall (){
-        comexec "go get github.com/x-motemen/ghq" || return
+        comexec "go install github.com/x-motemen/ghq@latest" || return
     }
 else
     export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
