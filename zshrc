@@ -9,6 +9,13 @@ if [ "$(uname)" = 'Darwin' ] ; then
     command -v brew 2>/dev/null 1>&2
     if [[ $? -ne 0 ]]; then
         echo "Homebrew is not installed."
+    else
+        git lfs 2>/dev/null 1>&2
+        if [[ $? -ne 0 ]]; then
+            echo "installing git lfs";
+            brew install git-lfs
+            git lfs install
+        fi
     fi
 fi
 
@@ -216,6 +223,9 @@ else
     export PATH=${GOPATH:-$HOME/go/bin}:$PATH
 fi
 
+# flutter
+export PATH=$PATH:$HOME/development/flutter/bin
+
 # LESS
 # http://qiita.com/delphinus/items/b04752bb5b64e6cc4ea9
 export LESS="-R -M -i -W -x4"
@@ -247,12 +257,19 @@ else
 fi
 
 # asdf
-if [[ ! -e $HOME/.asdf ]] ; then
-    echo "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf";
+command -v asdf 2>/dev/null 1>&2
+if [[ ! -e ~/.asdf ]] ; then
+    echo "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
+    function my-asdfinstall() {
+        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.9.0" || return
+    }
 else
     . $HOME/.asdf/asdf.sh
     fpath=(${ASDF_DIR}/completions $fpath)
     autoload -Uz compinit && compinit
+    if [[ -e ~/.asdf/plugins/java/set-java-home.zsh ]]; then
+        . ~/.asdf/plugins/java/set-java-home.zsh
+    fi
 fi
 
 # tig
@@ -1198,8 +1215,6 @@ if (which zprof > /dev/null) ;then
 fi
 
 autoload -U +X bashcompinit && bashcompinit
-complete -o nospace -C /usr/bin/terraform terraform
-export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
 
 # tabtab source for packages
 # uninstall by removing these lines
