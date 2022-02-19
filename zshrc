@@ -289,9 +289,14 @@ fi
 # lazygit
 command -v lazygit 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "lazygit isn't installed: my-lazygitinstall"
-    function my-lazygitinstall() {
+    echo "lazygit isn't installed: my-lazygitinstall-by-xxx"
+    function my-lazygitinstall-by-go() {
         comexec "go install github.com/jesseduffield/lazygit@latest" || return
+    }
+    function my-lazygitinstall-by-apt() {
+        comexec "sudo add-apt-repository ppa:lazygit-team/release" || return
+        comexec "sudo apt-get update" || return
+        comexec "sudo apt-get install lazygit" || return
     }
 else
     alias lg='lazygit'
@@ -1005,7 +1010,6 @@ fi
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
 
-complete -o nospace -C /home/kesoji/my/bin/terraform terraform
 #########
 # AWS Completer
 #########
@@ -1215,6 +1219,9 @@ if (which zprof > /dev/null) ;then
 fi
 
 autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C terraform terraform
+
+export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
 
 # tabtab source for packages
 # uninstall by removing these lines
