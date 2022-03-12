@@ -50,6 +50,9 @@ nnoremap <Space>O :action GotoFile<CR>
 "nnoremap <Space>h :action QuickJavaDoc<CR>
 nnoremap [c :<C-u>action VcsShowPrevChangeMarker<CR>
 nnoremap ]c :<C-u>action VcsShowNextChangeMarker<CR>
+nnoremap [q :<C-u>action GotoPreviousError<CR>
+nnoremap ]q :<C-u>action GotoNextError<CR>
+nnoremap gr :<C-u>action GotoDeclaration<CR>
 
 "" Tab Navigation
 nnoremap H gT

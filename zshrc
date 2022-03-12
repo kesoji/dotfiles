@@ -5,7 +5,12 @@ fi
 # remove windows PATH for WSL 2
 export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
 
+
+MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
+    MAC=true
+fi
+if $MAC; then
     command -v brew 2>/dev/null 1>&2
     if [[ $? -ne 0 ]]; then
         echo "Homebrew is not installed."
@@ -225,6 +230,11 @@ fi
 
 # flutter
 export PATH=$PATH:$HOME/development/flutter/bin
+
+# Android
+if [[ -e $HOME/Library/Android/sdk ]] ; then
+    export PATH=$PATH:$HOME/Library/Android/sdk/platform-tools
+fi
 
 # LESS
 # http://qiita.com/delphinus/items/b04752bb5b64e6cc4ea9
@@ -505,6 +515,7 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias reload='exec $SHELL'
 alias :q='exit'
 alias dcd='cd ~/dotfiles'
 alias dotpl='cd ~/dotfiles; git pull --rebase; cd -'
@@ -674,7 +685,11 @@ else
     else
         echo "ripgrep(rg) isn't installed: my-rginstall"
         function my-rginstall() {
-            comexec "sudo apt-get install ripgrep" || return
+            if $MAC; then
+                comexec "brew install ripgrep" || return
+            else
+                comexec "sudo apt-get install ripgrep" || return
+            fi
         }
     fi
 fi
@@ -777,11 +792,9 @@ fi
 if [[ ! -e $HOME/.cargo ]] ; then
     echo "Cargo(Rust) isn't installed: my-rustinstall"
     function my-rustinstall (){
-        comexec "curl https://sh.rustup.rs -sSf | sh" || return
+        comexec "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" || return
     }
 else
-    export PATH="$HOME/.cargo/bin:$PATH"
-fi
 
 command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
