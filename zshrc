@@ -794,7 +794,7 @@ if [[ ! -e $HOME/.cargo ]] ; then
     function my-rustinstall (){
         comexec "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" || return
     }
-else
+fi
 
 command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
