@@ -788,7 +788,7 @@ else
     alias runghc='stack runghc --'
 fi
 
-# Haskell
+# Rust
 if [[ ! -e $HOME/.cargo ]] ; then
     echo "Cargo(Rust) isn't installed: my-rustinstall"
     function my-rustinstall (){
