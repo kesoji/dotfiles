@@ -554,33 +554,24 @@ function zipp() {
     command zip -r $DIR.zip $DIR -x "*.DS_Store"
 }
 
-## Tfenv
-if [[ ! -e $HOME/.tfenv ]] ; then
-    echo "tfenv isn't installed: my-tfenvinstall (CURRENTLY ONLY IN UBUNTU)"
-    function my-tfenvinstall() {
-        comexec "git clone https://github.com/tfutils/tfenv.git ~/.tfenv"
-    }
+## Terraform
+command -v terraform 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo "terraform isn't installed: use asdf to install"
 else
-    export PATH="$HOME/.tfenv/bin:$PATH"
-    ## Terraform
-    command -v terraform 2>/dev/null 1>&2
-    if [[ $? -ne 0 ]] ; then
-        echo "terraform isn't installed: use tfenv to install"
-    else
-        alias tf='terraform'
-        alias tfa='terraform apply'
-        alias tfanor='terraform apply -refresh=false'
-        alias tfp='terraform plan'
-        alias tfpnor='terraform plan -refresh=false'
-        alias tfd='terraform destroy'
-        alias tfi='terraform import'
-        alias tfw='terraform workspace'
-        alias tfwl='terraform workspace list'
-        alias tfws='terraform workspace select'
-        alias tfi='terraform import'
-        export TF_CLI_ARGS_plan="--parallelism=20"
-        export TF_CLI_ARGS_apply="--parallelism=20"
-    fi
+    alias tf='terraform'
+    alias tfa='terraform apply'
+    alias tfanor='terraform apply -refresh=false'
+    alias tfp='terraform plan'
+    alias tfpnor='terraform plan -refresh=false'
+    alias tfd='terraform destroy'
+    alias tfi='terraform import'
+    alias tfw='terraform workspace'
+    alias tfwl='terraform workspace list'
+    alias tfws='terraform workspace select'
+    alias tfi='terraform import'
+    export TF_CLI_ARGS_plan="--parallelism=20"
+    export TF_CLI_ARGS_apply="--parallelism=20"
 fi
 
 ## saml2aws
