@@ -843,6 +843,8 @@ else
     zle     -N   fzf-ghq-widget
     bindkey '^G' fzf-ghq-widget
 
+    alias ghq-status='for i in `ghq list`; do echo "======== $i ========"; cd $(ghq root)/$i; git status -s; popd; done'
+
 fi
 
 # Krypton
