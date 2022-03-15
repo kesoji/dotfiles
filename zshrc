@@ -380,28 +380,11 @@ if [[ $? -ne 0 ]] ; then
         comexec "git clone git@github.com:direnv/direnv.git $tmpdir" || return
         comexec "pushd $tmpdir" || return
         comexec "make" || return
-        comexec "make install DESTDIR=$HOME/my" || return
+        comexec "make install PREFIX=$HOME/my" || return
         comexec "popd; rm -rf $tmpdir" || return
     }
 else
     eval "$(direnv hook zsh)"
-fi
-
-### Javascript / Node / Typescript
-# NVM
-export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || echo "nvm isn't installed: go to https://github.com/creationix/nvm and install it"
-
-# n
-command -v n 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "n isn't installed: my-ninstall"
-    function my-ninstall {
-        comexec "sudo git clone https://github.com/tj/n /usr/local/src/n"
-        comexec "pushd /usr/local/src/n"
-        comexec "sudo make install"
-        comexec "popd"
-    }
 fi
 
 function myutils() {
