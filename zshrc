@@ -427,69 +427,9 @@ function my-javascript() {
     done
 }
 
-###
-
-# Plenv
-if [ -e "${HOME}/.plenv" ]; then
-    export PATH="$HOME/.plenv/bin:$PATH"
-    #export PATH="$HOME/.plenv/shims:$PATH"
-    eval "$(plenv init -)"
-fi
-
-# rbenv
-if [ -e "${HOME}/.rbenv" ]; then
-    export PATH="$HOME/.rbenv/bin:$PATH"
-    eval "$(rbenv init - --no-rehash)"
-else
-    echo "rbenv isn't installed: my-rbenvinstall"
-    function my-rbenvinstall() {
-        comexec "git clone https://github.com/rbenv/rbenv.git ~/.rbenv" || return
-        comexec "cd ~/.rbenv && src/configure && make -C src" || return
-        export PATH="$HOME/.rbenv/bin:$PATH"
-        echo '>>> eval $(~/.rbenv/bin/rbenv init -)'
-        eval "$(~/.rbenv/bin/rbenv init -)"
-        comexec "mkdir -p ""$(~/.rbenv/bin/rbenv root)""/plugins" || return
-        comexec "git clone https://github.com/rbenv/ruby-build.git ""$(~/.rbenv/bin/rbenv root)""/plugins/ruby-build" || return
-        comexec "curl -fsSL https://github.com/rbenv/rbenv-installer/raw/master/bin/rbenv-doctor | bash" || return
-        source ~/.zshrc
-    }
-fi
-
-# Pyenv
-if [ -e "${HOME}/.pyenv" ]; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init --path)"
-else
-    echo "pyenv isn't installed: my-pyenvinstall"
-    function my-pyenvinstall() {
-        comexec "git clone https://github.com/pyenv/pyenv.git ~/.pyenv" || return
-        comexec "git clone https://github.com/yyuu/pyenv-virtualenv.git ~/.pyenv/plugins/pyenv-virtualenv" || return
-        echo "Install python dependencies"
-        comexec "sudo apt-get install -y libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev" || return
-        echo "https://github.com/pyenv/pyenv/wiki/Common-build-problems"
-        echo -e "$1: \e[30;41;1mWhen you install python by pyenv, use 'export PYTHON_CONFIGURE_OPTS=\"--enable-shared\"; pyenv install 3.x.x'\e[m"
-        comexec "source ~/.zshrc"
-    }
-fi
-
-# Pipenv
-command -v pipenv 2>/dev/null 1>&2
-if [[ $? -eq 0 ]] ; then
-    export PIPENV_VENV_IN_PROJECT=1
-else
-    echo "pipenv isn't installed: my-pipenvinstall"
-    function my-pipenvinstall() {
-        echo "Using pyenv environment"
-        comexec "pip install --user pipenv"
-    }
-fi
-
 if [ -e /usr/share/zsh/site-functions/ ]; then
     fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
-
-# j
 
 # jump
 command -v jump 2>/dev/null 1>&2
