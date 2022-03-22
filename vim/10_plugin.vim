@@ -143,6 +143,7 @@ endfunction
 "    let g:singleton#opener = "edit"
 "endif
 "
+
 "<<<Plugin>>> vista {{{1
 nnoremap VV :<c-u>Vista!!<CR>
 let g:vista_default_executive = 'vim_lsp'
