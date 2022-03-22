@@ -9,6 +9,7 @@ export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
     MAC=true
+    MAC_INSTALLER="brew install"
 fi
 if $MAC; then
     command -v brew 2>/dev/null 1>&2
@@ -282,20 +283,6 @@ else
     fi
 fi
 
-# tig
-command -v tig 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "tig isn't installed: my-tiginstall"
-    function my-tiginstall() {
-        comexec "mkdir -p ~/my/{src,bin}" || return
-        comexec "pushd ~/my/src; git clone https://github.com/jonas/tig; pushd tig" || return
-        comexec "make configure" || return
-        comexec "./configure --prefix=$HOME/my LDLIBS=-lncursesw CPPFLAGS=-DHAVE_NCURSESW_CURSES_H" || return
-        comexec "make; make install" || return
-        comexec "popd; popd" || return
-    }
-fi
-
 # lazygit
 command -v lazygit 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -519,10 +506,14 @@ command -v saml2aws 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo "saml2aws isn't installed: my-saml2awsinstall"
     function my-saml2awsinstall() {
-        CURRENT_VERSION=$(curl -Ls https://api.github.com/repos/Versent/saml2aws/releases/latest | grep 'tag_name' | cut -d'v' -f2 | cut -d'"' -f1)
-        comexec "wget -c https://github.com/Versent/saml2aws/releases/download/v${CURRENT_VERSION}/saml2aws_${CURRENT_VERSION}_linux_amd64.tar.gz -O - | tar -xzv -C ~/my/bin"
-        comexec "chmod u+x ~/my/bin/saml2aws"
-        comexec "hash -r"
+        if $MAC; then
+            comexec "$MAC_INSTALLER saml2aws"
+        else
+            CURRENT_VERSION=$(curl -Ls https://api.github.com/repos/Versent/saml2aws/releases/latest | grep 'tag_name' | cut -d'v' -f2 | cut -d'"' -f1)
+            comexec "wget -c https://github.com/Versent/saml2aws/releases/download/v${CURRENT_VERSION}/saml2aws_${CURRENT_VERSION}_linux_amd64.tar.gz -O - | tar -xzv -C ~/my/bin"
+            comexec "chmod u+x ~/my/bin/saml2aws"
+            comexec "hash -r"
+        fi
     }
 fi
 
@@ -548,17 +539,6 @@ else
     alias drmia='docker images -aq | xargs docker rmi'
     alias dco='docker-compose'
     alias dcolf='docker-compose logs -f'
-fi
-
-command -v docui 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo "docui isn't installed: my-docuiinstall"
-    function my-docuiinstall() {
-        comexec "ghq get https://github.com/skanehira/docui"
-        comexec "pushd ~/go/src/github.com/skanehira/docui"
-        comexec "GO111MODULE=on go install"
-        comexec "popd"
-    }
 fi
 
 ## Git
