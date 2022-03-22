@@ -180,7 +180,8 @@ autoload -Uz bashcompinit &&bashcompinit -i
 #set -o vi
 set -o emacs
 
-export TERM=xterm-256color
+# 20220322 これは設定しちゃいけないらしい
+#export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
 export MANPATH=$HOME/my/share/man:$MANPATH
