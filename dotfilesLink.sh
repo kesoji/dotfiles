@@ -30,6 +30,7 @@ ln -sf ~/dotfiles/template ~/.vim/
 
 # .config
 ln -sf ~/dotfiles/dotconfig/rsync ~/.config/
+ln -sf ~/dotfiles/dotconfig/wezterm ~/.config/
 
 # zplezto
 [ -d ~/.zprezto ] || git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
