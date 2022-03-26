@@ -2,9 +2,6 @@ if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
 
-# remove windows PATH for WSL 2
-export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
-
 
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -30,6 +27,9 @@ if [[ "$(uname -a)" =~ "microsoft" ]]; then
     WSL=true
 fi
 if $WSL; then
+    # remove windows PATH for WSL 2
+    export PATH=`echo $PATH | sed -e 's@/mnt/c/.*:@@g'`
+
     # open google-chrome
     if [[ ! -x ~/my/bin/google-chrome ]]; then
         mkdir -p ~/my/bin
