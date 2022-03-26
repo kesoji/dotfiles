@@ -42,11 +42,13 @@ SCRIPT
     export BROWSER=$HOME/my/bin/google-chrome
 
     # env-specific command alias
-    clip=$(/mnt/c/Windows/System32/wsl.exe wslpath C:/Windows/System32/clip.exe)
-    alias clip=$clip
-    alias pbcopy=$clip
-    alias cl=$clip
-    alias -g C="| $clip"
+    # これがなぜかtmuxを壊す！なんだこれ！
+    #echo $(/mnt/c/Windows/System32/wsl.exe wslpath C:/Windows/System32/clip.exe)
+    clip_cmd=/mnt/c/Windows/System32/clip.exe
+    alias clip=$clip_cmd
+    alias pbcopy=$clip_cmd
+    alias cl=$clip_cmd
+    alias -g C="| $clip_cmd"
 
     # add repository
     function my-addaptrepos {
