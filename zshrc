@@ -25,11 +25,47 @@ if $MAC; then
     fi
 fi
 
+WSL=false
+if [[ "$(uname -a)" =~ "microsoft" ]]; then
+    WSL=true
+fi
+if $WSL; then
+    # open google-chrome
+    if [[ ! -x ~/my/bin/google-chrome ]]; then
+        mkdir -p ~/my/bin
+        cat << 'SCRIPT' > ~/my/bin/google-chrome
+#!/bin/sh
+exec /mnt/c/Program\ Files/Google/Chrome/Application/chrome.exe "$@"
+SCRIPT
+        chmod +x ~/my/bin/google-chrome
+    fi
+    export BROWSER=$HOME/my/bin/google-chrome
+
+    # env-specific command alias
+    clip=$(/mnt/c/Windows/System32/wsl.exe wslpath C:/Windows/System32/clip.exe)
+    alias clip=$clip
+    alias pbcopy=$clip
+    alias cl=$clip
+    alias -g C="| $clip"
+
+    # add repository
+    function my-addaptrepos {
+        comexec "sudo add-apt-repository ppa:jonathonf/vim"
+        comexec "sudo add-apt-repository ppa:longsleep/golang-backports"
+    }
+
+    # docker wsl tweak
+    export PATH="$PATH:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin"
+
+    # export DOCKER_HOST='tcp://0.0.0.0:2375'
+fi
+
+
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 
 ###### SSH Setting ######
 function my-sshkeyadd (){
-    if [ "$(uname)" = 'Darwin' ] ; then
+    if $MAC; then
         ssh-add --apple-use-keychain ~/.ssh/id_ed25519_work
     else
         ssh-add -t 72h ~/.ssh/id_ed25519_work
@@ -481,8 +517,8 @@ else
     alias tfwl='terraform workspace list'
     alias tfws='terraform workspace select'
     alias tfi='terraform import'
-    export TF_CLI_ARGS_plan="--parallelism=20"
-    export TF_CLI_ARGS_apply="--parallelism=20"
+    export TF_CLI_ARGS_plan="--parallelism=40"
+    export TF_CLI_ARGS_apply="--parallelism=40"
 fi
 
 ## saml2aws
@@ -612,41 +648,6 @@ command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
     source <(kubectl completion zsh)
 fi
-
-# if wsl
-arch=`uname -a`
-if [[ $arch =~ "microsoft" ]]; then
-    # export DOCKER_HOST='tcp://0.0.0.0:2375'
-
-    # open google-chrome
-    if [[ ! -x ~/my/bin/google-chrome ]]; then
-        mkdir -p ~/my/bin
-        cat << 'SCRIPT' > ~/my/bin/google-chrome
-#!/bin/sh
-exec /mnt/c/Program\ Files/Google/Chrome/Application/chrome.exe "$@"
-SCRIPT
-        chmod +x ~/my/bin/google-chrome
-    fi
-    export BROWSER=$HOME/my/bin/google-chrome
-
-    # env-specific command alias
-    clip=$(/mnt/c/Windows/System32/wsl.exe wslpath C:/Windows/System32/clip.exe)
-    alias clip=$clip
-    alias pbcopy=$clip
-    alias cl=$clip
-    alias -g C="| $clip"
-
-    # add repository
-    function my-addaptrepos {
-        comexec "sudo add-apt-repository ppa:jonathonf/vim"
-        comexec "sudo add-apt-repository ppa:longsleep/golang-backports"
-    }
-
-    # docker wsl tweak
-    export PATH="$PATH:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin"
-
-fi
-
 
 
 function my-colortable (){
