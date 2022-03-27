@@ -499,6 +499,7 @@ alias browsh='docker run --rm -it browsh/browsh'
 alias clswp='rm -rf ~/.vim/swp/*'
 alias nanounixt='date +%s%3N'
 alias unixt='date +%s'
+alias simpleserver='python -m http.server'
 function zipp() {
     DIR=$1
     command rm -f $DIR.zip
