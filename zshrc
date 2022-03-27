@@ -1,7 +1,17 @@
+# Fig pre block. Keep at the top of this file.
+export PATH="${PATH}:${HOME}/.local/bin"
+eval "$(fig init zsh pre)"
+
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
 
+function echo_error {
+    echo -e "\e[31m$@\e[m"
+}
+function echo_info {
+    echo -e "\e[38;5;247m$@\e[m"
+}
 
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -11,7 +21,7 @@ fi
 if $MAC; then
     command -v brew 2>/dev/null 1>&2
     if [[ $? -ne 0 ]]; then
-        echo "Homebrew is not installed."
+        echo_info "Homebrew isn't installed."
     else
         git lfs 2>/dev/null 1>&2
         if [[ $? -ne 0 ]]; then
@@ -97,7 +107,7 @@ fi
 
 command -v tmux 2>/dev/null 1>&2
 if [[ $? -ne 0 ]]; then
-    echo "tmux is not installed: my-tmuxinstall"
+    echo_info "tmux isn't installed: my-tmuxinstall"
     function my-tmuxinstall() {
         if [ "$(uname)" = 'Darwin' ] ; then
             brew install tmux
@@ -148,9 +158,11 @@ function comexec() {
 # essentials
 command -v make 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "I think this is first installation. Installing gcc, make..."
-    comexec "sudo apt -y update"
-    comexec "sudo apt -y install build-essential git unzip"
+    if $WSL; then
+        echo "I think this is first installation. Installing gcc, make..."
+        comexec "sudo apt -y update"
+        comexec "sudo apt -y install build-essential git unzip"
+    fi
 fi
 
 # Source Prezto.
@@ -191,28 +203,18 @@ else
     ## message
     zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 fi
-#if [ -e ~/.zsh/z/z.sh ]; then
-    #source ~/.zsh/z/z.sh
-#else
-    #echo "z is not installed: my-zinstall()"
-    #function my-zinstall() {
-        #comexec "git clone https://github.com/rupa/z ~/.zsh/z"
-        #source ~/.zsh//z/z.sh
-    #}
-#fi
 
-if [ -e ~/my/src/enhancd/init.sh ]; then
-    source ~/my/src/enhancd/init.sh
-else
-    echo "enhancd is not installed: my-enhancdinstall"
+if [ ! -e ~/my/src/enhancd/init.sh ]; then
+    echo_info "enhancd isn't installed: my-enhancdinstall"
     function my-enhancdinstall() {
         comexec "git clone https://github.com/b4b4r07/enhancd ~/my/src/enhancd"
         comexec "source ~/my/src/enhancd/init.sh"
     }
+else
+    source ~/my/src/enhancd/init.sh
 fi
 
-
-autoload -Uz bashcompinit &&bashcompinit -i
+autoload -Uz bashcompinit && bashcompinit -i
 
 # 20220213 zpreztoより前に置くなぜかおかしくなる
 #set -o vi
@@ -247,7 +249,7 @@ if [[ $? -ne 0 ]] ; then
         export PATH=$GOROOT/bin:$PATH
         export PATH=${GOPATH:-$HOME/go/bin}:$PATH
     else
-        echo "go isn't installed: run my-goinstall"
+        echo_info "go isn't installed: run my-goinstall"
         function my-goinstall() {
             command -v lsb_release 2>/dev/null 1>&2
             if [[ $? -ne 0 ]] ; then
@@ -287,7 +289,7 @@ fi
 # gh cli
 command -v gh 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "gh isn't installed: my-ghinstall"
+    echo_info "gh isn't installed: my-ghinstall"
     function my-ghinstall() {
         comexec "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg"
         comexec 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null'
@@ -301,7 +303,7 @@ fi
 # bat
 command -v bat 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "bat isn't installed: let's visit https://github.com/sharkdp/bat/releases and install!"
+    echo_info "bat isn't installed: let's visit https://github.com/sharkdp/bat/releases and install!"
 else
     alias cat='bat'
 fi
@@ -309,7 +311,7 @@ fi
 # asdf
 command -v asdf 2>/dev/null 1>&2
 if [[ ! -e ~/.asdf ]] ; then
-    echo "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
+    echo_info "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
     function my-asdfinstall() {
         comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.9.0" || return
     }
@@ -325,7 +327,7 @@ fi
 # lazygit
 command -v lazygit 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "lazygit isn't installed: my-lazygitinstall-by-xxx"
+    echo_info "lazygit isn't installed: my-lazygitinstall-by-xxx"
     function my-lazygitinstall-by-go() {
         comexec "go install github.com/jesseduffield/lazygit@latest" || return
     }
@@ -342,7 +344,7 @@ fi
 if command -v diff-highlight >/dev/null ; then
     ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
 else
-    echo "diff-highlight isn't installed: my-diff-highlightinstall"
+    echo_info "diff-highlight isn't installed: my-diff-highlightinstall"
     function my-diff-highlightinstall() {
         workdir="temp_git_diffhighlightinstall"
         comexec "git clone --depth 1 https://github.com/git/git $workdir" || return
@@ -356,7 +358,7 @@ fi
 # git-secrets
 command -v git-secrets 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "git-secrets isn't installed: my-git-secretsinstall"
+    echo_info "git-secrets isn't installed: my-git-secretsinstall"
     function my-git-secretsinstall() {
         workdir="temp_git_gitsecretsinstall"
         comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $workdir" || return
@@ -369,7 +371,7 @@ fi
 # hyperfine
 command -v hyperfine 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "hyperfine benchmark tool is not installed: my-hyperfineinstall"
+    echo_info "hyperfine benchmark tool isn't installed: my-hyperfineinstall"
     function my-hyperfineinstall() {
         downloadurl=$(curl https://api.github.com/repos/sharkdp/hyperfine/releases | jq '.[0].assets[] | select(.name | test("hyperfine_.+amd64.deb")) | .browser_download_url' -r )
         comexec "wget $downloadurl" || return
@@ -382,13 +384,13 @@ fi
 # hexyl
 command -v hexyl 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "Let's install hexyl bindump tool!: https://github.com/sharkdp/hexyl"
+    echo_info "hexyl (bindump tool) isn't installed: https://github.com/sharkdp/hexyl"
 fi
 
 # asciinema
 command -v asciinema 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "asciinema isn't installed: my-asciinemainstall"
+    echo_info "asciinema isn't installed: my-asciinemainstall"
     function my-asciinemainstall() {
         comexec "sudo apt-add-repository ppa:zanchey/asciinema"
         comexec "sudo apt-get update"
@@ -399,7 +401,7 @@ fi
 # direnv
 command -v direnv 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "direnv isn't installed: my-direnvinstall"
+    echo_info "direnv isn't installed: my-direnvinstall"
     function my-direnvinstall {
         tmpdir=~/__direnv__tmp
         [[ -d $tmpdir ]] && comexec "rm -rf $tmpdir"
@@ -445,7 +447,7 @@ command -v jump 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
     eval "$(jump shell)"
 else
-    echo "jump isn't installed"
+    echo_info "jump isn't installed"
 fi
 
 
@@ -506,7 +508,7 @@ function zipp() {
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "terraform isn't installed: use asdf to install"
+    echo_info "terraform isn't installed: use asdf to install"
 else
     alias tf='terraform'
     alias tfa='terraform apply'
@@ -523,10 +525,33 @@ else
     export TF_CLI_ARGS_apply="--parallelism=40"
 fi
 
+## AWS CLI
+command -v aws 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "awscli isn't installed: my-awscliinstall"
+    function my-awscliinstall() {
+        if $MAC; then
+            comexec "$MAC_INSTALLER awscli"
+        else
+            comexec "curl -L https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip"
+            comexec "unzip awscliv2.zip -d ./awstemp"
+            comexec "sudo ./awstemp/aws/install"
+            comexec "rm -rf ./awstemp awscliv2.zip"
+        fi
+    }
+else
+    command -v aws_completer 2>/dev/null 1>&2
+    if [[ $? -ne 0 ]] ; then
+        echo_error "aws is installed but aws_completer not found. why!?"
+    else
+        complete -C aws_completer aws
+    fi
+fi
+
 ## saml2aws
 command -v saml2aws 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "saml2aws isn't installed: my-saml2awsinstall"
+    echo_info "saml2aws isn't installed: my-saml2awsinstall"
     function my-saml2awsinstall() {
         if $MAC; then
             comexec "$MAC_INSTALLER saml2aws"
@@ -543,7 +568,7 @@ fi
 ## Docker
 command -v docker 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "docker isn't installed: my-dockerinstall (CURRENTLY ONLY IN UBUNTU)"
+    echo_info "docker isn't installed: my-dockerinstall (CURRENTLY ONLY IN UBUNTU)"
     function my-dockerinstall() {
         comexec "sudo apt-get update"
         comexec "sudo apt-get install apt-transport-https ca-certificates curl software-properties-common"
@@ -600,7 +625,7 @@ alias ssh='cssh '
 
 command -v fzf 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "fzf isn't installed: my-fzfinstall"
+    echo_info "fzf isn't installed: my-fzfinstall"
     function my-fzfinstall() {
         comexec "git clone https://github.com/junegunn/fzf.git ~/.fzf" || return
         comexec "~/.fzf/install" || return
@@ -616,7 +641,7 @@ else
         #--color info:108,prompt:109,spinner:108,pointer:168,marker:168
         #'
     else
-        echo "ripgrep(rg) isn't installed: my-rginstall"
+        echo_info "ripgrep(rg) isn't installed: my-rginstall"
         function my-rginstall() {
             if $MAC; then
                 comexec "brew install ripgrep" || return
@@ -675,7 +700,7 @@ function my-colortable2() {
 # Haskell
 command -v stack 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "stack (Haskell) isn't installed: my-haskellstackinstall"
+    echo_info "stack (Haskell) isn't installed: my-haskellstackinstall"
     function my-haskellstackinstall (){
         comexec "curl -sSL https://get.haskellstack.org/ | sh" || return
     }
@@ -688,7 +713,7 @@ fi
 
 # Rust
 if [[ ! -e $HOME/.cargo ]] ; then
-    echo "Cargo(Rust) isn't installed: my-rustinstall"
+    echo_info "Cargo(Rust) isn't installed: my-rustinstall"
     function my-rustinstall (){
         comexec "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" || return
     }
@@ -696,7 +721,7 @@ fi
 
 command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "gibo isn't installed: my-giboinstall"
+    echo_info "gibo isn't installed: my-giboinstall"
     function my-giboinstall (){
         comexec "mkdir -p ~/my/bin" || return
         comexec "curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo -so ~/my/bin/gibo" || return
@@ -721,7 +746,7 @@ bindkey '^z' switch-back-ctrl-z
 # ghq
 command -v ghq 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "ghq isn't installed: my-ghqinstall"
+    echo_info "ghq isn't installed: my-ghqinstall"
     function my-ghqinstall (){
         comexec "go install github.com/x-motemen/ghq@latest" || return
     }
@@ -757,7 +782,7 @@ fi
 # Krypton
 command -v kr 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo "krypton isn't installed: my-kryptoninstall"
+    echo_info "krypton isn't installed: my-kryptoninstall"
     function my-kryptoninstall (){
         if [[ "$(uname -a)" =~ "Microsoft" ]]; then
             comexec "go get github.com/kryptco/kr" || return
@@ -787,7 +812,7 @@ function my-php() {
 
 command -v composer 2>/dev/null 1>&2
 if [[ $? -ne 0 ]]; then
-    echo "composer isn't installed: my-composerinstall"
+    echo_info "composer isn't installed: my-composerinstall"
     function my-composerinstall() {
         echo 'getting signature'
         EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
@@ -816,7 +841,7 @@ command -v fdfind 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     command -v fd 2>/dev/null 1>&2
     if [[ $? -ne 0 ]] ; then
-        echo "fd isn't installed: my-fdinstall"
+        echo_info "fd isn't installed: my-fdinstall"
         function my-fdinstall() {
             comexec "sudo apt install fd-find" || return
         }
@@ -922,67 +947,6 @@ fi
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-
-#########
-# AWS Completer
-#########
-# Source this file to activate auto completion for zsh using the bash
-# compatibility helper.  Make sure to run `compinit` before, which should be
-# given usually.
-#
-# % source /path/to/zsh_complete.sh
-#
-# Typically that would be called somewhere in your .zshrc.
-#
-# Note, the overwrite of _bash_complete() is to export COMP_LINE and COMP_POINT
-# That is only required for zsh <= edab1d3dbe61da7efe5f1ac0e40444b2ec9b9570
-#
-# https://github.com/zsh-users/zsh/commit/edab1d3dbe61da7efe5f1ac0e40444b2ec9b9570
-#
-# zsh relases prior to that version do not export the required env variables!
-
-_bash_complete() {
-  local ret=1
-  local -a suf matches
-  local -x COMP_POINT COMP_CWORD
-  local -a COMP_WORDS COMPREPLY BASH_VERSINFO
-  local -x COMP_LINE="$words"
-  local -A savejobstates savejobtexts
-
-  (( COMP_POINT = 1 + ${#${(j. .)words[1,CURRENT]}} + $#QIPREFIX + $#IPREFIX + $#PREFIX ))
-  (( COMP_CWORD = CURRENT - 1))
-  COMP_WORDS=( $words )
-  BASH_VERSINFO=( 2 05b 0 1 release )
-
-  savejobstates=( ${(kv)jobstates} )
-  savejobtexts=( ${(kv)jobtexts} )
-
-  [[ ${argv[${argv[(I)nospace]:-0}-1]} = -o ]] && suf=( -S '' )
-
-  matches=( ${(f)"$(compgen $@ -- ${words[CURRENT]})"} )
-
-  if [[ -n $matches ]]; then
-    if [[ ${argv[${argv[(I)filenames]:-0}-1]} = -o ]]; then
-      compset -P '*/' && matches=( ${matches##*/} )
-      compset -S '/*' && matches=( ${matches%%/*} )
-      compadd -Q -f "${suf[@]}" -a matches && ret=0
-    else
-      compadd -Q "${suf[@]}" -a matches && ret=0
-    fi
-  fi
-
-  if (( ret )); then
-    if [[ ${argv[${argv[(I)default]:-0}-1]} = -o ]]; then
-      _default "${suf[@]}" && ret=0
-    elif [[ ${argv[${argv[(I)dirnames]:-0}-1]} = -o ]]; then
-      _directories "${suf[@]}" && ret=0
-    fi
-  fi
-
-  return ret
-}
-
-complete -C aws_completer aws
 
 # if bash rename "handler" to "handle"
 command_not_found_handler() {
@@ -1145,3 +1109,7 @@ if [ -f '/home/kesoji/google-cloud-sdk/path.zsh.inc' ]; then . '/home/kesoji/goo
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/kesoji/google-cloud-sdk/completion.zsh.inc'; fi
+
+# Fig post block. Keep at the bottom of this file.
+eval "$(fig init zsh post)"
+
