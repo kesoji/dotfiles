@@ -10,7 +10,7 @@ function echo_error {
     echo -e "\e[31m$@\e[m"
 }
 function echo_info {
-    echo -e "\e[38;5;247m$@\e[m"
+    echo -e "\e[38;5;243m$@\e[m"
 }
 
 MAC=false
