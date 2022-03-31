@@ -1,6 +1,8 @@
 # Fig pre block. Keep at the top of this file.
-export PATH="${PATH}:${HOME}/.local/bin"
-eval "$(fig init zsh pre)"
+command -v fig 2>/dev/null 1>&2
+if [[ $? -eq 0 ]]; then
+    eval "$(fig init zsh pre)"
+fi
 
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
@@ -1112,5 +1114,8 @@ if [ -f '/home/kesoji/google-cloud-sdk/path.zsh.inc' ]; then . '/home/kesoji/goo
 if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/kesoji/google-cloud-sdk/completion.zsh.inc'; fi
 
 # Fig post block. Keep at the bottom of this file.
-eval "$(fig init zsh post)"
+command -v fig 2>/dev/null 1>&2
+if [[ $? -eq 0 ]]; then
+    eval "$(fig init zsh post)"
+fi
 
