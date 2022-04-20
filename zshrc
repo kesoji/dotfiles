@@ -1,7 +1,6 @@
 # Fig pre block. Keep at the top of this file.
-command -v fig 2>/dev/null 1>&2
-if [[ $? -eq 0 ]]; then
-    eval "$(fig init zsh pre)"
+if [[ -e $HOME/.fig ]]; then
+  . "$HOME/.fig/shell/zshrc.pre.zsh"
 fi
 
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
@@ -1114,8 +1113,6 @@ if [ -f '/home/kesoji/google-cloud-sdk/path.zsh.inc' ]; then . '/home/kesoji/goo
 if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/kesoji/google-cloud-sdk/completion.zsh.inc'; fi
 
 # Fig post block. Keep at the bottom of this file.
-command -v fig 2>/dev/null 1>&2
-if [[ $? -eq 0 ]]; then
-    eval "$(fig init zsh post)"
+if [[ -e $HOME/.fig ]]; then
+  . "$HOME/.fig/shell/zshrc.post.zsh"
 fi
-
