@@ -275,6 +275,7 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     eval $(go env)
+    export GOPATH=$HOME/go
     export PATH=${GOPATH}/bin:$PATH
 fi
 
