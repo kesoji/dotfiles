@@ -27,7 +27,7 @@ set incsearch        "show where search pattern typed so far matches
 "set timeoutlen       "time that is waited for a mapped key sequence
 "set undolevels       "maximum number of changes that can be undone
 "set viminfo          "information to remember after restart
-"set visualbell       "use visual bell instead of beeping
+set visualbell       "use visual bell instead of beeping
 "set wrapscan         "searches wrap around the end of the file
 
 let mapleader = ' '
