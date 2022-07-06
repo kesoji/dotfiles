@@ -1,8 +1,9 @@
-# Fig pre block. Keep at the top of this file.
-[[ -e "$HOME/.fig" ]] && . "$HOME/.fig/shell/zshrc.pre.zsh"
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
+
+# Fig pre block. Keep at the top of this file.
+[[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && . "$HOME/.fig/shell/zshrc.pre.zsh"
 
 function echo_error {
     echo -e "\e[31m$@\e[m"
@@ -26,6 +27,16 @@ if $MAC; then
             echo "installing git lfs";
             brew install git-lfs
             git lfs install
+        fi
+        if [[ -e "$HOMEBREW_PREFIX/opt/coreutils" ]]; then
+            echo_info "replace core commands from BSD to GNU"
+            export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$PATH"
+            export MANPATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnuman:$MANPATH"
+        fi
+        if [[ -e "$HOMEBREW_PREFIX/opt/grep" ]]; then
+            echo_info "replace grep from BSD to GNU"
+            export PATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
+            export MANPATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnuman:$MANPATH"
         fi
     fi
 fi
@@ -472,10 +483,9 @@ alias la='ls -la'
 alias vi='vim'
 alias c='clear'
 alias ap='ansible-playbook'
-if [ "$(uname)" = 'Darwin' ] ; then
+if $MAC; then
     alias ftpsv='launchctl load -w /System/Library/LaunchDaemons/ftp.plist'
     alias ftpsvstop='launchctl unload -w /System/Library/LaunchDaemons/ftp.plist'
-    alias ls='ls -G'
 fi
 alias gf='terragrunt'
 alias gfa='terragrunt apply'
@@ -1105,4 +1115,4 @@ if [ -f '/home/kesoji/google-cloud-sdk/path.zsh.inc' ]; then . '/home/kesoji/goo
 if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/kesoji/google-cloud-sdk/completion.zsh.inc'; fi
 
 # Fig post block. Keep at the bottom of this file.
-[[ -e "$HOME/.fig" ]] && . "$HOME/.fig/shell/zshrc.post.zsh"
+[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && . "$HOME/.fig/shell/zshrc.post.zsh"

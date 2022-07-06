@@ -289,6 +289,7 @@ let g:quickrun_config = {
             \   },
             \}
 
+nnoremap <Leader>r :QuickRun<CR>
 inoremap \\r <ESC>:QuickRun<CR>
 " <C-c> で実行を強制終了させる
 " quickrun.vim が実行していない場合には <C-c> を呼び出す
