@@ -88,6 +88,7 @@ Plug 'simeji/winresizer'
 Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
+Plug 'prabirshrestha/asyncomplete-ultisnips.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'mattn/vim-lsp-settings'
 " don't forget to install goimports itself
@@ -439,6 +440,13 @@ imap <C-e> <ESC><C-u>:NERDTreeToggle<CR>
 "<<<Plugin>>> UltiSnips {{{1
 let g:UltiSnipsJumpForwardTrigger = "<c-f>"
 let g:UltiSnipsJumpBackwardTrigger = "<c-b>"
+
+"let g:UltiSnipsExpandTrigger="<c-e>"
+call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
+    \ 'name': 'ultisnips',
+    \ 'allowlist': ['*'],
+    \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
+    \ }))
 
 "<<<Plugin>>> YouCompleteMe {{{1
 let g:ycm_key_list_select_completion = ['<Down>']
