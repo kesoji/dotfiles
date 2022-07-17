@@ -32,11 +32,15 @@ if $MAC; then
             echo_info "replace core commands from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnuman:$MANPATH"
+        else
+            echo_info "run brew install coreutils!"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/grep" ]]; then
             echo_info "replace grep from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnuman:$MANPATH"
+        else
+            echo_info "run brew install grep!"
         fi
     fi
 fi
