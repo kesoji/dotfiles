@@ -52,7 +52,7 @@ Plug 'jiangmiao/auto-pairs'
 Plug 'alvan/vim-closetag'
 "Plug 'Townk/vim-autoclose'
 "Plug 'vim-scripts/cisco.vim'
-"Plug 'scrooloose/syntastic'
+Plug 'vim-syntastic/syntastic'
 Plug 'Yggdroot/indentLine'
 Plug 'easymotion/vim-easymotion'
 Plug 'terryma/vim-expand-region'
@@ -438,8 +438,8 @@ map <C-e> :NERDTreeToggle<CR>
 imap <C-e> <ESC><C-u>:NERDTreeToggle<CR>
 
 "<<<Plugin>>> UltiSnips {{{1
-let g:UltiSnipsJumpForwardTrigger = "<c-f>"
-let g:UltiSnipsJumpBackwardTrigger = "<c-b>"
+let g:UltiSnipsJumpForwardTrigger = "<Tab>"
+let g:UltiSnipsJumpBackwardTrigger = "<S-Tab>"
 
 "let g:UltiSnipsExpandTrigger="<c-e>"
 call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
