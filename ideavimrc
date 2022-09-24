@@ -57,6 +57,7 @@ nnoremap gr :<C-u>action GotoDeclaration<CR>
 "" Tab Navigation
 nnoremap H gT
 nnoremap L gt
+nnoremap <C-w>m :action MoveEditorToOppositeTabGroup<CR>
 
 "nnoremap <C-o> :<C-u>action Back<CR>s
 "nnoremap <C-i> :<C-u>action Forward<CR>
