@@ -53,6 +53,7 @@ nnoremap ]c :<C-u>action VcsShowNextChangeMarker<CR>
 nnoremap [q :<C-u>action GotoPreviousError<CR>
 nnoremap ]q :<C-u>action GotoNextError<CR>
 nnoremap gr :<C-u>action GotoDeclaration<CR>
+nnoremap gi :<C-u>action GotoImplementation<CR>
 
 "" Tab Navigation
 nnoremap H gT
