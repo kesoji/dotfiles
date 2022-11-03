@@ -448,6 +448,9 @@ function my-javascript() {
 if [ -e /usr/share/zsh/site-functions/ ]; then
     fpath=(/usr/share/zsh/sites-functions $fpath)
 fi
+if [ -e /opt/homebrew/share/zsh/site-functions ]; then
+    fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
+fi
 
 # jump
 command -v jump 2>/dev/null 1>&2
