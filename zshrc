@@ -7,6 +7,9 @@ fi
 function echo_error {
     echo -e "\e[31m$@\e[m"
 }
+function echo_notice {
+    echo -e "\e[33;5;243m$@\e[m"
+}
 function echo_info {
     echo -e "\e[38;5;243m$@\e[m"
 }
@@ -112,6 +115,7 @@ if [[ $? -ne 0 ]] ; then
     #echo "skip adding ssh-key? (y/N)"
     #if read -q ; then
     #else
+        echo_notice "Adding my keys"
         my-sshkeyadd
     #fi
 fi
