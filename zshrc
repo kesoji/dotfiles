@@ -108,12 +108,12 @@ else
 fi
 ssh-add -l 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo
-    echo "skip adding ssh-key? (y/N)"
-    if read -q ; then
-    else
+    #echo
+    #echo "skip adding ssh-key? (y/N)"
+    #if read -q ; then
+    #else
         my-sshkeyadd
-    fi
+    #fi
 fi
 #===== SSH Setting ======
 
