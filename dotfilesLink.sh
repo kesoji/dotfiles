@@ -18,6 +18,7 @@ ln -sf ~/dotfiles/globalrc ~/.globalrc
 ln -sf ~/dotfiles/irbrc ~/.irbrc
 [ -d ~/.ctags.d ] || mkdir ~/.ctags.d
 ln -sf ~/dotfiles/ctags ~/.ctags.d/config.ctags
+ln -sf ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 
 # dir
 ln -sf ~/dotfiles/sshrc.d ~/.sshrc.d
