@@ -67,7 +67,7 @@
 	fa = fetch --all --prune
 	sb = show-branch
 	emptycommit = commit --allow-empty -m
-	delete-merged-branches = !git branch --merged | grep -v \\* | egrep -v '(main|master|staging)' | xargs -I % git branch -d %
+	delete-merged-branches = !git branch --merged | grep -v \\* | grep -Ev '(main|master|staging)' | xargs -I % git branch -d %
 [gui]
 	encoding = utf-8
 [difftool "sourcetree"]

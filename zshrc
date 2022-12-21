@@ -7,6 +7,9 @@ fi
 function echo_error {
     echo -e "\e[31m$@\e[m"
 }
+function echo_notice {
+    echo -e "\e[33;5;243m$@\e[m"
+}
 function echo_info {
     echo -e "\e[38;5;243m$@\e[m"
 }
@@ -108,12 +111,13 @@ else
 fi
 ssh-add -l 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo
-    echo "skip adding ssh-key? (y/N)"
-    if read -q ; then
-    else
+    #echo
+    #echo "skip adding ssh-key? (y/N)"
+    #if read -q ; then
+    #else
+        echo_notice "Adding my keys"
         my-sshkeyadd
-    fi
+    #fi
 fi
 #===== SSH Setting ======
 
@@ -146,6 +150,7 @@ else
 fi
 
 export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 
 fpath=(~/.zsh/completions $fpath)
 if [[ -s ~/.stripe/stripe-completion.zsh ]]; then
