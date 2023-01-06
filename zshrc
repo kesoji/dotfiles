@@ -515,6 +515,7 @@ alias nanounixt='date +%s%3N'
 alias unixt='date +%s'
 alias simpleserver='python -m http.server 80'
 alias fb='firebase'
+alias dcomposer='docker run --rm -i --tty -v $PWD:/app composer'
 function zipp() {
     DIR=$1
     command rm -f $DIR.zip
