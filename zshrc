@@ -385,11 +385,15 @@ command -v hyperfine 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "hyperfine benchmark tool isn't installed: my-hyperfineinstall"
     function my-hyperfineinstall() {
-        downloadurl=$(curl https://api.github.com/repos/sharkdp/hyperfine/releases | jq '.[0].assets[] | select(.name | test("hyperfine_.+amd64.deb")) | .browser_download_url' -r )
-        comexec "wget $downloadurl" || return
-        filename=${downloadurl##*/}
-        comexec "sudo dpkg -i $filename" || return
-        comexec "rm -f $filename" || return
+        if $MAC; then
+            brew install hyperfine
+        else
+            downloadurl=$(curl https://api.github.com/repos/sharkdp/hyperfine/releases | jq '.[0].assets[] | select(.name | test("hyperfine_.+amd64.deb")) | .browser_download_url' -r )
+            comexec "wget $downloadurl" || return
+            filename=${downloadurl##*/}
+            comexec "sudo dpkg -i $filename" || return
+            comexec "rm -f $filename" || return
+        fi
     }
 fi
 
