@@ -584,6 +584,7 @@ if [[ $? -ne 0 ]] ; then
         fi
     }
 fi
+alias saml2awsbrowser='SAML2AWS_IDP_PROVIDER=Browser saml2aws'
 
 
 ## Docker
