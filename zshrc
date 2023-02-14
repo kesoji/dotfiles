@@ -529,7 +529,7 @@ function ppap() {
     PASSWORD=`openssl rand -base64 9`
     FILENAME=${1%.*}
     command zip -P "${PASSWORD}" -r "${FILENAME}.zip" "$1"
-    echo "[pass]"
+    echo "[パスワード]"
     echo "$PASSWORD"
 }
 
