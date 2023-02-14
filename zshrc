@@ -525,6 +525,13 @@ function zipp() {
     command rm -f $DIR.zip
     command zip -r $DIR.zip $DIR -x "*.DS_Store"
 }
+function ppap() {
+    PASSWORD=`openssl rand -base64 9`
+    FILENAME=${1%.*}
+    command zip -P "${PASSWORD}" -r "${FILENAME}.zip" "$1"
+    echo "[pass]"
+    echo "$PASSWORD"
+}
 
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
