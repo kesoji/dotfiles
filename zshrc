@@ -24,6 +24,7 @@ if $MAC; then
     if [[ $? -ne 0 ]]; then
         echo_info "Homebrew isn't installed."
     else
+        MAC_INSTALLCMD="brew install"
         git lfs 2>/dev/null 1>&2
         if [[ $? -ne 0 ]]; then
             echo "installing git lfs";
@@ -35,14 +36,14 @@ if $MAC; then
             export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnuman:$MANPATH"
         else
-            echo_info "run brew install coreutils!"
+            echo_notice "run brew install coreutils!"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/grep" ]]; then
             echo_info "replace grep from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnuman:$MANPATH"
         else
-            echo_info "run brew install grep!"
+            echo_notice "run brew install grep!"
         fi
     fi
 fi
@@ -229,6 +230,19 @@ if [ ! -e ~/my/src/enhancd/init.sh ]; then
     }
 else
     source ~/my/src/enhancd/init.sh
+fi
+
+if command -v jump >/dev/null; then
+    eval "$(jump shell)"
+else
+    echo_info "jump isn't installed: my-jumpinstall"
+    function my-jumpinstall() {
+        if $MAC; then
+            comexec "$MAC_INSTALLCMD jump"
+        else
+            comexec "go install github.com/gsamokovarov/jump@latest"
+        fi
+    }
 fi
 
 autoload -Uz bashcompinit && bashcompinit -i
