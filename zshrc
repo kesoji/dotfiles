@@ -517,7 +517,7 @@ alias browsh='docker run --rm -it browsh/browsh'
 alias clswp='rm -rf ~/.vim/swp/*'
 alias nanounixt='date +%s%3N'
 alias unixt='date +%s'
-alias simpleserver='python -m http.server 80'
+alias simpleserver='(){python -m http.server $1}'
 alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
 function zipp() {

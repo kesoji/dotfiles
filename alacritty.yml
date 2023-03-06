@@ -1,7 +1,13 @@
 font:
   size: 15.0
+  normal:
+    family: HackGen35 Console NFJ
+    style: Regular
+  bold:
+    family: HackGen35 Console NFJ
+    style: Bold
 key_bindings:
-  # 日本語キーボード + Karabiner調整
+  # 日本語キーボード + Karabinar調整
   # 全然わからんが、たぶんYenが5C(Baclslash)に変換された上で
   # 何かが起こっておかしな挙動になる。(更にKarbinarも相まって..)
   # ¥が打てなくなってしまったが、Terminal上で打つことはないだろう
