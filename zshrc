@@ -535,9 +535,9 @@ alias simpleserver='(){python -m http.server $1}'
 alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
 function zipp() {
-    DIR=$1
-    command rm -f $DIR.zip
-    command zip -r $DIR.zip $DIR -x "*.DS_Store"
+    DIR="$1"
+    command rm -f "$DIR".zip
+    command zip -r "$DIR".zip "$DIR" -x "*.DS_Store"
 }
 function ppap() {
     PASSWORD=`openssl rand -base64 9`
