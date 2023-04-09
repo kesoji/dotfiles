@@ -809,28 +809,6 @@ else
 
 fi
 
-# Krypton
-command -v kr 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "krypton isn't installed: my-kryptoninstall"
-    function my-kryptoninstall (){
-        if [[ "$(uname -a)" =~ "Microsoft" ]]; then
-            comexec "go get github.com/kryptco/kr" || return
-            comexec "pushd ~/go/src/github.com/kryptco/kr && make install && kr restart" || return
-            comexec "popd" || return
-        else
-            comexec "curl https://krypt.co/kr | sh" || return
-        fi
-
-        if [ "$(uname)" != 'Darwin' ] ; then
-            comexec "sudo mkdir -p /usr/local/lib" || return
-            comexec "sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so" || return
-            comexec "sudo mkdir -p /usr/local/bin" || return
-            comexec "sudo ln -s /usr/bin/krssh /usr/local/bin/krssh" || return
-        fi
-    }
-fi
-
 # fd-find
 command -v fdfind 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
