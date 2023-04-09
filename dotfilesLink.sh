@@ -34,14 +34,6 @@ ln -sf ~/dotfiles/dotconfig/wezterm ~/.config/
 mkdir -p ~/.config/alacritty
 ln -sf ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 
-# zplezto
-[ -d ~/.zprezto ] || git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
-#for rcfile in ${ZDOTDIR:-$HOME}/.zprezto/runcoms/z*; do
-#    filename=`basename $rcfile`
-#    ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.$filename"
-#done
-ln -sf ~/dotfiles/zpreztorc ~/.zpreztorc
-
 # vim-plug
 if [ ! -s ~/.vim/autoload/plug.vim ] ; then
     curl -fLo ~/.vim/autoload/plug.vim --create-dirs \

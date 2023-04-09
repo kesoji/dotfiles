@@ -209,8 +209,6 @@ else
     }
 fi
 
-
-
 ###### SSH Setting ######
 function my-sshkeyadd (){
     if $MAC; then
