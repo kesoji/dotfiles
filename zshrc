@@ -183,44 +183,31 @@ if [[ $? -ne 0 ]] ; then
     fi
 fi
 
-# Source Prezto.
-if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
-    source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
+# PROMPT
+autoload -U promptinit
+autoload -Uz colors && colors
+PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
+$ "
+# enable completion
+autoload -Uz compinit && compinit -u
 
-    if [[ -z "${ZPREZTODIR}" ]]; then
-        echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR isn't found."
-    fi
-
-    autoload -Uz promptinit
-    promptinit
-    prompt steeef
-else
-    # PROMPT
-    autoload -U promptinit
-    autoload -Uz colors && colors
-    PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
-    $ "
-    # enable completion
-    autoload -Uz compinit && compinit -u
-
-    setopt auto_cd
-    setopt auto_pushd
-    DIRSTACKSIZE=100
-    # can cd with only this str
-    cdpath=(.. ~)
-    ## ignore case
-    zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
-    ## minified style
-    setopt list_packed
-    ## colore
-    zstyle ':completion:*' list-colors ''
-    ## enable menu-style
-    zstyle ':completion:*' menu select
-    ## exclude current dir
-    zstyle ':completion:*:cd:*' ignore-parents parent pwd
-    ## message
-    zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
-fi
+setopt auto_cd
+setopt auto_pushd
+DIRSTACKSIZE=100
+# can cd with only this str
+cdpath=(.. ~)
+## ignore case
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+## minified style
+setopt list_packed
+## colore
+zstyle ':completion:*' list-colors ''
+## enable menu-style
+zstyle ':completion:*' menu select
+## exclude current dir
+zstyle ':completion:*:cd:*' ignore-parents parent pwd
+## message
+zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 
 if [ ! -e ~/my/src/enhancd/init.sh ]; then
     echo_info "enhancd isn't installed: my-enhancdinstall"
@@ -842,41 +829,6 @@ if [[ $? -ne 0 ]] ; then
             comexec "sudo ln -s /usr/bin/krssh /usr/local/bin/krssh" || return
         fi
     }
-fi
-
-# php
-function my-php() {
-    echo ">>> PHP <<<"
-    local -a ary=("composer" "phpstan:phpstan/phpstan" "phpcbf:squizlabs/PHP_CodeSniffer" "psysh:psy/psysh")
-    for v in $ary; do
-        commandinstalled $v
-    done
-}
-
-command -v composer 2>/dev/null 1>&2
-if [[ $? -ne 0 ]]; then
-    echo_info "composer isn't installed: my-composerinstall"
-    function my-composerinstall() {
-        echo 'getting signature'
-        EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
-        echo 'got signature ' $EXPECTED_SIGNATURE
-        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
-        echo 'checking signature'
-        ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
-        echo 'got signature ' $ACTUAL_SIGNATURE
-
-        if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
-        then
-            echo 'ERROR: Invalid installer signature'
-            comexec "rm composer-setup.php" || return
-            return
-        fi
-
-        comexec "php composer-setup.php --quiet --install-dir=$HOME/my/bin --filename=composer" || return
-        comexec "rm -f composer-setup.php" || return
-    }
-else
-    export PATH=$HOME/.config/composer/vendor/bin:$PATH
 fi
 
 # fd-find
