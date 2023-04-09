@@ -22,7 +22,6 @@ function cached_eval {
     source "$CACHE_FILE"
 }
 
-
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
     MAC=true
@@ -301,11 +300,6 @@ if [[ $? -ne 0 ]] ; then
     fi
 fi
 
-# PROMPT
-autoload -U promptinit
-autoload -Uz colors && colors
-PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
-$ "
 # enable completion
 autoload -Uz compinit && compinit -u
 
@@ -1169,9 +1163,6 @@ complete-ssh-host-fzf() {
 zle -N complete-ssh-host-fzf
 bindkey '^s^s' complete-ssh-host-fzf
 
-export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
-AGNOSTER_PROMPT_SEGMENTS[2]=
-
 # PROFILING. If you want to profile zsh initialization,
 # Comment-in this code of the first line of
 # ~/.zshenv
@@ -1197,3 +1188,5 @@ if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/keso
 
 # Fig post block. Keep at the bottom of this file.
 [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+
+
