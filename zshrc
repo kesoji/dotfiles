@@ -1163,13 +1163,6 @@ complete-ssh-host-fzf() {
 zle -N complete-ssh-host-fzf
 bindkey '^s^s' complete-ssh-host-fzf
 
-# PROFILING. If you want to profile zsh initialization,
-# Comment-in this code of the first line of
-# ~/.zshenv
-# `zmodload zsh/zprof && zprof`
-if (which zprof > /dev/null) ;then
-  zprof | less
-fi
 
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C terraform terraform
@@ -1189,4 +1182,7 @@ if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/keso
 # Fig post block. Keep at the bottom of this file.
 [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
 
-
+# PROFILING .zshenvから `zmodload zsh/zprof && zprof` をコメントインするとプロファイリングできる
+if (which zprof > /dev/null) ;then
+  zprof | less
+fi
