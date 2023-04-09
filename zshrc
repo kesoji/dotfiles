@@ -13,6 +13,15 @@ function echo_notice {
 function echo_info {
     echo -e "\e[38;5;243m$@\e[m"
 }
+function cached_eval {
+    CACHE_DIR=~/.local/cache/zshrc-eval
+    [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR"
+
+    CACHE_FILE="$CACHE_DIR/${1// /_}"
+    [[ ! -e "$CACHE_FILE" ]] && eval "$1" > "$CACHE_FILE"
+    source "$CACHE_FILE"
+}
+
 
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -219,18 +228,6 @@ else
     source ~/my/src/enhancd/init.sh
 fi
 
-if command -v jump >/dev/null; then
-    eval "$(jump shell)"
-else
-    echo_info "jump isn't installed: my-jumpinstall"
-    function my-jumpinstall() {
-        if $MAC; then
-            comexec "$MAC_INSTALLCMD jump"
-        else
-            comexec "go install github.com/gsamokovarov/jump@latest"
-        fi
-    }
-fi
 
 autoload -Uz bashcompinit && bashcompinit -i
 
@@ -294,7 +291,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt install golang-go" || return
     }
 else
-    eval $(go env)
+    cached_eval "go env"
     export GOPATH=$HOME/go
     export PATH=${GOPATH}/bin:$PATH
 fi
@@ -326,7 +323,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt install gh" || return
     }
 else
-    eval "$(gh completion -s zsh)"
+    cached_eval "gh completion -s zsh"
 fi
 
 # bat
@@ -429,7 +426,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "popd; rm -rf $tmpdir" || return
     }
 else
-    eval "$(direnv hook zsh)"
+    cached_eval "direnv hook zsh"
 fi
 
 function myutils() {
@@ -460,14 +457,6 @@ if [ -e /usr/share/zsh/site-functions/ ]; then
 fi
 if [ -e /opt/homebrew/share/zsh/site-functions ]; then
     fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
-fi
-
-# jump
-command -v jump 2>/dev/null 1>&2
-if [[ $? -eq 0 ]] ; then
-    eval "$(jump shell)"
-else
-    echo_info "jump isn't installed"
 fi
 
 
@@ -726,6 +715,20 @@ function my-colortable2() {
     done
     printf " \\\e[m\n"
 }
+
+# jump
+if command -v jump >/dev/null; then
+    cached_eval "jump shell"
+else
+    echo_info "jump isn't installed: my-jumpinstall"
+    function my-jumpinstall() {
+        if $MAC; then
+            comexec "$MAC_INSTALLCMD jump"
+        else
+            comexec "go install github.com/gsamokovarov/jump@latest"
+        fi
+    }
+fi
 
 # Haskell
 command -v stack 2>/dev/null 1>&2
