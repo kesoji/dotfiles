@@ -94,6 +94,13 @@ SCRIPT
     export PATH="$PATH:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin"
 
     # export DOCKER_HOST='tcp://0.0.0.0:2375'
+    function mountdrive() {
+        [ -z "$1" ] && echo "usage: mountdrive letter" && return 1
+        UPPER=$(echo "$1" | tr '[:lower:]' '[:upper:]' )
+        LOWER=$(echo "$UPPER" | tr '[:upper:]' '[:lower:]' )
+        sudo mkdir -p "/mnt/$LOWER"
+        sudo mount -t drvfs "${UPPER}:" "/mnt/$LOWER"
+    }
 fi
 
 
@@ -615,16 +622,22 @@ alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
 function zipp() {
     DIR="$1"
-    command rm -f "$DIR".zip
-    command zip -r "$DIR".zip "$DIR" -x "*.DS_Store"
+    command rm -f "${DIR}.zip"
+    command zip -r "${DIR}.zip" "$DIR" -x "*.DS_Store"
 }
 function ppap() {
     PASSWORD=`openssl rand -base64 9`
     FILENAME=${1%.*}
-    command zip -P "${PASSWORD}" -r "${FILENAME}.zip" "$1"
+    command rm -f "${FILENAME}.zip"
+    command zip -P "${PASSWORD}" -r "${FILENAME}.zip" "$1" -x "*.DS_Store"
     echo "[パスワード]"
     echo "$PASSWORD"
 }
+function md5check() {
+    if [ -z "$1" ] || [ -z "$2" ]; then echo "usage: md5check dir1 dir2"; return 1; fi
+    diff <(find "$1" -maxdepth 1 -type f | xargs md5sum | sed -e 's@/.*/@@g') <(find "$2" -maxdepth 1 -type f | xargs md5sum | sed -e 's@/.*/@@g')
+}
+
 
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
