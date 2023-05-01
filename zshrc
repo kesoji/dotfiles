@@ -260,7 +260,7 @@ else
     alias tmux='tmux -2'
     alias tma='tmux -2 a'
     # run tmux avoiding nest / intellijはintellij側に設定する
-    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
+    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" && "$TERM_PROGRAM" != "WarpTerminal" ]]; then
         check=`tmux ls 2>&1`
         if [[ $? -eq 0 ]]; then
             if [[ -z $check ]]; then
@@ -620,6 +620,10 @@ alias unixt='date +%s'
 alias simpleserver='(){python -m http.server $1}'
 alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
+function aws-list-ec2() {
+    aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
+}
+
 function zipp() {
     DIR="$1"
     command rm -f "${DIR}.zip"
