@@ -370,7 +370,7 @@ command -v asdf 2>/dev/null 1>&2
 if [[ ! -e ~/.asdf ]] ; then
     echo_info "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
     function my-asdfinstall() {
-        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.9.0" || return
+        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.3" || return
     }
 else
     . $HOME/.asdf/asdf.sh
