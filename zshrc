@@ -939,7 +939,11 @@ if [[ $? -ne 0 ]] ; then
     if [[ $? -ne 0 ]] ; then
         echo_info "fd isn't installed: my-fdinstall"
         function my-fdinstall() {
-            comexec "sudo apt install fd-find" || return
+            if $MAC; then
+                comexec "$MAC_INSTALLER fd"
+            else
+                comexec "sudo apt install fd-find"
+            fi
         }
     fi
 else
