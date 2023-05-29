@@ -8,6 +8,7 @@ mkdir -p ~/.vim/undo
 ln -sf ~/dotfiles/vimrc ~/.vimrc
 ln -sf ~/dotfiles/gvimrc ~/.gvimrc
 ln -sf ~/dotfiles/ideavimrc ~/.ideavimrc
+ln -sf ~/dotfiles/config ~/.vim/
 ln -sf ~/dotfiles/rc ~/.vim/
 ln -sf ~/dotfiles/snippets ~/.vim/
 ln -sf ~/dotfiles/after ~/.vim/
