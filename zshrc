@@ -260,7 +260,7 @@ else
     alias tmux='tmux -2'
     alias tma='tmux -2 a'
     # run tmux avoiding nest / intellijはintellij側に設定する
-    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" && "$TERM_PROGRAM" != "WarpTerminal" ]]; then
+    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" && "$TERM_PROGRAM" != "WarpTerminal" && $TERMINAL_EMULATOR != "JetBrains-JediTerm" ]]; then
         check=`tmux ls 2>&1`
         if [[ $? -eq 0 ]]; then
             if [[ -z $check ]]; then
