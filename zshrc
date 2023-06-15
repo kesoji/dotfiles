@@ -263,7 +263,7 @@ else
     alias tmux='tmux -2'
     alias tma='tmux -2 a'
     # run tmux avoiding nest / intellijはintellij側に設定する
-    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" && "$TERM_PROGRAM" != "WarpTerminal" ]]; then
+    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" && "$TERM_PROGRAM" != "WarpTerminal" && $TERMINAL_EMULATOR != "JetBrains-JediTerm" ]]; then
         check=`tmux ls 2>&1`
         if [[ $? -eq 0 ]]; then
             if [[ -z $check ]]; then
@@ -373,7 +373,7 @@ command -v asdf 2>/dev/null 1>&2
 if [[ ! -e ~/.asdf ]] ; then
     echo_info "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
     function my-asdfinstall() {
-        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.9.0" || return
+        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.3" || return
     }
 else
     . $HOME/.asdf/asdf.sh
@@ -942,7 +942,11 @@ if [[ $? -ne 0 ]] ; then
     if [[ $? -ne 0 ]] ; then
         echo_info "fd isn't installed: my-fdinstall"
         function my-fdinstall() {
-            comexec "sudo apt install fd-find" || return
+            if $MAC; then
+                comexec "$MAC_INSTALLER fd"
+            else
+                comexec "sudo apt install fd-find"
+            fi
         }
     fi
 else

@@ -8,11 +8,12 @@ mkdir -p ~/.vim/undo
 ln -sf ~/dotfiles/vimrc ~/.vimrc
 ln -sf ~/dotfiles/gvimrc ~/.gvimrc
 ln -sf ~/dotfiles/ideavimrc ~/.ideavimrc
-ln -sf ~/dotfiles/rc ~/.vim/
-ln -sf ~/dotfiles/snippets ~/.vim/
-ln -sf ~/dotfiles/after ~/.vim/
-ln -sf ~/dotfiles/memo ~/.vim/
-ln -sf ~/dotfiles/template ~/.vim/
+ln -sf ~/dotfiles/vim/config ~/.vim/
+ln -sf ~/dotfiles/vim/rc ~/.vim/
+ln -sf ~/dotfiles/vim/snippets ~/.vim/
+ln -sf ~/dotfiles/vim/after ~/.vim/
+ln -sf ~/dotfiles/vim/memo ~/.vim/
+ln -sf ~/dotfiles/vim/template ~/.vim/
 
 # others
 ln -sf ~/dotfiles/tmux.conf ~/.tmux.conf
