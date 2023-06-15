@@ -21,6 +21,9 @@ function cached_eval {
     [[ ! -e "$CACHE_FILE" ]] && eval "$1" > "$CACHE_FILE"
     source "$CACHE_FILE"
 }
+function clear_cached_eval {
+    rm -rf ~/.local/cache/zshrc-eval
+}
 
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -402,7 +405,7 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     cached_eval "go env"
-    export GOPATH=$HOME/go
+    export GOPATH=${HOME}/go
     export PATH=${GOPATH}/bin:$PATH
 fi
 
