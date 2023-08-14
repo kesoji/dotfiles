@@ -263,7 +263,23 @@ command! -bang -nargs=* Gri
       \   <bang>0 ? fzf#vim#with_preview('up:60%')
       \           : fzf#vim#with_preview('right:50%:hidden', '?'),
       \   <bang>0)
-nnoremap <expr> g* ':Gr ' . expand('<cword>') . '<CR>'
+
+" https://zoshigayan.net/ripgrep-and-fzf-with-vim/
+" change:reloadのおかげで検索を後から変えれてメチャ便利
+function! FZGrep(query, fullscreen)
+  let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case -- %s || true'
+  let initial_command = printf(command_fmt, shellescape(a:query))
+  let reload_command = printf(command_fmt, '{q}')
+  let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command]}
+  call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+endfunction
+
+command! -nargs=* -bang RG call FZGrep(<q-args>, <bang>0)
+nnoremap <expr> g* ':RG ' . expand('<cword>') . '<CR>'
+nnoremap <silent> <Leader>,p :GFiles<CR>
+nnoremap <silent> <Leader>,P :Files<CR>
+nnoremap <silent> <Leader>,s :RG<CR>
+nnoremap <silent> <Leader>,c :Commits<CR>
 
 command! -nargs=0 Ghq
       \ call fzf#run({
