@@ -18,6 +18,23 @@
                 },
                 "rules": [
                     {
+                        "description": "Change Ctrl + [ to ESC",
+                        "manipulators": [
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "close_bracket",
+                                    "modifiers": {
+                                        "mandatory": ["control"]
+                                    }
+                                },
+                                "to": [{
+                                    "key_code": "ESC"
+                                }]
+                            }
+                        ]
+                    },
+                    {
                         "description": "Change EISU + f to Enter",
                         "manipulators": [
                             {
