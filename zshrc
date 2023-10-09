@@ -404,13 +404,14 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt install golang-go" || return
     }
 else
-    cached_eval "go env"
+    #cached_eval "go env"
     export GOPATH=${HOME}/go
     export PATH=${GOPATH}/bin:$PATH
 fi
 
 # flutter
 export PATH=$PATH:$HOME/development/flutter/bin
+export PATH=$PATH:$HOME/flutter/bin
 
 # Android
 if [[ -e $HOME/Library/Android/sdk ]] ; then
@@ -1210,10 +1211,16 @@ if [ -f '/home/kesoji/google-cloud-sdk/path.zsh.inc' ]; then . '/home/kesoji/goo
 # The next line enables shell command completion for gcloud.
 if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/kesoji/google-cloud-sdk/completion.zsh.inc'; fi
 
-# Fig post block. Keep at the bottom of this file.
-[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
-
 # PROFILING .zshenvから `zmodload zsh/zprof && zprof` をコメントインするとプロファイリングできる
 if (which zprof > /dev/null) ;then
   zprof | less
 fi
+
+# Fig post block. Keep at the bottom of this file.
+[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+#export SDKMAN_DIR="$HOME/.sdkman"
+#[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
+export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
