@@ -36,6 +36,7 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'scrooloose/nerdtree'
 Plug 'mechatroner/rainbow_csv'
+Plug 'airblade/vim-gitgutter'
 
 "Plug 'majutsushi/tagbar'
 " Replacement for tagbar
@@ -68,7 +69,6 @@ Plug 'vim-scripts/open-browser.vim'
 Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'vim-scripts/DirDiff.vim'
 Plug 'glidenote/memolist.vim'
-Plug 'mhinz/vim-signify'
 "Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
@@ -148,6 +148,10 @@ endfunction
 "<<<Plugin>>> vista {{{1
 nnoremap VV :<c-u>Vista!!<CR>
 let g:vista_default_executive = 'vim_lsp'
+
+"<<<Plugin>>> gitgutter {{{1
+command! Gqf GitGutterQuickFix | copen
+nnoremap <silent> <Leader>d <Plug>(GitGutterPreviewHunk)
 
 "<<<Plugin>>> vim-lsp {{{1
 "https://mattn.kaoriya.net/software/vim/20191231213507.htm
