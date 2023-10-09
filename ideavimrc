@@ -7,7 +7,7 @@ set clipboard+=unnamed        "clipboard options
 "set gdefault         "the :substitute flag 'g' is default on
 "set history          "number of command-lines that are remembered
 set hlsearch         "highlight matches with last search pattern
-set ignorecase       "ignore case in search patterns
+"set ignorecase       "ignore case in search patterns
 "set iskeyword        "defines keywords for commands like 'w', '*', etc.
 set incsearch        "show where search pattern typed so far matches
 "set matchpairs       "pairs of characters that % can match
@@ -22,7 +22,7 @@ set incsearch        "show where search pattern typed so far matches
 "set showmode         "message on status line to show current mode
 "set sidescroll       "minimum number of columns to scroll horizontal
 "set sidescrolloff    "min. nr. of columns to left and right of cursor
-"set smartcase        "no ignore case when pattern has uppercase
+set smartcase        "no ignore case when pattern has uppercase
 "set timeout          "use timeout for mapped key sequences
 "set timeoutlen       "time that is waited for a mapped key sequence
 "set undolevels       "maximum number of changes that can be undone
@@ -54,6 +54,7 @@ nnoremap [q :<C-u>action GotoPreviousError<CR>
 nnoremap ]q :<C-u>action GotoNextError<CR>
 nnoremap gr :<C-u>action GotoDeclaration<CR>
 nnoremap gi :<C-u>action GotoImplementation<CR>
+nnoremap <Space>k :<C-u>action ShowErrorDescription<CR>
 
 "" Tab Navigation
 nnoremap H gT
