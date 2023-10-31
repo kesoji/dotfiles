@@ -54,7 +54,8 @@ nnoremap [q :<C-u>action GotoPreviousError<CR>
 nnoremap ]q :<C-u>action GotoNextError<CR>
 nnoremap gr :<C-u>action GotoDeclaration<CR>
 nnoremap gi :<C-u>action GotoImplementation<CR>
-nnoremap <Space>k :<C-u>action ShowErrorDescription<CR>
+"nnoremap <Space>k :<C-u>action ShowErrorDescription<CR>
+nnoremap <Space>k :<C-u>action ShowHoverInfo<CR>
 
 "" Tab Navigation
 nnoremap H gT
