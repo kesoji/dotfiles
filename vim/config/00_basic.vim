@@ -7,13 +7,16 @@ scriptencoding utf-8
 
 if has('vim_starting')
   unlet! skip_defaults_vim
-  source $VIMRUNTIME/defaults.vim
+  if filereadable($VIMRUNTIME."/defaults.vim")
+    source $VIMRUNTIME/defaults.vim
+  endif
 
   " Avoid Duplication
   set fileencodings+=cp932
-  set clipboard+=autoselect,unnamed
-  let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
-  let $PATH = expand("~/.plenv/shims") . ":" . $PATH
+  set clipboard+=unnamed
+  if !has('nvim')
+    set clipboard+=autoselect
+  endif
 
   if has('win32') || has('win64')
     set directory=$TMP
