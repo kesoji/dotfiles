@@ -19,6 +19,9 @@ endif
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
 Plug 'github/copilot.vim'
+Plug 'raghur/vim-ghost', {'do': ':GhostInstall'}
+Plug 'roxma/nvim-yarp', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
+Plug 'roxma/vim-hug-neovim-rpc', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
 Plug 'mg979/vim-visual-multi'
 Plug 'cocopon/vaffle.vim'
 Plug 'lighttiger2505/sqls.vim'
