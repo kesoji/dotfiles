@@ -61,6 +61,11 @@ nnoremap <Space>k :<C-u>action ShowHoverInfo<CR>
 nnoremap H gT
 nnoremap L gt
 nnoremap <C-w>m :action MoveEditorToOppositeTabGroup<CR>
+nnoremap <C-w><C-m> :action MoveEditorToOppositeTabGroup<CR>
+nnoremap <C-w>n gt
+nnoremap <C-w>p gT
+nnoremap <C-w><C-n> gt
+nnoremap <C-w><C-p> gT
 
 "nnoremap <C-o> :<C-u>action Back<CR>s
 "nnoremap <C-i> :<C-u>action Forward<CR>
