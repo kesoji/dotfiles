@@ -252,6 +252,7 @@ nmap <Space>f [fzf]
 nnoremap [fzf]b :<C-u>Buffers<CR>
 nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
+nnoremap [fzf]p :<C-u>FzfPaste<CR>
 if s:is_plugged("vista.vim")
     nnoremap [fzf]t :<C-u>Vista finder<CR>
 endif
@@ -285,6 +286,17 @@ nnoremap <silent> <Leader>,p :GFiles<CR>
 nnoremap <silent> <Leader>,P :Files<CR>
 nnoremap <silent> <Leader>,s :RG<CR>
 nnoremap <silent> <Leader>,c :Commits<CR>
+
+command! FzfPaste :call s:FzfPaste()
+function! s:FzfPaste()
+  let reg = execute(":reg")
+  let regs = split(reg, "\n")
+  call remove(regs, 0) "Type Name Contentを消している
+  call fzf#run({'source': regs, 'sink': funcref('s:write'), 'window': {'width': 0.7, 'height': 0.6}})
+endfunction
+func! s:write(s) abort
+  execute ':norm ' . strcharpart(a:s, 5, 2) . 'p'
+endfunc
 
 command! -nargs=0 Ghq
       \ call fzf#run({
