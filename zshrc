@@ -631,6 +631,7 @@ alias unixt='date +%s'
 alias simpleserver='(){python -m http.server $1}'
 alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
+alias diskbench='dd if=/dev/zero bs=1024k of=tstfile count=1024'
 function aws-list-ec2() {
     aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
 }
