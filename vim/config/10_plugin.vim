@@ -168,6 +168,8 @@ function! s:on_lsp_buffer_enabled() abort
   nmap <buffer> gr <plug>(lsp-references)
   nmap <buffer> gt <plug>(lsp-type-definition)
   nmap <buffer> gi <plug>(lsp-implementation)
+  nmap <buffer> ]q <plug>(lsp-next-error)
+  nmap <buffer> [q <plug>(lsp-previous-error)
   nmap <buffer> <f2> <plug>(lsp-rename)
   nmap <buffer> <S-k> <plug>(lsp-hover)
   inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"

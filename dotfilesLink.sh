@@ -14,6 +14,8 @@ ln -sf ~/dotfiles/vim/snippets ~/.vim/
 ln -sf ~/dotfiles/vim/after ~/.vim/
 ln -sf ~/dotfiles/vim/memo ~/.vim/
 ln -sf ~/dotfiles/vim/template ~/.vim/
+# neovim
+ln -sf ~/dotfiles/nvim ~/.config/
 
 # others
 ln -sf ~/dotfiles/tmux.conf ~/.tmux.conf
