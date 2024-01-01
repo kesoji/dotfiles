@@ -56,6 +56,13 @@ if $MAC; then
         else
             echo_notice "run brew install grep!"
         fi
+        if [[ -e "$HOMEBREW_PREFIX/opt/gsed" ]]; then
+            echo_info "replace sed from BSD to GNU"
+            export PATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnubin:$PATH"
+            export MANPATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnuman:$MANPATH"
+        else
+            echo_notice "run brew install gsed!"
+        fi
     fi
 fi
 
