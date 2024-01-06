@@ -970,6 +970,12 @@ else
 fi
 
 
+# atcoder-tools
+command -v atcoder-tools 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+    alias atc='atcoder-tools'
+fi
+
 function commandinstalled() {
     command -v ${1%:*} 2>/dev/null 1>&2
     if [[ $? -eq 0 ]]; then
