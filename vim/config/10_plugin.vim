@@ -100,7 +100,6 @@ Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
 Plug 'pearofducks/ansible-vim'
-Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
 Plug 'tpope/vim-endwise'
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
 Plug 'othree/html5.vim',           { 'for': ['html'] }
