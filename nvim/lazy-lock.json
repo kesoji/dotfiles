@@ -1,0 +1,4 @@
+{
+  "SmoothCursor.nvim": { "branch": "main", "commit": "cc8780622a7b7c328f774762fa2d97d9f83be828" },
+  "lazy.nvim": { "branch": "main", "commit": "96584866b9c5e998cbae300594d0ccfd0c464627" }
+}
