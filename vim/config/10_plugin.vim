@@ -23,9 +23,6 @@ Plug 'raghur/vim-ghost', {'do': ':GhostInstall'}
 Plug 'roxma/nvim-yarp', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
 Plug 'roxma/vim-hug-neovim-rpc', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
 Plug 'mg979/vim-visual-multi'
-Plug 'cocopon/vaffle.vim'
-Plug 'lighttiger2505/sqls.vim'
-Plug 'andymass/vim-matchup'
 Plug 'mattn/vim-starwars'
 "Plug 'w0rp/ale'
 "Plug 'honza/vim-snippets'
@@ -86,7 +83,6 @@ Plug 'kana/vim-operator-user'
 Plug 'haya14busa/vim-operator-flashy'
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'chr4/nginx.vim'
-Plug 'thinca/vim-ref'
 Plug 'joonty/vdebug', { 'on': 'VdebugEnable' }
 Plug 'simeji/winresizer'
 Plug 'prabirshrestha/async.vim'
@@ -100,26 +96,14 @@ Plug 'mattn/vim-goimports'
 Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
-Plug 'posva/vim-vue'
-Plug 'bps/vim-textobj-python'
 Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
 Plug 'pearofducks/ansible-vim'
 Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
-Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
-Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
-Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
-Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
-Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
-Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
 Plug 'othree/html5.vim',           { 'for': ['html'] }
-Plug 'mattn/emmet-vim',            { 'for': ['html', 'css', 'blade'] }
-Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
-Plug 'petdance/vim-perl',          { 'for': ['perl'] }
-Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
 Plug 'cespare/vim-toml',           { 'for': ['toml'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
@@ -231,9 +215,6 @@ let g:go_highlight_string_spellcheck = 1
 let g:go_highlight_format_strings = 1
 let g:go_highlight_variable_declarations = 0
 let g:go_highlight_variable_assignments = 0
-
-"<<<Plugin>>> vaffle {{{1
-nnoremap FJ :Vaffle<CR>
 
 "<<<Plugin>>> vim-sandwich {{{1
 runtime macros/sandwich/keymap/surround.vim
@@ -523,19 +504,8 @@ let g:ale_javascript_prettier_use_local_config = 1
 nmap <C-a><C-f> <Plug>(ale_fix)
 nmap <leader>n <Plug>(ale_toggle)
 
-"<<<plugin>>> vim-vue {{{1
-autocmd FileType vue syntax sync fromstart
-
 "<<<plugin>>> vim-terraform {{{1
 let g:terraform_fmt_on_save = 1
-
-"<<<plugin>>> vim-ref {{{1
-let g:ref_phpmanual_path = $HOME . '/.vim/refs/php-chunked-xhtml'
-
-command! -nargs=0 RefPhpManualUpdate call RefPhpManualUpdate()
-function! RefPhpManualUpdate()
-    !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz -C ~/.vim/refs ; rm -f ~/.vim/refs/dl.tgz
-endfunction
 
 "<<<plugin>>> vim-tmux-navigator
 let g:tmux_navigator_no_mappings = 1
@@ -558,10 +528,6 @@ let g:closetag_xhtml_filetypes = 'xhtml,jsx,javascript'
 "<<<plugin>>> winresizer {{{1
 let g:winresizer_start_key = '<C-x>'
 
-"<<<plugin>>> vim-js-importer {{{1
-nnoremap <Leader><Leader>j :ImportJSWord<CR>
-nnoremap <Leader><Leader>i :ImportJSFix<CR>
-nnoremap <Leader><Leader>g :ImportJSGoto<CR>
 
 
 "<<<plugin>>> asyncomplete {{{1
