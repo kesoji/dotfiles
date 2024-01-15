@@ -80,7 +80,7 @@ Plug 'kana/vim-textobj-user'
 "Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-edgemotion'
 Plug 'kana/vim-operator-user'
-Plug 'haya14busa/vim-operator-flashy'
+Plug 'haya14busa/vim-operator-flashy', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'chr4/nginx.vim'
 Plug 'joonty/vdebug', { 'on': 'VdebugEnable' }
@@ -225,7 +225,7 @@ endif
 let g:indentLine_faster = 1
 
 "<<<Plugin>>> Operator-flashy {{{1
-if s:is_plugged("vim-operator-flashy")
+if s:is_plugged("vim-operator-flashy") && !has('nvim')
     map  y <Plug>(operator-flashy)
     nmap Y <Plug>(operator-flashy)$
 else

@@ -69,7 +69,7 @@ nnoremap <Space><Space> "zyiw:let @/ = '\<' . @z . '\>'<CR>:set hlsearch<CR>
 vnoremap <Space><Space> "zy:let @/ = @z<CR>:set hlsearch<CR>
 
 """ Window and Tab operation
-nnoremap s <Nop>
+"nnoremap s <Nop>
 "nnoremap sj <C-w>j
 "nnoremap sk <C-w>k
 "nnoremap sl <C-w>l
@@ -81,25 +81,25 @@ nnoremap s <Nop>
 "nnoremap sr <C-w>r
 "nnoremap s= <C-w>=
 "nnoremap sw <C-w>w
-nnoremap so <C-w>_<C-w>|
-nnoremap s> <C-w>>
-nnoremap s< <C-w><
-nnoremap s+ <C-w>+
-nnoremap s- <C-w>-
-nnoremap sO <C-w>=
-nnoremap sN :<C-u>bn<CR>
-nnoremap sP :<C-u>bp<CR>
-nnoremap sn gt
-nnoremap sp gT
-for n in range(1, 9)
-    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
-endfor
-nnoremap st :<C-u>tabnew<CR>
-nnoremap sx :<C-u>tabclose<CR>
+"nnoremap so <C-w>_<C-w>|
+"nnoremap s> <C-w>>
+"nnoremap s< <C-w><
+"nnoremap s+ <C-w>+
+"nnoremap s- <C-w>-
+"nnoremap sO <C-w>=
+"nnoremap sN :<C-u>bn<CR>
+"nnoremap sP :<C-u>bp<CR>
+"nnoremap sn gt
+"nnoremap sp gT
+"for n in range(1, 9)
+"    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
+"endfor
+"nnoremap st :<C-u>tabnew<CR>
+"nnoremap sx :<C-u>tabclose<CR>
 "nnoremap ss :<C-u>sp<CR>
 "nnoremap sv :<C-u>vs<CR>
-nnoremap sq :<C-u>q<CR>
-nnoremap sQ :<C-u>bd<CR>
+"nnoremap sq :<C-u>q<CR>
+"nnoremap sQ :<C-u>bd<CR>
 
 """ Utility
 nnoremap c. q:<UP><CR>
