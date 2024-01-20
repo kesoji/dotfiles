@@ -43,21 +43,21 @@ if $MAC; then
             git lfs install
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/coreutils" ]]; then
-            echo_info "replace core commands from BSD to GNU"
+            echo_info "replacing core commands from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnuman:$MANPATH"
         else
             echo_notice "run brew install coreutils!"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/grep" ]]; then
-            echo_info "replace grep from BSD to GNU"
+            echo_info "replacing grep from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnuman:$MANPATH"
         else
             echo_notice "run brew install grep!"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/gsed" ]]; then
-            echo_info "replace sed from BSD to GNU"
+            echo_info "replacing sed from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnuman:$MANPATH"
         else
