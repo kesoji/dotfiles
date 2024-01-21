@@ -2,44 +2,6 @@
 
 " Common mapping. Can be used for IdeaVim
 
-""" Editing
-"xでレジスタに入れない
-nnoremap x "_x
-
-""" 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
-nnoremap <Leader>w :<C-u>w<CR>
-nnoremap <Leader>W :<C-u>wq<CR>
-nnoremap <Leader>q :<C-u>q<CR>
-nnoremap <Leader><Leader>q :<C-u>qa<CR>
-nnoremap <Leader>Q :<C-u>q!<CR>
-nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
-
-""" ベースの動きをスワップ
-"noremap ; :
-noremap j gj
-noremap k gk
-noremap gj j
-noremap gk k
-
-"tagsジャンプの時に複数ある時は一覧表示
-"nnoremap <C-]> g<C-]>
-
-noremap + <C-a>
-noremap - <C-x>
-noremap gp "0p
-noremap gP "0P
-
-""" Moving
-noremap <Leader>h ^
-noremap <Leader>H 0
-noremap <Leader>l $
-noremap <c-i> <c-i>zz
-noremap <c-o> <c-o>zz
-
-""" <ESC>
-inoremap jj <ESC>
-inoremap jk <ESC>
-inoremap jl <ESC><Right>
 
 """ Location List / QuickFix
 """ MEMO: Use [q, ]q for QuickFix! ([l, ]l can also be used for Location List.)
@@ -48,8 +10,7 @@ nnoremap <C-p> :lp<CR>
 nnoremap <Leader>a :cclose<CR>
 nnoremap <Leader><Leader>a :lclose<CR>
 
-""" Tab mapping
-nnoremap <S-Tab> <<
+""" Tab mapping nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
 """ Search and Replace

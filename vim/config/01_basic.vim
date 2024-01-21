@@ -6,17 +6,13 @@ set fileformats=unix,dos,mac
 scriptencoding utf-8
 
 if has('vim_starting')
+  " Avoid Duplication
   unlet! skip_defaults_vim
   if filereadable($VIMRUNTIME."/defaults.vim")
     source $VIMRUNTIME/defaults.vim
   endif
 
-  " Avoid Duplication
   set fileencodings+=cp932
-  set clipboard+=unnamed
-  if !has('nvim')
-    set clipboard+=autoselect
-  endif
 
   if has('win32') || has('win64')
     set directory=$TMP
@@ -69,16 +65,11 @@ if has("vim_starting") && !has('gui_running') && has('vertsplit')
 endif
 
 " 基本設定 {{{1
-set hidden
-
-set modeline
 set modelines=2
 
 set spell
 set spelllang=en,cjk
 
-" 昔はcursorlineは遅かったが今は大丈夫だろう
-set cursorline
 "augroup delayCursorLine
   "let s:cur_f = 0
   "autocmd WinEnter * setlocal cursorline | let s:cur_f = 0
@@ -86,16 +77,10 @@ set cursorline
   "autocmd CursorHold,CursorHoldI * setlocal cursorline | let s:cur_f = 1
   "autocmd CursorMoved,CursorMovedI * if s:cur_f | setlocal nocursorline | endif
 "augroup END
-set history=1000
-set expandtab
-set smarttab
-set textwidth=0
-set virtualedit=block "can edit virtual area!
 "set nowrap
 set shiftwidth=4
 set softtabstop=4
 set tabstop=4
-set number
 set autoindent
 set smartindent
 augroup fileTypeIndent
@@ -147,8 +132,6 @@ set diffopt=internal,filler,algorithm:histogram,indent-heuristic
 set nostartofline
 
 " Advanced Mapping (only in vim, not in IdeaVim) {{{1
-let mapleader = "\<Space>"
-
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
