@@ -14,6 +14,7 @@ nnoremap <Leader><Leader>a :lclose<CR>
 inoremap <S-Tab> <C-d>
 
 """ Search and Replace
+"" zz: カーソル位置を中央に移動, zv: フォールディングを解除
 noremap  n nzzzv
 noremap  N Nzzzv
 nnoremap / /\v

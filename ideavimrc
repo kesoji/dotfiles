@@ -90,4 +90,8 @@ nmap <C-w><C-p> gT
 nmap <C-S-o> <C-o>
 nmap <C-S-i> <C-i>
 
-nmap <Space><Space> <Action>(AceAction)
+nmap s <Action>(AceAction)
+nmap S <Action>(AceTargetAction)
+"map g <Action>(AceLineAction)
+"nmap S <Action>(AceBackwardAction)
+"nmap s <Action>(AceForwardAction)
