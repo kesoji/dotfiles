@@ -26,12 +26,33 @@ else
           }) end
         },
         { 'ggandor/leap.nvim', config = function() require('leap').create_default_mappings() end },
+        { 'folke/tokyonight.nvim', lazy = false, priority = 1000, opts = {} },
+        {
+          "utilyre/barbecue.nvim",
+          name = "barbecue",
+          version = "*",
+          dependencies = {
+            "SmiteshP/nvim-navic",
+            "nvim-tree/nvim-web-devicons", -- optional dependency
+          },
+          opts = {
+            -- configurations go here
+          },
+          -- 効いていないきがする
+          config = function() require('barbecue').setup({ theme = 'tokyonight' }) end
+        }
       }, 
       nil)
     -- 既存のVim Scriptを読み込む
     opt.rtp:append('~/.vim') -- prependの方がいいのだろうか
     opt.rtp:append('~/.vim/after')
     -- vim.cmd('source ~/.vimrc')
+
+    vim.cmd[[colorscheme tokyonight]]
+    -- vim.cmd[[colorscheme tokyonight-night]]
+    -- vim.cmd[[colorscheme tokyonight-storm]]
+    -- vim.cmd[[colorscheme tokyonight-day]]
+    -- vim.cmd[[colorscheme tokyonight-moon]]
 end
 
 opt.filetype = "plugin", "indent", "on"
