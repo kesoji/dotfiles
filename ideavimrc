@@ -13,7 +13,8 @@ Plug 'machakann/vim-highlightedyank'
 " Commentary plugin
 Plug 'tpope/vim-commentary'
 
-source ~/.vim/config/01_common_mapping.vim
+source ~/.vim/config/00_essential_setting.vim
+source ~/.vim/config/10_essential_mapping.vim
 let mapleader = ' '
 nnoremap <Leader>ev :<C-u>vsplit ~/.ideavimrc<CR>
 nnoremap <Leader>sv :<C-u>source ~/.ideavimrc<CR>
