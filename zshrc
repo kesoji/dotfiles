@@ -189,7 +189,7 @@ if [[ -d "$HOME/.oh-my-zsh" ]]; then
     # Custom plugins may be added to $ZSH_CUSTOM/plugins/
     # Example format: plugins=(rails git textmate ruby lighthouse)
     # Add wisely, as too many plugins slow down shell startup.
-    plugins=(git)
+    plugins=(git docker docker-compose)
 
     source $ZSH/oh-my-zsh.sh
 
@@ -237,6 +237,7 @@ function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
 }
 
+#export SSH_AUTH_SOCK=~/Library/Group\ Containers/2BUA8C4S2C.com.1password/t/agent.sock
 # ssh_agent
 if [[ ! -v SSH_AGENT_PID ]] ; then
     echo -n "Starting ssh-agent... "
@@ -288,6 +289,7 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
 fpath=(~/.zsh/completions $fpath)
+fpath=(~/.local/share/zsh/completions $fpath)
 if [[ -s ~/.stripe/stripe-completion.zsh ]]; then
     fpath=(~/.stripe $fpath)
     autoload -Uz compinit && compinit -i
@@ -376,19 +378,31 @@ else
     source ~/my/src/enhancd/init.sh
 fi
 
-# asdf
-command -v asdf 2>/dev/null 1>&2
-if [[ ! -e ~/.asdf ]] ; then
-    echo_info "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
-    function my-asdfinstall() {
-        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.11.3" || return
+
+
+# zoxide
+command -v zoxide 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "zoxide isn't installed: my-zoxideinstall";
+    function my-zoxideinstall() {
+        comexec "curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash" || return
     }
 else
-    . $HOME/.asdf/asdf.sh
-    fpath=(${ASDF_DIR}/completions $fpath)
-    autoload -Uz compinit && compinit
-    if [[ -e ~/.asdf/plugins/java/set-java-home.zsh ]]; then
-        . ~/.asdf/plugins/java/set-java-home.zsh
+    eval "$(zoxide init zsh)"
+fi
+
+# mise
+command -v mise 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "mise isn't installed: let's visit https://mise.jdx.dev/getting-started.html#alternate-installation-methods OR my-miseinstall";
+    function my-miseinstall() {
+        comexec "curl https://mise.run | sh" || return
+    }
+else
+    eval "$($HOME/.local/bin/mise activate zsh)"
+    if [[ ! -e ~/.local/share/zsh/completions/_mise ]]; then
+        mkdir -p ~/.local/share/zsh/completions
+        mise completion zsh > ~/.local/share/zsh/completions/_mise
     fi
 fi
 
@@ -640,6 +654,17 @@ alias simpleserver='(){python -m http.server $1}'
 alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
 alias diskbench='dd if=/dev/zero bs=1024k of=tstfile count=1024'
+function create-laravel-dev-container() {
+    dir=${1:-laravel-example}
+    if [ -e $dir ]; then
+        echo "$dir already exists."
+        return 1
+    fi
+    curl -s "https://laravel.build/laravel-example?with=mysql,redis&devcontainer" | bash
+    code $dir
+}
+alias laraveldevcontainer='create-laravel-dev-container'
+
 function aws-list-ec2() {
     aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
 }
@@ -666,7 +691,7 @@ function md5check() {
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo_info "terraform isn't installed: use asdf to install"
+    echo_info "terraform isn't installed: install it"
 else
     alias tf='terraform'
     alias tfa='terraform apply'
