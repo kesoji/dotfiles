@@ -664,7 +664,6 @@ function create-laravel-dev-container() {
     code $dir
 }
 alias laraveldevcontainer='create-laravel-dev-container'
-
 function aws-list-ec2() {
     aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
 }
