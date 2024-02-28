@@ -225,6 +225,24 @@ else
     }
 fi
 
+# mise
+command -v mise 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "mise isn't installed: let's visit https://mise.jdx.dev/getting-started.html#alternate-installation-methods OR my-miseinstall";
+    function my-miseinstall() {
+        comexec "curl https://mise.run | sh" || return
+    }
+else
+    # https://mise.jdx.dev/dev-tools/shims.html
+    eval "$(mise activate zsh --shims)" # should be first
+    eval "$(mise activate zsh)"
+    # eval "$(mise hook-env -s zsh)"
+    if [[ ! -e ~/.local/share/zsh/completions/_mise ]]; then
+        mkdir -p ~/.local/share/zsh/completions
+        mise completion zsh > ~/.local/share/zsh/completions/_mise
+    fi
+fi
+
 ###### SSH Setting ######
 function my-sshkeyadd (){
     if $MAC; then
@@ -378,20 +396,6 @@ else
     eval "$(zoxide init zsh)"
 fi
 
-# mise
-command -v mise 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "mise isn't installed: let's visit https://mise.jdx.dev/getting-started.html#alternate-installation-methods OR my-miseinstall";
-    function my-miseinstall() {
-        comexec "curl https://mise.run | sh" || return
-    }
-else
-    eval "$($HOME/.local/bin/mise activate zsh)"
-    if [[ ! -e ~/.local/share/zsh/completions/_mise ]]; then
-        mkdir -p ~/.local/share/zsh/completions
-        mise completion zsh > ~/.local/share/zsh/completions/_mise
-    fi
-fi
 
 # go
 command -v go 2>/dev/null 1>&2
@@ -605,6 +609,7 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias ezsh="$EDITOR ~/.zshrc"
 alias reload='exec $SHELL'
 alias :q='exit'
 alias dcd='cd ~/dotfiles'
@@ -631,6 +636,10 @@ alias gfw='terragrunt workspace'
 alias gfwl='terragrunt workspace list'
 alias gfws='terragrunt workspace select'
 alias gfi='terragrunt import'
+if $MAC; then
+  alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+fi
+alias ts="tailscale"
 alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
@@ -651,6 +660,12 @@ function create-laravel-dev-container() {
     code $dir
 }
 alias laraveldevcontainer='create-laravel-dev-container'
+
+function helpme() {
+    echo ">>> Help <<<"
+    echo "最近作ったコマンド: ezsh"
+}
+
 function aws-list-ec2() {
     aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
 }
@@ -1233,3 +1248,5 @@ fi
 #[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
+
+helpme
