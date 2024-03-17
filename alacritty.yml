@@ -1,10 +1,10 @@
 font:
   size: 15.0
   normal:
-    family: HackGen35 Console NFJ
+    family: HackGen35 Console NF
     style: Regular
   bold:
-    family: HackGen35 Console NFJ
+    family: HackGen35 Console NF
     style: Bold
 key_bindings:
   # 日本語キーボード + Karabinar調整
