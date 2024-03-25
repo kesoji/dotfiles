@@ -51,13 +51,14 @@ set smartcase        "no ignore case when pattern has uppercase
 set visualbell       "use visual bell instead of beeping
 "set wrapscan         "searches wrap around the end of the file
 
+set matchit
+
 set easymotion
 nmap <Leader>f <Plug>(easymotion-f)
 nmap <Leader>t <Plug>(easymotion-t)
 nmap <Leader>F <Plug>(easymotion-F)
 nmap <Leader>T <Plug>(easymotion-T)
 
-set matchit
 
 vmap v <Action>(EditorSelectWord)
 vmap <S-v> <Action>(EditorUnSelectWord)
