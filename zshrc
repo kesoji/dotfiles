@@ -672,6 +672,7 @@ function aws-list-ec2() {
 
 function zipp() {
     DIR="$1"
+    DIR="${DIR%/}"
     command rm -f "${DIR}.zip"
     command zip -r "${DIR}.zip" "$DIR" -x "*.DS_Store"
 }
