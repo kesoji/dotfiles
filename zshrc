@@ -856,6 +856,11 @@ if `command -v pet 2>/dev/null 1>&2` ; then
     bindkey '^s' pet-select
 fi
 
+## textlint setup
+function my-textlintsetup() {
+    comexec "npm i -g textlint textlint-rule-preset-ja-technical-writing"
+}
+
 # kubectl completion
 command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
