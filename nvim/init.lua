@@ -1,7 +1,7 @@
 local opt = vim.opt
 
-require('./lua_helper')
-require('./autocmds')
+require('lua_helper')
+require('autocmds')
 
 if vim.g.vscode then
     -- VSCode extension
@@ -75,7 +75,7 @@ else
     opt.rtp:append('~/.vim') -- prependの方がいいのだろうか
     opt.rtp:append('~/.vim/after')
     -- vim.cmd('source ~/.vimrc')
-    require('./colorscheme')
+    require('colorscheme')
 end
 
 vim.cmd('source ~/.vim/config/00_essential_setting.vim')
