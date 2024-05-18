@@ -59,12 +59,18 @@ else
           opts = {
             ensure_installed = {
               "gopls",
-              "lua-language-server",
+              "lua_ls",
             }
           },
         },
       },
-      nil)
+      nil
+    )
+    require('mason-lspconfig').setup_handlers {
+      function(server_name)
+        require('lspconfig')[server_name].setup {}
+      end,
+    }
     -- 既存のVim Scriptを読み込む
     opt.rtp:append('~/.vim') -- prependの方がいいのだろうか
     opt.rtp:append('~/.vim/after')
@@ -72,6 +78,5 @@ else
     require('./colorscheme')
 end
 
-opt.filetype = "plugin", "indent", "on"
 vim.cmd('source ~/.vim/config/00_essential_setting.vim')
 vim.cmd('source ~/.vim/config/10_essential_mapping.vim')
