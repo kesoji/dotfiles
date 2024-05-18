@@ -1,5 +1,8 @@
 local opt = vim.opt
 
+require('lua_helper')
+require('autocmds')
+
 if vim.g.vscode then
     -- VSCode extension
 else
@@ -41,7 +44,7 @@ else
           -- 効いていないきがする
           config = function() require('barbecue').setup({ theme = 'tokyonight' }) end
         }
-      }, 
+      },
       nil)
     -- 既存のVim Scriptを読み込む
     opt.rtp:append('~/.vim') -- prependの方がいいのだろうか
