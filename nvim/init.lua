@@ -43,7 +43,26 @@ else
           },
           -- 効いていないきがする
           config = function() require('barbecue').setup({ theme = 'tokyonight' }) end
-        }
+        },
+        {
+          "williamboman/mason.nvim",
+          build = ":MasonUpdate",
+          opts = {},
+        },
+        {
+          "williamboman/mason-lspconfig.nvim",
+          dependencies = {
+            { "williamboman/mason.nvim" },
+            { "neovim/nvim-lspconfig" },
+          },
+          config = nil,
+          opts = {
+            ensure_installed = {
+              "gopls",
+              "lua-language-server",
+            }
+          },
+        },
       },
       nil)
     -- 既存のVim Scriptを読み込む

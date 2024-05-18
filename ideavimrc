@@ -107,3 +107,5 @@ nmap S <Action>(AceTargetAction)
 "map g <Action>(AceLineAction)
 "nmap S <Action>(AceBackwardAction)
 "nmap s <Action>(AceForwardAction)
+
+nmap gh :action Git.Add<CR>
