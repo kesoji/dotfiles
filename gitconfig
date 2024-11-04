@@ -94,7 +94,7 @@
 [include]
 	path = ~/.gitconfig.local
 [pull]
-	rebase = false
+	rebase = true
 [ghq]
 	root = ~/go/src
 [filter "lfs"]
