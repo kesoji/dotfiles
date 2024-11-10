@@ -11,8 +11,9 @@
 # @raycast.mode compact
 #
 # Optional parameters:
-# @raycast.icon 🤖
+# @raycast.icon 📖
 # @raycast.packageName Raycast Scripts
+# @raycast.argument1 { "type": "text", "placeholder": "テキスト" }
 
 # 現在の日付を取得
 DATE=$(date +"%Y-%m-%d")
