@@ -13,6 +13,9 @@ function echo_notice {
 function echo_info {
     echo -e "\e[38;5;243m$@\e[m"
 }
+function comexec() {
+    echo ">>> $1"; eval $1
+}
 function cached_eval {
     CACHE_DIR=~/.local/cache/zshrc-eval
     [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR"
@@ -35,33 +38,32 @@ if $MAC; then
     if [[ $? -ne 0 ]]; then
         echo_info "Homebrew isn't installed."
     else
-        MAC_INSTALLCMD="brew install"
         git lfs 2>/dev/null 1>&2
         if [[ $? -ne 0 ]]; then
-            echo "installing git lfs";
-            brew install git-lfs
-            git lfs install
+            echo_notice "installing git lfs";
+            comexec "$MAC_INSTALLER git-lfs"
+            comexec "git lfs install"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/coreutils" ]]; then
             echo_info "replacing core commands from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnuman:$MANPATH"
         else
-            echo_notice "run brew install coreutils!"
+            comexec "$MAC_INSTALLER coreutils"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/grep" ]]; then
             echo_info "replacing grep from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnuman:$MANPATH"
         else
-            echo_notice "run brew install grep!"
+            comexec "$MAC_INSTALLER grep"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/gsed" ]]; then
             echo_info "replacing sed from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnuman:$MANPATH"
         else
-            echo_notice "run brew install gsed!"
+            comexec "$MAC_INSTALLER gsed"
         fi
     fi
 fi
@@ -321,10 +323,6 @@ setopt histignorealldups
 # fzf may override these settings
 bindkey '^r' history-incremental-pattern-search-backward
 bindkey '^s' history-incremental-pattern-search-forward
-
-function comexec() {
-    echo ">>> $1"; eval $1
-}
 
 
 # essentials
