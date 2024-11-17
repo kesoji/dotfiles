@@ -10,7 +10,9 @@ brew "mas"
 brew "vim"
 cask "tailscale"
 cask "warp"
+mas "Keynote", id: 409183694
 mas "Kindle", id: 302584613
 mas "LINE", id: 539883307
+mas "Numbers", id: 409203825
 mas "RunCat", id: 1429033973
 mas "The Unarchiver", id: 425424353
