@@ -8,6 +8,7 @@ brew "grep"
 brew "lazygit"
 brew "mas"
 brew "vim"
+cask "jetbrains-toolbox"
 cask "tailscale"
 cask "warp"
 mas "Keynote", id: 409183694
