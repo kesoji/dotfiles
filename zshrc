@@ -478,6 +478,9 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt-get update" || return
         comexec "sudo apt-get install lazygit" || return
     }
+    function my-lazygitinstall-by-brew() {
+        comexec "$MAC_INSTALLER lazygit"
+    }
 else
     alias lg='lazygit'
 fi

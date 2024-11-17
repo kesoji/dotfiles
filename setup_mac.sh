@@ -31,9 +31,9 @@ confirm_and_execute() {
 echo -e "${BOLD}${BLUE}===== Setup Mac =====${NC}\n"
 
 confirm_and_execute \
-    "スクリーンセーバ起動時のパスワード要求設定" \
-    "defaults read com.apple.screensaver askForPassword" \
-    "defaults write com.apple.screensaver askForPassword -int 1"
+    "起動音を無くす" \
+    "nvram SystemAudioVolume" \
+    "sudo nvram SystemAudioVolume=%00"
 
 # スクリーンセーバーのパスワード設定
 confirm_and_execute \
@@ -42,7 +42,7 @@ confirm_and_execute \
     "defaults write com.apple.screensaver askForPassword -int 1"
 
 confirm_and_execute \
-    "パスワード要求までの遅延時間設定" \
+    "パスワード要求までの遅延時間設定(効いていない...)" \
     "defaults read com.apple.screensaver askForPasswordDelay" \
     "defaults write com.apple.screensaver askForPasswordDelay -int 5"
 
@@ -82,5 +82,15 @@ confirm_and_execute \
     "キーボードのリピート設定" \
     "defaults read NSGlobalDomain KeyRepeat" \
     "defaults write NSGlobalDomain KeyRepeat -int 1"
+
+# Finderの設定
+confirm_and_execute \
+    "Finderの拡張子表示設定" \
+    "defaults read NSGlobalDomain AppleShowAllExtensions" \
+    "defaults write NSGlobalDomain AppleShowAllExtensions -bool true"
+confirm_and_execute \
+    "Finderのパスバー表示設定" \
+    "defaults read com.apple.finder ShowPathbar" \
+    "defaults write com.apple.finder ShowPathbar -bool true"
 
 echo -e "${GREEN}${BOLD}スクリプトの実行が完了しました！${NC}"
