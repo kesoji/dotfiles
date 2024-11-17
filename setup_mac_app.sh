@@ -6,3 +6,5 @@ if ! command -v brew &> /dev/null; then
 fi
 
 brew bundle
+
+echo "Dockerは手でインストールしましょう"

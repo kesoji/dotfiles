@@ -1,6 +1,7 @@
 tap "homebrew/bundle"
 tap "homebrew/services"
 brew "coreutils"
+brew "ghq"
 brew "git-lfs"
 brew "gnu-sed"
 brew "gnupg"
