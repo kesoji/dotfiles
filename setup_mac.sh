@@ -40,30 +40,25 @@ confirm_and_execute \
     "スクリーンセーバ起動時のパスワード要求設定" \
     "defaults read com.apple.screensaver askForPassword" \
     "defaults write com.apple.screensaver askForPassword -int 1"
-
 confirm_and_execute \
     "パスワード要求までの遅延時間設定(効いていない...)" \
     "defaults read com.apple.screensaver askForPasswordDelay" \
     "defaults write com.apple.screensaver askForPasswordDelay -int 5"
-
-# スクリーンセーバー設定の反映
 confirm_and_execute \
     "スクリーンセーバー設定の反映" \
     "echo '現在の設定を反映します'" \
     "killall cfprefsd"
+
 
 # ホットコーナーの設定
 confirm_and_execute \
     "ホットコーナー左上の設定" \
     "defaults read com.apple.dock wvous-tl-corner" \
     "defaults write com.apple.dock wvous-tl-corner -int 5"
-
 confirm_and_execute \
     "ホットコーナー左上のmodifier設定" \
     "defaults read com.apple.dock wvous-tl-modifier" \
     "defaults write com.apple.dock wvous-tl-modifier -int 0"
-
-# ホットコーナー設定の反映
 confirm_and_execute \
     "ホットコーナー設定の反映" \
     "echo '現在の設定を反映します'" \
@@ -92,5 +87,22 @@ confirm_and_execute \
     "Finderのパスバー表示設定" \
     "defaults read com.apple.finder ShowPathbar" \
     "defaults write com.apple.finder ShowPathbar -bool true"
+confirm_and_execute \
+    "デフォルトでリストビュー" \
+    "defaults read com.apple.finder FXPreferredViewStyle" \
+    "defaults write com.apple.finder FXPreferredViewStyle -string 'Nlsv'"
+confirm_and_execute \
+    ".DS_Storeをネットワークボリュームに作成しない" \
+    "defaults read com.apple.desktopservices DSDontWriteNetworkStores" \
+    "defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true"
+confirm_and_execute \
+    ".DS_StoreをUSBメディアに作成しない" \
+    "defaults read com.apple.desktopservices DSDontWriteUSBStores" \
+    "defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true"
+confirm_and_execute \
+    "Finderの設定の反映" \
+    "echo '現在の設定を反映します'" \
+    "killall Finder"
+
 
 echo -e "${GREEN}${BOLD}スクリプトの実行が完了しました！${NC}"
