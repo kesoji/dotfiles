@@ -24,6 +24,7 @@ VAULT_PATH="$HOME/Documents/Obsidian/MyVault"
 DAILY_NOTE_PATH="$VAULT_PATH/Daily/$DATE.md"
 
 # 入力されたテキストを追加
+touch "$DAILY_NOTE_PATH"
 echo "- $TIME $1" >> "$DAILY_NOTE_PATH"
 
 # Obsidianを開く（必要な場合）
