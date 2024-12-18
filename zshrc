@@ -245,6 +245,54 @@ else
     fi
 fi
 
+# neovim
+function my-neoviminstall() {
+    temp_dir=$(mktemp -d)
+    cd "$temp_dir" || exit
+    arch=$(uname -m)
+    case $arch in
+        x86_64)
+            arch_name="linux64"
+            ;;
+        aarch64)
+            arch_name="linux-arm64"
+            ;;
+        *)
+            echo "未対応のアーキテクチャです: $arch"
+            exit 1
+            ;;
+    esac
+    latest_url=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest \
+        | grep "browser_download_url.*nvim-${arch_name}.tar.gz\"" \
+        | cut -d '"' -f 4)
+
+    if [ -z "$latest_url" ]; then
+        echo "最新版のURLの取得に失敗しました"
+        exit 1
+    fi
+    # ダウンロードと展開
+    echo "Neovimの最新版をダウンロード中..."
+    curl -L "$latest_url" -o nvim.tar.gz
+
+    echo "ファイルを展開中..."
+    tar xzf nvim.tar.gz
+
+    # neovimバイナリを~/.local/binにコピー
+    echo "Neovimをインストール中..."
+    cp ./nvim-${arch_name}/bin/nvim ~/.local/bin/
+
+    # パーミッションの設定
+    chmod +x ~/.local/bin/nvim
+
+    # 一時ディレクトリの削除
+    cd
+    rm -rf "$temp_dir"
+
+    echo "インストールが完了しました"
+    echo "Neovimのバージョン:"
+    ~/.local/bin/nvim --version | head -n 1
+}
+
 ###### SSH Setting ######
 function my-sshkeyadd (){
     if $MAC; then
@@ -304,9 +352,6 @@ else
         fi
     fi
 fi
-
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
 
 fpath=(~/.zsh/completions $fpath)
 fpath=(~/.local/share/zsh/completions $fpath)
