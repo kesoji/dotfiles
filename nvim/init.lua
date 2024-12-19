@@ -237,6 +237,6 @@ end
 -- if you only want these mappings for toggle term use term://*toggleterm#* instead
 vim.cmd('autocmd! TermOpen term://*toggleterm#* lua set_terminal_keymaps()')
 
-vim.cmd('source ~/.config/nvim/temp.vim')
+-- vim.cmd('source ~/.config/nvim/temp.vim')
 
 vim.keymap.set('n', 'gd', '<cmd>:lua vim.lsp.buf.definition()<CR>')
