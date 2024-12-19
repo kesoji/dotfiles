@@ -64,6 +64,13 @@ else
             'nvim-telescope/telescope.nvim',
             branch = '0.1.x',
             dependencies = { 'nvim-lua/plenary.nvim' }
+            keys = {
+              { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find files" },
+              { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Live grep" },
+              { "<leader>fb", "<cmd>Telescope buffers<cr>", desc = "Find buffers" },
+              { "<leader>fh", "<cmd>Telescope help_tags<cr>", desc = "Find helps" },
+              { "<leader>fm", "<cmd>Telescope oldfiles<cr>", desc = "Find recent files" },
+            },
           },
           { 'nvim-treesitter/nvim-treesitter', build = ":TSUpdate" },
           { 'gen740/SmoothCursor.nvim', config = function() require('smoothcursor').setup(
@@ -214,12 +221,6 @@ end
 vim.cmd('source ~/.vim/config/00_essential_setting.vim')
 vim.cmd('source ~/.vim/config/10_essential_mapping.vim')
 
-local builtin = require('telescope.builtin')
-vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = 'Telescope find files' })
-vim.keymap.set('n', '<leader>fg', builtin.live_grep, { desc = 'Telescope live grep' })
-vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = 'Telescope buffers' })
-vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = 'Telescope help tags' })
-vim.keymap.set('n', '<leader>fm', builtin.oldfiles, { desc = 'Telescope oldfiles' })
 
 function _G.set_terminal_keymaps()
   -- 特にESCがLazyGitが使い辛くなるため下の設定でToggleTermオンリーに効く
