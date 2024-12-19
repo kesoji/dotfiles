@@ -117,6 +117,7 @@ fi
 
 
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
+export PATH=$HOME/.local/share/flutter/bin:$PATH
 
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
     # If you come from bash you might have to change your $PATH.
@@ -528,6 +529,25 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     alias lg='lazygit'
+fi
+
+# lazydocker
+command -v lazydocker 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "lazydocker isn't installed: my-lazydockerinstall-by-xxx"
+    function my-lazydockerinstall-by-go() {
+        comexec "go install github.com/jesseduffield/lazydocker@latest" || return
+    }
+    function my-lazydockerinstall-by-apt() {
+        comexec "sudo add-apt-repository ppa:lazydocker-team/release" || return
+        comexec "sudo apt-get update" || return
+        comexec "sudo apt-get install lazydocker" || return
+    }
+    function my-lazydockerinstall-by-brew() {
+        comexec "$MAC_INSTALLER lazydocker"
+    }
+else
+    alias ldo='lazydocker'
 fi
 
 # diff-highlight
