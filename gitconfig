@@ -26,6 +26,7 @@
 	ss = status -s
 	sh = show
 	sp = stash pop
+	sl = stash list
 	ci = commit
 	cim = commit -m
 	ciam = commit -a -m
