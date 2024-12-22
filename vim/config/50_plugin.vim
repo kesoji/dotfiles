@@ -18,10 +18,11 @@ endif
 " Plugin Manager Settings {{{1
 let g:vimproc#download_windows_dll = 1
 call plug#begin('~/.vim/plugged')
+Plug 'github/copilot.vim'
+Plug 'raghur/vim-ghost', {'do': ':GhostInstall'}
+Plug 'roxma/nvim-yarp', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
+Plug 'roxma/vim-hug-neovim-rpc', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
 Plug 'mg979/vim-visual-multi'
-Plug 'cocopon/vaffle.vim'
-Plug 'lighttiger2505/sqls.vim'
-Plug 'andymass/vim-matchup'
 Plug 'mattn/vim-starwars'
 "Plug 'w0rp/ale'
 "Plug 'honza/vim-snippets'
@@ -36,6 +37,7 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'scrooloose/nerdcommenter'
 Plug 'scrooloose/nerdtree'
 Plug 'mechatroner/rainbow_csv'
+Plug 'airblade/vim-gitgutter'
 
 "Plug 'majutsushi/tagbar'
 " Replacement for tagbar
@@ -68,7 +70,6 @@ Plug 'vim-scripts/open-browser.vim'
 Plug 'vim-scripts/AnsiEsc.vim'
 Plug 'vim-scripts/DirDiff.vim'
 Plug 'glidenote/memolist.vim'
-Plug 'mhinz/vim-signify'
 "Plug 'Valloric/YouCompleteMe', { 'do': './install.py --go-completer --ts-completer' }
 "Plug 'Valloric/YouCompleteMe', { 'do': 'zsh -i -c \"nvminit && ./install.py --go-completer --ts-completer\"' }
 Plug 'Shougo/vinarise'
@@ -79,10 +80,9 @@ Plug 'kana/vim-textobj-user'
 "Plug 'kana/vim-textobj-indent'
 Plug 'haya14busa/vim-edgemotion'
 Plug 'kana/vim-operator-user'
-Plug 'haya14busa/vim-operator-flashy'
+Plug 'haya14busa/vim-operator-flashy', v:version >= 800 && !has('nvim') ? {} : { 'on': [], 'for': [] }
 Plug 'AndrewRadev/splitjoin.vim'
 Plug 'chr4/nginx.vim'
-Plug 'thinca/vim-ref'
 Plug 'joonty/vdebug', { 'on': 'VdebugEnable' }
 Plug 'simeji/winresizer'
 Plug 'prabirshrestha/async.vim'
@@ -93,29 +93,15 @@ Plug 'prabirshrestha/vim-lsp'
 Plug 'mattn/vim-lsp-settings'
 " don't forget to install goimports itself
 Plug 'mattn/vim-goimports'
-Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
-Plug 'posva/vim-vue'
-Plug 'bps/vim-textobj-python'
 Plug 'leafgarland/typescript-vim'
 Plug 'hashivim/vim-terraform'
 Plug 'juliosueiras/vim-terraform-completion'
 Plug 'pearofducks/ansible-vim'
-Plug 'PProvost/vim-ps1',           { 'for': ['ps1'] }
-Plug 'Rykka/clickable.vim',        { 'for': ['rst'] }
-Plug 'Rykka/riv.vim',              { 'for': ['rst'] }
-Plug 'vim-ruby/vim-ruby',          { 'for': ['ruby', 'eruby'] }
 Plug 'tpope/vim-endwise'
-Plug 'tpope/vim-rails',            { 'for': ['ruby', 'eruby'] }
-Plug 'tbastos/vim-lua',            { 'for': ['lua'] }
-Plug 'xolox/vim-lua-ftplugin',     { 'for': ['lua'] }
 Plug 'plasticboy/vim-markdown',    { 'for': ['markdown'] }
 Plug 'othree/html5.vim',           { 'for': ['html'] }
-Plug 'mattn/emmet-vim',            { 'for': ['html', 'css', 'blade'] }
-Plug 'hotchpotch/perldoc-vim',     { 'for': ['perl'] }
-Plug 'petdance/vim-perl',          { 'for': ['perl'] }
-Plug 'c9s/perlomni.vim',           { 'for': ['perl'] }
 Plug 'cespare/vim-toml',           { 'for': ['toml'] }
 "Plug 'othree/yajs',                { 'for': ['javascript'] }
 Plug 'elzr/vim-json',              { 'for': ['javascript', 'json'] }
@@ -149,6 +135,10 @@ endfunction
 nnoremap VV :<c-u>Vista!!<CR>
 let g:vista_default_executive = 'vim_lsp'
 
+"<<<Plugin>>> gitgutter {{{1
+command! Gqf GitGutterQuickFix | copen
+nnoremap <silent> <Leader>d <Plug>(GitGutterPreviewHunk)
+
 "<<<Plugin>>> vim-lsp {{{1
 "https://mattn.kaoriya.net/software/vim/20191231213507.htm
 if empty(globpath(&rtp, 'autoload/lsp.vim'))
@@ -163,6 +153,8 @@ function! s:on_lsp_buffer_enabled() abort
   nmap <buffer> gr <plug>(lsp-references)
   nmap <buffer> gt <plug>(lsp-type-definition)
   nmap <buffer> gi <plug>(lsp-implementation)
+  nmap <buffer> ]q <plug>(lsp-next-error)
+  nmap <buffer> [q <plug>(lsp-previous-error)
   nmap <buffer> <f2> <plug>(lsp-rename)
   nmap <buffer> <S-k> <plug>(lsp-hover)
   inoremap <expr> <cr> pumvisible() ? "\<c-y>\<cr>" : "\<cr>"
@@ -186,44 +178,6 @@ let g:lsp_diagnostics_float_cursor = 1
 
 let g:lsp_settings_filetype_go = ['gopls', 'golangci-lint-langserver']
 
-"<<<Plugin>>> vim-go {{{1
-function! s:build_go_files()
-    let l:file = expand('%')
-    if l:file =~# '^\f\+_test\.go$'
-        call go#test#Test(0, 1)
-    elseif l:file =~# '^\f\+\.go$'
-        call go#cmd#Build(0)
-    endif
-endfunction
-let g:go_fmt_command = "goimports"
-let g:go_fmt_autosave = 1
-let g:go_metalinter_command = "golangci-lint"
-let g:go_metalinter_autosave = 0
-let g:go_auto_type_info = 1
-let g:go_auto_sameids = 1
-
-let g:go_highlight_functions = 1
-let g:go_highlight_function_calls = 1
-let g:go_highlight_methods = 1
-let g:go_highlight_structs = 1
-let g:go_highlight_array_whitespace_error = 0
-let g:go_highlight_chan_whitespace_error = 0
-let g:go_highlight_extra_types = 0
-let g:go_highlight_space_tab_error = 0
-let g:go_highlight_trailing_whitespace_error = 0
-let g:go_highlight_operators = 0
-let g:go_highlight_function_arguments = 0
-let g:go_highlight_types = 0
-let g:go_highlight_fields = 0
-let g:go_highlight_build_constraints = 0
-let g:go_highlight_generate_tags = 0
-let g:go_highlight_string_spellcheck = 1
-let g:go_highlight_format_strings = 1
-let g:go_highlight_variable_declarations = 0
-let g:go_highlight_variable_assignments = 0
-
-"<<<Plugin>>> vaffle {{{1
-nnoremap FJ :Vaffle<CR>
 
 "<<<Plugin>>> vim-sandwich {{{1
 runtime macros/sandwich/keymap/surround.vim
@@ -235,7 +189,7 @@ endif
 let g:indentLine_faster = 1
 
 "<<<Plugin>>> Operator-flashy {{{1
-if s:is_plugged("vim-operator-flashy")
+if s:is_plugged("vim-operator-flashy") && !has('nvim')
     map  y <Plug>(operator-flashy)
     nmap Y <Plug>(operator-flashy)$
 else
@@ -247,6 +201,7 @@ nmap <Space>f [fzf]
 nnoremap [fzf]b :<C-u>Buffers<CR>
 nnoremap [fzf]m :<C-u>History<CR>
 nnoremap [fzf]f :<C-u>Files<CR>
+nnoremap [fzf]p :<C-u>FzfPaste<CR>
 if s:is_plugged("vista.vim")
     nnoremap [fzf]t :<C-u>Vista finder<CR>
 endif
@@ -263,7 +218,34 @@ command! -bang -nargs=* Gri
       \   <bang>0 ? fzf#vim#with_preview('up:60%')
       \           : fzf#vim#with_preview('right:50%:hidden', '?'),
       \   <bang>0)
-nnoremap <expr> g* ':Gr ' . expand('<cword>') . '<CR>'
+
+" https://zoshigayan.net/ripgrep-and-fzf-with-vim/
+" change:reloadのおかげで検索を後から変えれてメチャ便利
+function! FZGrep(query, fullscreen)
+  let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case -- %s || true'
+  let initial_command = printf(command_fmt, shellescape(a:query))
+  let reload_command = printf(command_fmt, '{q}')
+  let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command]}
+  call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+endfunction
+
+command! -nargs=* -bang RG call FZGrep(<q-args>, <bang>0)
+nnoremap <expr> g* ':RG ' . expand('<cword>') . '<CR>'
+nnoremap <silent> <Leader>,p :GFiles<CR>
+nnoremap <silent> <Leader>,P :Files<CR>
+nnoremap <silent> <Leader>,s :RG<CR>
+nnoremap <silent> <Leader>,c :Commits<CR>
+
+command! FzfPaste :call s:FzfPaste()
+function! s:FzfPaste()
+  let reg = execute(":reg")
+  let regs = split(reg, "\n")
+  call remove(regs, 0) "Type Name Contentを消している
+  call fzf#run({'source': regs, 'sink': funcref('s:write'), 'window': {'width': 0.7, 'height': 0.6}})
+endfunction
+func! s:write(s) abort
+  execute ':norm ' . strcharpart(a:s, 5, 2) . 'p'
+endfunc
 
 command! -nargs=0 Ghq
       \ call fzf#run({
@@ -485,19 +467,8 @@ let g:ale_javascript_prettier_use_local_config = 1
 nmap <C-a><C-f> <Plug>(ale_fix)
 nmap <leader>n <Plug>(ale_toggle)
 
-"<<<plugin>>> vim-vue {{{1
-autocmd FileType vue syntax sync fromstart
-
 "<<<plugin>>> vim-terraform {{{1
 let g:terraform_fmt_on_save = 1
-
-"<<<plugin>>> vim-ref {{{1
-let g:ref_phpmanual_path = $HOME . '/.vim/refs/php-chunked-xhtml'
-
-command! -nargs=0 RefPhpManualUpdate call RefPhpManualUpdate()
-function! RefPhpManualUpdate()
-    !mkdir ~/.vim/refs; wget http://jp2.php.net/get/php_manual_ja.tar.gz/from/this/mirror -O ~/.vim/refs/dl.tgz; tar zxf ~/.vim/refs/dl.tgz -C ~/.vim/refs ; rm -f ~/.vim/refs/dl.tgz
-endfunction
 
 "<<<plugin>>> vim-tmux-navigator
 let g:tmux_navigator_no_mappings = 1
@@ -520,10 +491,6 @@ let g:closetag_xhtml_filetypes = 'xhtml,jsx,javascript'
 "<<<plugin>>> winresizer {{{1
 let g:winresizer_start_key = '<C-x>'
 
-"<<<plugin>>> vim-js-importer {{{1
-nnoremap <Leader><Leader>j :ImportJSWord<CR>
-nnoremap <Leader><Leader>i :ImportJSFix<CR>
-nnoremap <Leader><Leader>g :ImportJSGoto<CR>
 
 
 "<<<plugin>>> asyncomplete {{{1

@@ -1,5 +1,5 @@
-# Fig pre block. Keep at the top of this file.
-[[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.pre.zsh"
+# Q pre block. Keep at the top of this file.
+[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
@@ -13,6 +13,20 @@ function echo_notice {
 function echo_info {
     echo -e "\e[38;5;243m$@\e[m"
 }
+function comexec() {
+    echo ">>> $1"; eval $1
+}
+function cached_eval {
+    CACHE_DIR=~/.local/cache/zshrc-eval
+    [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR"
+
+    CACHE_FILE="$CACHE_DIR/${1// /_}"
+    [[ ! -e "$CACHE_FILE" ]] && eval "$1" > "$CACHE_FILE"
+    source "$CACHE_FILE"
+}
+function clear_cached_eval {
+    rm -rf ~/.local/cache/zshrc-eval
+}
 
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -24,26 +38,32 @@ if $MAC; then
     if [[ $? -ne 0 ]]; then
         echo_info "Homebrew isn't installed."
     else
-        MAC_INSTALLCMD="brew install"
         git lfs 2>/dev/null 1>&2
         if [[ $? -ne 0 ]]; then
-            echo "installing git lfs";
-            brew install git-lfs
-            git lfs install
+            echo_notice "installing git lfs";
+            comexec "$MAC_INSTALLER git-lfs"
+            comexec "git lfs install"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/coreutils" ]]; then
-            echo_info "replace core commands from BSD to GNU"
+            echo_info "replacing core commands from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnuman:$MANPATH"
         else
-            echo_notice "run brew install coreutils!"
+            comexec "$MAC_INSTALLER coreutils"
         fi
         if [[ -e "$HOMEBREW_PREFIX/opt/grep" ]]; then
-            echo_info "replace grep from BSD to GNU"
+            echo_info "replacing grep from BSD to GNU"
             export PATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
             export MANPATH="$HOMEBREW_PREFIX/opt/grep/libexec/gnuman:$MANPATH"
         else
-            echo_notice "run brew install grep!"
+            comexec "$MAC_INSTALLER grep"
+        fi
+        if [[ -e "$HOMEBREW_PREFIX/opt/gsed" ]]; then
+            echo_info "replacing sed from BSD to GNU"
+            export PATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnubin:$PATH"
+            export MANPATH="$HOMEBREW_PREFIX/opt/gsed/libexec/gnuman:$MANPATH"
+        else
+            comexec "$MAC_INSTALLER gsed"
         fi
     fi
 fi
@@ -86,10 +106,193 @@ SCRIPT
     export PATH="$PATH:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin"
 
     # export DOCKER_HOST='tcp://0.0.0.0:2375'
+    function mountdrive() {
+        [ -z "$1" ] && echo "usage: mountdrive letter" && return 1
+        UPPER=$(echo "$1" | tr '[:lower:]' '[:upper:]' )
+        LOWER=$(echo "$UPPER" | tr '[:upper:]' '[:lower:]' )
+        sudo mkdir -p "/mnt/$LOWER"
+        sudo mount -t drvfs "${UPPER}:" "/mnt/$LOWER"
+    }
 fi
 
 
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
+export PATH=$HOME/.local/share/flutter/bin:$PATH
+
+if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    # If you come from bash you might have to change your $PATH.
+    # export PATH=$HOME/bin:/usr/local/bin:$PATH
+
+    # Path to your oh-my-zsh installation.
+    export ZSH="$HOME/.oh-my-zsh"
+
+    # Set name of the theme to load --- if set to "random", it will
+    # load a random theme each time oh-my-zsh is loaded, in which case,
+    # to know which specific one was loaded, run: echo $RANDOM_THEME
+    # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+    ZSH_THEME="amuse"
+
+    # Set list of themes to pick from when loading at random
+    # Setting this variable when ZSH_THEME=random will cause zsh to load
+    # a theme from this variable instead of looking in $ZSH/themes/
+    # If set to an empty array, this variable will have no effect.
+    # ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+
+    # Uncomment the following line to use case-sensitive completion.
+    # CASE_SENSITIVE="true"
+
+    # Uncomment the following line to use hyphen-insensitive completion.
+    # Case-sensitive completion must be off. _ and - will be interchangeable.
+    # HYPHEN_INSENSITIVE="true"
+
+    # Uncomment one of the following lines to change the auto-update behavior
+    # zstyle ':omz:update' mode disabled  # disable automatic updates
+    # zstyle ':omz:update' mode auto      # update automatically without asking
+    # zstyle ':omz:update' mode reminder  # just remind me to update when it's time
+
+    # Uncomment the following line to change how often to auto-update (in days).
+    # zstyle ':omz:update' frequency 13
+
+    # Uncomment the following line if pasting URLs and other text is messed up.
+    # DISABLE_MAGIC_FUNCTIONS="true"
+
+    # Uncomment the following line to disable colors in ls.
+    # DISABLE_LS_COLORS="true"
+
+    # Uncomment the following line to disable auto-setting terminal title.
+    # DISABLE_AUTO_TITLE="true"
+
+    # Uncomment the following line to enable command auto-correction.
+    # ENABLE_CORRECTION="true"
+
+    # Uncomment the following line to display red dots whilst waiting for completion.
+    # You can also set it to another string to have that shown instead of the default red dots.
+    # e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+    # Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
+    # COMPLETION_WAITING_DOTS="true"
+
+    # Uncomment the following line if you want to disable marking untracked files
+    # under VCS as dirty. This makes repository status check for large repositories
+    # much, much faster.
+    # DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+    # Uncomment the following line if you want to change the command execution time
+    # stamp shown in the history command output.
+    # You can set one of the optional three formats:
+    # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
+    # or set a custom format using the strftime function format specifications,
+    # see 'man strftime' for details.
+    # HIST_STAMPS="mm/dd/yyyy"
+
+    # Would you like to use another custom folder than $ZSH/custom?
+    # ZSH_CUSTOM=/path/to/new-custom-folder
+
+    # Which plugins would you like to load?
+    # Standard plugins can be found in $ZSH/plugins/
+    # Custom plugins may be added to $ZSH_CUSTOM/plugins/
+    # Example format: plugins=(rails git textmate ruby lighthouse)
+    # Add wisely, as too many plugins slow down shell startup.
+    plugins=(git docker docker-compose)
+
+    source $ZSH/oh-my-zsh.sh
+
+    # User configuration
+
+    # export MANPATH="/usr/local/man:$MANPATH"
+
+    # You may need to manually set your language environment
+    # export LANG=en_US.UTF-8
+
+    # Preferred editor for local and remote sessions
+    # if [[ -n $SSH_CONNECTION ]]; then
+    #   export EDITOR='vim'
+    # else
+    #   export EDITOR='mvim'
+    # fi
+
+    # Compilation flags
+    # export ARCHFLAGS="-arch x86_64"
+
+    # Set personal aliases, overriding those provided by oh-my-zsh libs,
+    # plugins, and themes. Aliases can be placed here, though oh-my-zsh
+    # users are encouraged to define aliases within the ZSH_CUSTOM folder.
+    # For a full list of active aliases, run `alias`.
+    #
+    # Example aliases
+    # alias zshconfig="mate ~/.zshrc"
+    # alias ohmyzsh="mate ~/.oh-my-zsh"
+else
+    echo_info "oh-my-zsh isn't installed: my-ohmyzshinstall"
+    function my-ohmyzshinstall() {
+        comexec "git clone https://github.com/ohmyzsh/ohmyzsh $HOME/.oh-my-zsh"
+    }
+fi
+
+# mise
+command -v mise 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "mise isn't installed: let's visit https://mise.jdx.dev/getting-started.html#alternate-installation-methods OR my-miseinstall";
+    function my-miseinstall() {
+        comexec "curl https://mise.run | sh" || return
+    }
+else
+    # https://mise.jdx.dev/dev-tools/shims.html
+    eval "$(mise activate zsh --shims)" # should be first
+    eval "$(mise activate zsh)"
+    # eval "$(mise hook-env -s zsh)"
+    if [[ ! -e ~/.local/share/zsh/completions/_mise ]]; then
+        mkdir -p ~/.local/share/zsh/completions
+        mise completion zsh > ~/.local/share/zsh/completions/_mise
+    fi
+fi
+
+# neovim
+function my-neoviminstall() {
+    temp_dir=$(mktemp -d)
+    cd "$temp_dir" || exit
+    arch=$(uname -m)
+    case $arch in
+        x86_64)
+            arch_name="linux64"
+            ;;
+        aarch64)
+            arch_name="linux-arm64"
+            ;;
+        *)
+            echo "未対応のアーキテクチャです: $arch"
+            exit 1
+            ;;
+    esac
+    latest_url=$(curl -s https://api.github.com/repos/neovim/neovim/releases/latest \
+        | grep "browser_download_url.*nvim-${arch_name}.tar.gz\"" \
+        | cut -d '"' -f 4)
+
+    if [ -z "$latest_url" ]; then
+        echo "最新版のURLの取得に失敗しました"
+        exit 1
+    fi
+    # ダウンロードと展開
+    echo "Neovimの最新版をダウンロード中..."
+    curl -L "$latest_url" -o nvim.tar.gz
+
+    echo "ファイルを展開中..."
+    tar xzf nvim.tar.gz
+
+    # neovimバイナリを~/.local/binにコピー
+    echo "Neovimをインストール中..."
+    cp ./nvim-${arch_name}/bin/nvim ~/.local/bin/
+
+    # パーミッションの設定
+    chmod +x ~/.local/bin/nvim
+
+    # 一時ディレクトリの削除
+    cd
+    rm -rf "$temp_dir"
+
+    echo "インストールが完了しました"
+    echo "Neovimのバージョン:"
+    ~/.local/bin/nvim --version | head -n 1
+}
 
 ###### SSH Setting ######
 function my-sshkeyadd (){
@@ -103,6 +306,7 @@ function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
 }
 
+#export SSH_AUTH_SOCK=~/Library/Group\ Containers/2BUA8C4S2C.com.1password/t/agent.sock
 # ssh_agent
 if [[ ! -v SSH_AGENT_PID ]] ; then
     echo -n "Starting ssh-agent... "
@@ -136,7 +340,7 @@ else
     alias tmux='tmux -2'
     alias tma='tmux -2 a'
     # run tmux avoiding nest / intellijはintellij側に設定する
-    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" ]]; then
+    if [[ -z "$TMUX" && "$TERM_PROGRAM" != "vscode" && "$TERM_PROGRAM" != "intellij" && "$TERM_PROGRAM" != "WarpTerminal" && $TERMINAL_EMULATOR != "JetBrains-JediTerm" ]]; then
         check=`tmux ls 2>&1`
         if [[ $? -eq 0 ]]; then
             if [[ -z $check ]]; then
@@ -150,10 +354,8 @@ else
     fi
 fi
 
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-
 fpath=(~/.zsh/completions $fpath)
+fpath=(~/.local/share/zsh/completions $fpath)
 if [[ -s ~/.stripe/stripe-completion.zsh ]]; then
     fpath=(~/.stripe $fpath)
     autoload -Uz compinit && compinit -i
@@ -168,10 +370,6 @@ setopt histignorealldups
 bindkey '^r' history-incremental-pattern-search-backward
 bindkey '^s' history-incremental-pattern-search-forward
 
-function comexec() {
-    echo ">>> $1"; eval $1
-}
-
 
 # essentials
 command -v make 2>/dev/null 1>&2
@@ -183,67 +381,27 @@ if [[ $? -ne 0 ]] ; then
     fi
 fi
 
-# Source Prezto.
-if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
-    source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
+# enable completion
+autoload -Uz compinit && compinit -u
 
-    if [[ -z "${ZPREZTODIR}" ]]; then
-        echo "whoops, something wrong with ZPREZTO. Env ZPREZTODIR isn't found."
-    fi
+setopt auto_cd
+setopt auto_pushd
+DIRSTACKSIZE=100
+# can cd with only this str
+cdpath=(.. ~)
+## ignore case
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+## minified style
+setopt list_packed
+## colore
+zstyle ':completion:*' list-colors ''
+## enable menu-style
+zstyle ':completion:*' menu select
+## exclude current dir
+zstyle ':completion:*:cd:*' ignore-parents parent pwd
+## message
+zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
 
-    autoload -Uz promptinit
-    promptinit
-    prompt steeef
-else
-    # PROMPT
-    autoload -U promptinit
-    autoload -Uz colors && colors
-    PROMPT="%{${fg[green]}%}[%n@%m]%{${reset_color}%} %~
-    $ "
-    # enable completion
-    autoload -Uz compinit && compinit -u
-
-    setopt auto_cd
-    setopt auto_pushd
-    DIRSTACKSIZE=100
-    # can cd with only this str
-    cdpath=(.. ~)
-    ## ignore case
-    zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
-    ## minified style
-    setopt list_packed
-    ## colore
-    zstyle ':completion:*' list-colors ''
-    ## enable menu-style
-    zstyle ':completion:*' menu select
-    ## exclude current dir
-    zstyle ':completion:*:cd:*' ignore-parents parent pwd
-    ## message
-    zstyle ':completion:*:descriptions' format '%BCompleting%b %U%d%u'
-fi
-
-if [ ! -e ~/my/src/enhancd/init.sh ]; then
-    echo_info "enhancd isn't installed: my-enhancdinstall"
-    function my-enhancdinstall() {
-        comexec "git clone https://github.com/b4b4r07/enhancd ~/my/src/enhancd"
-        comexec "source ~/my/src/enhancd/init.sh"
-    }
-else
-    source ~/my/src/enhancd/init.sh
-fi
-
-if command -v jump >/dev/null; then
-    eval "$(jump shell)"
-else
-    echo_info "jump isn't installed: my-jumpinstall"
-    function my-jumpinstall() {
-        if $MAC; then
-            comexec "$MAC_INSTALLCMD jump"
-        else
-            comexec "go install github.com/gsamokovarov/jump@latest"
-        fi
-    }
-fi
 
 autoload -Uz bashcompinit && bashcompinit -i
 
@@ -271,21 +429,17 @@ export CLICOLOR=1
 export LSCOLORS=DxGxcxdxCxegedabagacad
 export LS_COLORS='no=00:fi=00:di=34:ow=34;40:ln=35:pi=30;44:so=35;44:do=35;44:bd=33;44:cd=37;44:or=05;37;41:mi=05;37;41:ex=01;31:*.cmd=01;31:*.exe=01;31:*.com=01;31:*.bat=01;31:*.reg=01;31:*.app=01;31:*.txt=32:*.org=32:*.md=32:*.mkd=32:*.h=32:*.hpp=32:*.c=32:*.C=32:*.cc=32:*.cpp=32:*.cxx=32:*.objc=32:*.cl=32:*.sh=32:*.bash=32:*.csh=32:*.zsh=32:*.el=32:*.vim=32:*.java=32:*.pl=32:*.pm=32:*.py=32:*.rb=32:*.hs=32:*.php=32:*.htm=32:*.html=32:*.shtml=32:*.erb=32:*.haml=32:*.xml=32:*.rdf=32:*.css=32:*.sass=32:*.scss=32:*.less=32:*.js=32:*.coffee=32:*.man=32:*.0=32:*.1=32:*.2=32:*.3=32:*.4=32:*.5=32:*.6=32:*.7=32:*.8=32:*.9=32:*.l=32:*.n=32:*.p=32:*.pod=32:*.tex=32:*.go=32:*.sql=32:*.csv=32:*.sv=32:*.svh=32:*.v=32:*.vh=32:*.vhd=32:*.bmp=33:*.cgm=33:*.dl=33:*.dvi=33:*.emf=33:*.eps=33:*.gif=33:*.jpeg=33:*.jpg=33:*.JPG=33:*.mng=33:*.pbm=33:*.pcx=33:*.pdf=33:*.pgm=33:*.png=33:*.PNG=33:*.ppm=33:*.pps=33:*.ppsx=33:*.ps=33:*.svg=33:*.svgz=33:*.tga=33:*.tif=33:*.tiff=33:*.xbm=33:*.xcf=33:*.xpm=33:*.xwd=33:*.xwd=33:*.yuv=33:*.aac=33:*.au=33:*.flac=33:*.m4a=33:*.mid=33:*.midi=33:*.mka=33:*.mp3=33:*.mpa=33:*.mpeg=33:*.mpg=33:*.ogg=33:*.opus=33:*.ra=33:*.wav=33:*.anx=33:*.asf=33:*.avi=33:*.axv=33:*.flc=33:*.fli=33:*.flv=33:*.gl=33:*.m2v=33:*.m4v=33:*.mkv=33:*.mov=33:*.MOV=33:*.mp4=33:*.mp4v=33:*.mpeg=33:*.mpg=33:*.nuv=33:*.ogm=33:*.ogv=33:*.ogx=33:*.qt=33:*.rm=33:*.rmvb=33:*.swf=33:*.vob=33:*.webm=33:*.wmv=33:*.doc=31:*.docx=31:*.rtf=31:*.odt=31:*.dot=31:*.dotx=31:*.ott=31:*.xls=31:*.xlsx=31:*.ods=31:*.ots=31:*.ppt=31:*.pptx=31:*.odp=31:*.otp=31:*.fla=31:*.psd=31:*.7z=1;35:*.apk=1;35:*.arj=1;35:*.bin=1;35:*.bz=1;35:*.bz2=1;35:*.cab=1;35:*.deb=1;35:*.dmg=1;35:*.gem=1;35:*.gz=1;35:*.iso=1;35:*.jar=1;35:*.msi=1;35:*.rar=1;35:*.rpm=1;35:*.tar=1;35:*.tbz=1;35:*.tbz2=1;35:*.tgz=1;35:*.tx=1;35:*.war=1;35:*.xpi=1;35:*.xz=1;35:*.z=1;35:*.Z=1;35:*.zip=1;35:*.ANSI-30-black=30:*.ANSI-01;30-brblack=01;30:*.ANSI-31-red=31:*.ANSI-01;31-brred=01;31:*.ANSI-32-green=32:*.ANSI-01;32-brgreen=01;32:*.ANSI-33-yellow=33:*.ANSI-01;33-bryellow=01;33:*.ANSI-34-blue=34:*.ANSI-01;34-brblue=01;34:*.ANSI-35-magenta=35:*.ANSI-01;35-brmagenta=01;35:*.ANSI-36-cyan=36:*.ANSI-01;36-brcyan=01;36:*.ANSI-37-white=37:*.ANSI-01;37-brwhite=01;37:*.log=01;32:*~=01;32:*#=01;32:*.bak=01;33:*.BAK=01;33:*.old=01;33:*.OLD=01;33:*.org_archive=01;33:*.off=01;33:*.OFF=01;33:*.dist=01;33:*.DIST=01;33:*.orig=01;33:*.ORIG=01;33:*.swp=01;33:*.swo=01;33:*,v=01;33:*.gpg=34:*.gpg=34:*.pgp=34:*.asc=34:*.3des=34:*.aes=34:*.enc=34:*.sqlite=34:';
 
-# asdf
-command -v asdf 2>/dev/null 1>&2
-if [[ ! -e ~/.asdf ]] ; then
-    echo_info "asdf isn't installed: let's visit http://asdf-vm.com/guide/getting-started.html#_3-install-asdf OR my-asdfinstall";
-    function my-asdfinstall() {
-        comexec "git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.9.0" || return
+# zoxide
+command -v zoxide 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "zoxide isn't installed: my-zoxideinstall";
+    function my-zoxideinstall() {
+        comexec "curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash" || return
     }
 else
-    . $HOME/.asdf/asdf.sh
-    fpath=(${ASDF_DIR}/completions $fpath)
-    autoload -Uz compinit && compinit
-    if [[ -e ~/.asdf/plugins/java/set-java-home.zsh ]]; then
-        . ~/.asdf/plugins/java/set-java-home.zsh
-    fi
+    eval "$(zoxide init zsh)"
 fi
+
 
 # go
 command -v go 2>/dev/null 1>&2
@@ -307,13 +461,14 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt install golang-go" || return
     }
 else
-    eval $(go env)
-    export GOPATH=$HOME/go
+    #cached_eval "go env"
+    export GOPATH=${HOME}/go
     export PATH=${GOPATH}/bin:$PATH
 fi
 
 # flutter
 export PATH=$PATH:$HOME/development/flutter/bin
+export PATH=$PATH:$HOME/flutter/bin
 
 # Android
 if [[ -e $HOME/Library/Android/sdk ]] ; then
@@ -339,15 +494,22 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt install gh" || return
     }
 else
-    eval "$(gh completion -s zsh)"
+    cached_eval "gh completion -s zsh"
 fi
 
 # bat
 command -v bat 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo_info "bat isn't installed: let's visit https://github.com/sharkdp/bat/releases and install!"
+    echo_info "bat isn't installed: my-batinstall"
+    function my-batinstall() {
+        if $MAC; then
+            comexec "brew install bat" || return
+        else
+            comexec "sudo apt-get install bat" || return
+        fi
+    }
 else
-    alias cat='bat'
+    alias cat='bat --theme=Dracula'
 fi
 
 # lazygit
@@ -362,8 +524,30 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt-get update" || return
         comexec "sudo apt-get install lazygit" || return
     }
+    function my-lazygitinstall-by-brew() {
+        comexec "$MAC_INSTALLER lazygit"
+    }
 else
     alias lg='lazygit'
+fi
+
+# lazydocker
+command -v lazydocker 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "lazydocker isn't installed: my-lazydockerinstall-by-xxx"
+    function my-lazydockerinstall-by-go() {
+        comexec "go install github.com/jesseduffield/lazydocker@latest" || return
+    }
+    function my-lazydockerinstall-by-apt() {
+        comexec "sudo add-apt-repository ppa:lazydocker-team/release" || return
+        comexec "sudo apt-get update" || return
+        comexec "sudo apt-get install lazydocker" || return
+    }
+    function my-lazydockerinstall-by-brew() {
+        comexec "$MAC_INSTALLER lazydocker"
+    }
+else
+    alias ldo='lazydocker'
 fi
 
 # diff-highlight
@@ -442,7 +626,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "popd; rm -rf $tmpdir" || return
     }
 else
-    eval "$(direnv hook zsh)"
+    cached_eval "direnv hook zsh"
 fi
 
 function myutils() {
@@ -475,14 +659,6 @@ if [ -e /opt/homebrew/share/zsh/site-functions ]; then
     fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
 fi
 
-# jump
-command -v jump 2>/dev/null 1>&2
-if [[ $? -eq 0 ]] ; then
-    eval "$(jump shell)"
-else
-    echo_info "jump isn't installed"
-fi
-
 
 ## zsh-completions
 #if [ -e /usr/local/share/zsh-completions ]; then
@@ -499,6 +675,7 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias ezsh="$EDITOR ~/.zshrc"
 alias reload='exec $SHELL'
 alias :q='exit'
 alias dcd='cd ~/dotfiles'
@@ -525,6 +702,10 @@ alias gfw='terragrunt workspace'
 alias gfwl='terragrunt workspace list'
 alias gfws='terragrunt workspace select'
 alias gfi='terragrunt import'
+if $MAC; then
+  alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+fi
+alias ts="tailscale"
 alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
@@ -534,23 +715,51 @@ alias unixt='date +%s'
 alias simpleserver='(){python -m http.server $1}'
 alias fb='firebase'
 alias dcomposer='docker run --rm -it -v $PWD:/app composer'
+alias diskbench='dd if=/dev/zero bs=1024k of=tstfile count=1024'
+function create-laravel-dev-container() {
+    dir=${1:-laravel-example}
+    if [ -e $dir ]; then
+        echo "$dir already exists."
+        return 1
+    fi
+    curl -s "https://laravel.build/laravel-example?with=mysql,redis&devcontainer" | bash
+    code $dir
+}
+alias laraveldevcontainer='create-laravel-dev-container'
+
+function helpme() {
+    echo ">>> Help <<<"
+    echo "最近作ったコマンド: ezsh"
+}
+
+function aws-list-ec2() {
+    aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
+}
+
 function zipp() {
-    DIR=$1
-    command rm -f $DIR.zip
-    command zip -r $DIR.zip $DIR -x "*.DS_Store"
+    DIR="$1"
+    DIR="${DIR%/}"
+    command rm -f "${DIR}.zip"
+    command zip -r "${DIR}.zip" "$DIR" -x "*.DS_Store"
 }
 function ppap() {
     PASSWORD=`openssl rand -base64 9`
     FILENAME=${1%.*}
-    command zip -P "${PASSWORD}" -r "${FILENAME}.zip" "$1"
+    command rm -f "${FILENAME}.zip"
+    command zip -P "${PASSWORD}" -r "${FILENAME}.zip" "$1" -x "*.DS_Store"
     echo "[パスワード]"
     echo "$PASSWORD"
 }
+function md5check() {
+    if [ -z "$1" ] || [ -z "$2" ]; then echo "usage: md5check dir1 dir2"; return 1; fi
+    diff <(find "$1" -maxdepth 1 -type f | xargs md5sum | sed -e 's@/.*/@@g') <(find "$2" -maxdepth 1 -type f | xargs md5sum | sed -e 's@/.*/@@g')
+}
+
 
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
-    echo_info "terraform isn't installed: use asdf to install"
+    echo_info "terraform isn't installed: install it"
 else
     alias tf='terraform'
     alias tfa='terraform apply'
@@ -713,6 +922,11 @@ if `command -v pet 2>/dev/null 1>&2` ; then
     bindkey '^s' pet-select
 fi
 
+## textlint setup
+function my-textlintsetup() {
+    comexec "npm i -g textlint textlint-rule-preset-ja-technical-writing"
+}
+
 # kubectl completion
 command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
@@ -796,9 +1010,6 @@ if [[ $? -ne 0 ]] ; then
 else
     export GHQ_ROOT="${GOPATH:-$HOME/go}/src"
     alias g='cd $(ghq root)/$(ghq list | fzf)'
-    if [ ! -z $ENHANCD_ROOT ]; then
-        alias g='cd -G'
-    fi
 
     # CTRL-G - Paste ghq path into the command line
     __fghq() {
@@ -822,63 +1033,6 @@ else
 
 fi
 
-# Krypton
-command -v kr 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "krypton isn't installed: my-kryptoninstall"
-    function my-kryptoninstall (){
-        if [[ "$(uname -a)" =~ "Microsoft" ]]; then
-            comexec "go get github.com/kryptco/kr" || return
-            comexec "pushd ~/go/src/github.com/kryptco/kr && make install && kr restart" || return
-            comexec "popd" || return
-        else
-            comexec "curl https://krypt.co/kr | sh" || return
-        fi
-
-        if [ "$(uname)" != 'Darwin' ] ; then
-            comexec "sudo mkdir -p /usr/local/lib" || return
-            comexec "sudo ln -s /usr/lib/kr-pkcs11.so /usr/local/lib/kr-pkcs11.so" || return
-            comexec "sudo mkdir -p /usr/local/bin" || return
-            comexec "sudo ln -s /usr/bin/krssh /usr/local/bin/krssh" || return
-        fi
-    }
-fi
-
-# php
-function my-php() {
-    echo ">>> PHP <<<"
-    local -a ary=("composer" "phpstan:phpstan/phpstan" "phpcbf:squizlabs/PHP_CodeSniffer" "psysh:psy/psysh")
-    for v in $ary; do
-        commandinstalled $v
-    done
-}
-
-command -v composer 2>/dev/null 1>&2
-if [[ $? -ne 0 ]]; then
-    echo_info "composer isn't installed: my-composerinstall"
-    function my-composerinstall() {
-        echo 'getting signature'
-        EXPECTED_SIGNATURE="$(wget -q -O - https://composer.github.io/installer.sig)"
-        echo 'got signature ' $EXPECTED_SIGNATURE
-        comexec "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\""
-        echo 'checking signature'
-        ACTUAL_SIGNATURE="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
-        echo 'got signature ' $ACTUAL_SIGNATURE
-
-        if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]
-        then
-            echo 'ERROR: Invalid installer signature'
-            comexec "rm composer-setup.php" || return
-            return
-        fi
-
-        comexec "php composer-setup.php --quiet --install-dir=$HOME/my/bin --filename=composer" || return
-        comexec "rm -f composer-setup.php" || return
-    }
-else
-    export PATH=$HOME/.config/composer/vendor/bin:$PATH
-fi
-
 # fd-find
 command -v fdfind 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -886,13 +1040,23 @@ if [[ $? -ne 0 ]] ; then
     if [[ $? -ne 0 ]] ; then
         echo_info "fd isn't installed: my-fdinstall"
         function my-fdinstall() {
-            comexec "sudo apt install fd-find" || return
+            if $MAC; then
+                comexec "$MAC_INSTALLER fd"
+            else
+                comexec "sudo apt install fd-find"
+            fi
         }
     fi
 else
     alias fd='fdfind'
 fi
 
+
+# atcoder-tools
+command -v atcoder-tools 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+    alias atc='atcoder-tools'
+fi
 
 function commandinstalled() {
     command -v ${1%:*} 2>/dev/null 1>&2
@@ -1127,16 +1291,6 @@ complete-ssh-host-fzf() {
 zle -N complete-ssh-host-fzf
 bindkey '^s^s' complete-ssh-host-fzf
 
-export PS1=`echo $PS1 | sed -e 's/|/(AWS:${AWS_PROFILE}${AWS_STS_SESSION})|/'`
-AGNOSTER_PROMPT_SEGMENTS[2]=
-
-# PROFILING. If you want to profile zsh initialization,
-# Comment-in this code of the first line of
-# ~/.zshenv
-# `zmodload zsh/zprof && zprof`
-if (which zprof > /dev/null) ;then
-  zprof | less
-fi
 
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C terraform terraform
@@ -1153,5 +1307,19 @@ if [ -f '/home/kesoji/google-cloud-sdk/path.zsh.inc' ]; then . '/home/kesoji/goo
 # The next line enables shell command completion for gcloud.
 if [ -f '/home/kesoji/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/kesoji/google-cloud-sdk/completion.zsh.inc'; fi
 
-# Fig post block. Keep at the bottom of this file.
-[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+# PROFILING .zshenvから `zmodload zsh/zprof && zprof` をコメントインするとプロファイリングできる
+if (which zprof > /dev/null) ;then
+  zprof | less
+fi
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+#export SDKMAN_DIR="$HOME/.sdkman"
+#[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
+export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
+
+
+helpme
+
+# Q post block. Keep at the bottom of this file.
+[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"

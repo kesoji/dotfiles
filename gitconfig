@@ -26,6 +26,7 @@
 	ss = status -s
 	sh = show
 	sp = stash pop
+	sl = stash list
 	ci = commit
 	cim = commit -m
 	ciam = commit -a -m
@@ -94,7 +95,7 @@
 [include]
 	path = ~/.gitconfig.local
 [pull]
-	rebase = false
+	rebase = true
 [ghq]
 	root = ~/go/src
 [filter "lfs"]

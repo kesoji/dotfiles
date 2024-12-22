@@ -8,11 +8,14 @@ mkdir -p ~/.vim/undo
 ln -sf ~/dotfiles/vimrc ~/.vimrc
 ln -sf ~/dotfiles/gvimrc ~/.gvimrc
 ln -sf ~/dotfiles/ideavimrc ~/.ideavimrc
-ln -sf ~/dotfiles/rc ~/.vim/
-ln -sf ~/dotfiles/snippets ~/.vim/
-ln -sf ~/dotfiles/after ~/.vim/
-ln -sf ~/dotfiles/memo ~/.vim/
-ln -sf ~/dotfiles/template ~/.vim/
+ln -sf ~/dotfiles/vim/config ~/.vim/
+ln -sf ~/dotfiles/vim/rc ~/.vim/
+ln -sf ~/dotfiles/vim/snippets ~/.vim/
+ln -sf ~/dotfiles/vim/after ~/.vim/
+ln -sf ~/dotfiles/vim/memo ~/.vim/
+ln -sf ~/dotfiles/vim/template ~/.vim/
+# neovim
+ln -sf ~/dotfiles/nvim ~/.config/
 
 # others
 ln -sf ~/dotfiles/tmux.conf ~/.tmux.conf
@@ -33,14 +36,6 @@ ln -sf ~/dotfiles/dotconfig/rsync ~/.config/
 ln -sf ~/dotfiles/dotconfig/wezterm ~/.config/
 mkdir -p ~/.config/alacritty
 ln -sf ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
-
-# zplezto
-[ -d ~/.zprezto ] || git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
-#for rcfile in ${ZDOTDIR:-$HOME}/.zprezto/runcoms/z*; do
-#    filename=`basename $rcfile`
-#    ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.$filename"
-#done
-ln -sf ~/dotfiles/zpreztorc ~/.zpreztorc
 
 # vim-plug
 if [ ! -s ~/.vim/autoload/plug.vim ] ; then

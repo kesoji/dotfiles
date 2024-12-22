@@ -6,14 +6,13 @@ set fileformats=unix,dos,mac
 scriptencoding utf-8
 
 if has('vim_starting')
-  unlet! skip_defaults_vim
-  source $VIMRUNTIME/defaults.vim
-
   " Avoid Duplication
+  unlet! skip_defaults_vim
+  if filereadable($VIMRUNTIME."/defaults.vim")
+    source $VIMRUNTIME/defaults.vim
+  endif
+
   set fileencodings+=cp932
-  set clipboard+=autoselect,unnamed
-  let $PATH = expand("~/.pyenv/shims") . ":" . $PATH
-  let $PATH = expand("~/.plenv/shims") . ":" . $PATH
 
   if has('win32') || has('win64')
     set directory=$TMP
@@ -66,16 +65,11 @@ if has("vim_starting") && !has('gui_running') && has('vertsplit')
 endif
 
 " 基本設定 {{{1
-set hidden
-
-set modeline
 set modelines=2
 
 set spell
 set spelllang=en,cjk
 
-""" cursorline is slow..
-"set cursorline
 "augroup delayCursorLine
   "let s:cur_f = 0
   "autocmd WinEnter * setlocal cursorline | let s:cur_f = 0
@@ -83,16 +77,10 @@ set spelllang=en,cjk
   "autocmd CursorHold,CursorHoldI * setlocal cursorline | let s:cur_f = 1
   "autocmd CursorMoved,CursorMovedI * if s:cur_f | setlocal nocursorline | endif
 "augroup END
-set history=1000
-set expandtab
-set smarttab
-set textwidth=0
-set virtualedit=block "can edit virtual area!
 "set nowrap
 set shiftwidth=4
 set softtabstop=4
 set tabstop=4
-set number
 set autoindent
 set smartindent
 augroup fileTypeIndent
@@ -144,8 +132,6 @@ set diffopt=internal,filler,algorithm:histogram,indent-heuristic
 set nostartofline
 
 " Advanced Mapping (only in vim, not in IdeaVim) {{{1
-let mapleader = "\<Space>"
-
 nnoremap <Leader>o :<C-u>for i in range(v:count1) \| call append(line('.'), '') \| endfor<CR>
 nnoremap <Leader>O :<C-u>for i in range(v:count1) \| call append(line('.')-1, '') \| endfor<CR>
 
@@ -153,6 +139,40 @@ nnoremap <Leader>ev :vsplit $MYVIMRC<CR>
 nnoremap <Leader>sv :source $MYVIMRC<CR>
 nnoremap <Leader>egv :vsplit $MYGVIMRC<CR>
 nnoremap <Leader>sgv :source $MYGVIMRC<CR>
+
+if has('nvim')
+  autocmd TermOpen * :startinsert
+endif
+" https://qiita.com/delphinus/items/aea16e82de2145d2a6b7
+tnoremap <ESC> <C-\><C-n>
+tnoremap <C-W><C-J>   <cmd>wincmd j<cr>
+tnoremap <C-W>j       <cmd>wincmd j<cr>
+tnoremap <C-W><C-K>   <cmd>wincmd k<cr>
+tnoremap <C-W>k       <cmd>wincmd k<cr>
+tnoremap <C-W><C-H>   <cmd>wincmd h<cr>
+tnoremap <C-W>h       <cmd>wincmd h<cr>
+tnoremap <C-W><C-L>   <cmd>wincmd l<cr>
+tnoremap <C-W>l       <cmd>wincmd l<cr>
+tnoremap <C-W>w       <cmd>wincmd w<cr>
+tnoremap <C-W><C-W>   <cmd>wincmd w<cr>
+tnoremap <C-W>W       <cmd>wincmd W<cr>
+tnoremap <C-W>t       <cmd>wincmd t<cr>
+tnoremap <C-W><C-T>   <cmd>wincmd t<cr>
+tnoremap <C-W>b       <cmd>wincmd b<cr>
+tnoremap <C-W><C-B>   <cmd>wincmd b<cr>
+tnoremap <C-W>p       <cmd>wincmd p<cr>
+tnoremap <C-W><C-P>   <cmd>wincmd p<cr>
+tnoremap <C-W>P       <cmd>wincmd P<cr>
+tnoremap <C-W>r       <cmd>wincmd r<cr>
+tnoremap <C-W><C-R>   <cmd>wincmd r<cr>
+tnoremap <C-W>R       <cmd>wincmd R<cr>
+tnoremap <C-W>x       <cmd>wincmd x<cr>
+tnoremap <C-W><C-X>   <cmd>wincmd x<cr>
+tnoremap <C-W>K       <cmd>wincmd K<cr>
+tnoremap <C-W>J       <cmd>wincmd J<cr>
+tnoremap <C-W>H       <cmd>wincmd H<cr>
+tnoremap <C-W>L       <cmd>wincmd L<cr>
+tnoremap <C-W>T       <cmd>wincmd T<cr>
 
 """ Text usabiity improvement
 inoremap japp <ESC>:<C-u>set noimdisable<CR>a

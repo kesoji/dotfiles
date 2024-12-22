@@ -1,3 +1,24 @@
+" .ideavimrc is a configuration file for IdeaVim plugin. It uses
+"   the same commands as the original .vimrc configuration.
+" You can find a list of commands here: https://jb.gg/h38q75
+" Find more examples here: https://jb.gg/share-ideavimrc
+
+" Don't use Ex mode, use Q for formatting.
+map Q gq
+
+" --- Enable IdeaVim plugins https://jb.gg/ideavim-plugins
+
+" Highlight copied text
+Plug 'machakann/vim-highlightedyank'
+" Commentary plugin
+Plug 'tpope/vim-commentary'
+
+source ~/.vim/config/00_essential_setting.vim
+source ~/.vim/config/10_essential_mapping.vim
+let mapleader = ' '
+nnoremap <Leader>ev :<C-u>vsplit ~/.ideavimrc<CR>
+nnoremap <Leader>sv :<C-u>source ~/.ideavimrc<CR>
+
 " https://qiita.com/sei40kr/items/09e7e92eb7686f9b5950
 set multiple-cursors
 set surround
@@ -7,7 +28,7 @@ set clipboard+=unnamed        "clipboard options
 "set gdefault         "the :substitute flag 'g' is default on
 "set history          "number of command-lines that are remembered
 set hlsearch         "highlight matches with last search pattern
-set ignorecase       "ignore case in search patterns
+"set ignorecase       "ignore case in search patterns
 "set iskeyword        "defines keywords for commands like 'w', '*', etc.
 set incsearch        "show where search pattern typed so far matches
 "set matchpairs       "pairs of characters that % can match
@@ -17,12 +38,12 @@ set incsearch        "show where search pattern typed so far matches
 "set                    "the cursor
 "set scroll           "lines to scroll with CTRL-U and CTRL-D
 "set scrolljump       "minimum number of lines to scroll
-"set scrolloff        "minimum nr. of lines above and below cursor
+set scrolloff=5        "minimum nr. of lines above and below cursor
 "set selection        "what type of selection to use
 "set showmode         "message on status line to show current mode
 "set sidescroll       "minimum number of columns to scroll horizontal
 "set sidescrolloff    "min. nr. of columns to left and right of cursor
-"set smartcase        "no ignore case when pattern has uppercase
+set smartcase        "no ignore case when pattern has uppercase
 "set timeout          "use timeout for mapped key sequences
 "set timeoutlen       "time that is waited for a mapped key sequence
 "set undolevels       "maximum number of changes that can be undone
@@ -30,43 +51,61 @@ set incsearch        "show where search pattern typed so far matches
 set visualbell       "use visual bell instead of beeping
 "set wrapscan         "searches wrap around the end of the file
 
-let mapleader = ' '
-source ~/.vim/config/01_common_mapping.vim
+set matchit
 
-nnoremap <Leader>ev :<C-u>vsplit ~/.ideavimrc<CR>
-nnoremap <Leader>sv :<C-u>source ~/.ideavimrc<CR>
+set easymotion
+nmap <Leader>f <Plug>(easymotion-f)
+nmap <Leader>t <Plug>(easymotion-t)
+nmap <Leader>F <Plug>(easymotion-F)
+nmap <Leader>T <Plug>(easymotion-T)
+
+
+vmap v <Action>(EditorSelectWord)
+vmap <S-v> <Action>(EditorUnSelectWord)
 
 "" IDE actions
-"nnoremap / :action Find<CR>
-"nnoremap n :action FindNext<CR>
-"nnoremap N :action FindPrevious<CR>
-"nnoremap U :action $Redo<CR>
-"nnoremap ; :action AceJumpAction<CR>
-nnoremap <Space>o :action GotoClass<CR>
-nnoremap <Space>O :action GotoFile<CR>
-"nnoremap <Space>d :action CloseContent<CR>
-"nnoremap <Space>j :action RecentFiles<CR>
-"nnoremap <Space>k :action FileStructurePopup<CR>
-"nnoremap <Space>h :action QuickJavaDoc<CR>
-nnoremap [c :<C-u>action VcsShowPrevChangeMarker<CR>
-nnoremap ]c :<C-u>action VcsShowNextChangeMarker<CR>
-nnoremap [q :<C-u>action GotoPreviousError<CR>
-nnoremap ]q :<C-u>action GotoNextError<CR>
-nnoremap gr :<C-u>action GotoDeclaration<CR>
-nnoremap gi :<C-u>action GotoImplementation<CR>
+"nmap / <Action>(Find)
+"nmap n <Action>(FindNext)
+"nmap N <Action>(FindPrevious)
+"nmap U <Action>($Redo)
+"nmap ; <Action>(AceJumpAction)
+nmap <Space>o <Action>GotoClass)
+nmap <Space>O <Action>(GotoFile)
+"nmap <Space>d <Action>(CloseContent)
+"nmap <Space>j <Action>(RecentFiles)
+"nmap <Space>k <Action>(FileStructurePopup)
+"nmap <Space>h <Action>(QuickJavaDoc)
+nmap [c <Action>(VcsShowPrevChangeMarker)
+nmap ]c <Action>(VcsShowNextChangeMarker)
+nmap [q <Action>(GotoPreviousError)
+nmap ]q <Action>(GotoNextError)
+nmap gr <Action>(GotoDeclaration)
+nmap gi <Action>(GotoImplementation)
+nmap <Leader>G <Action>(Generate)
+nmap <Leader>r <Action>(Refactorings.QuickListPopupAction)
+"nmap <Leader>k <Action>(ShowErrorDescription)
+nmap <Leader>k <Action>(ShowHoverInfo)
+nmap <Leader>a <Action>(GotoAction)
 
 "" Tab Navigation
-nnoremap H gT
-nnoremap L gt
-nnoremap <C-w>m :action MoveEditorToOppositeTabGroup<CR>
+nmap H gT
+nmap L gt
+nmap <C-w>m <Action>(MoveEditorToOppositeTabGroup)
+nmap <C-w><C-m> <Action>(MoveEditorToOppositeTabGroup)
+nmap <C-w>n gt
+nmap <C-w>p gT
+nmap <C-w><C-n> gt
+nmap <C-w><C-p> gT
 
-"nnoremap <C-o> :<C-u>action Back<CR>s
-"nnoremap <C-i> :<C-u>action Forward<CR>
-nnoremap <C-S-o> <C-o>
-nnoremap <C-S-i> <C-i>
+"nmap <C-o> <Action>(Back)
+"nmap <C-i> <Action>(Forward)
+nmap <C-S-o> <C-o>
+nmap <C-S-i> <C-i>
 
-nnoremap <Space><Space> :<C-u>action AceAction<CR>
+nmap s <Action>(AceAction)
+nmap S <Action>(AceTargetAction)
+"map g <Action>(AceLineAction)
+"nmap S <Action>(AceBackwardAction)
+"nmap s <Action>(AceForwardAction)
 
-nnoremap <Space>a :<C-u>action GotoAction<CR>
-nnoremap <Space>G :<C-u>action Generate<CR>
-nnoremap <Space>r :<C-u>action Refactorings.QuickListPopupAction<CR>
+nmap gh :action Git.Add<CR>

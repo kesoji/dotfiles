@@ -2,44 +2,6 @@
 
 " Common mapping. Can be used for IdeaVim
 
-""" Editing
-"xでレジスタに入れない
-nnoremap x "_x
-
-""" 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
-nnoremap <Leader>w :<C-u>w<CR>
-nnoremap <Leader>W :<C-u>wq<CR>
-nnoremap <Leader>q :<C-u>q<CR>
-nnoremap <Leader><Leader>q :<C-u>qa<CR>
-nnoremap <Leader>Q :<C-u>q!<CR>
-nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
-
-""" ベースの動きをスワップ
-"noremap ; :
-noremap j gj
-noremap k gk
-noremap gj j
-noremap gk k
-
-"tagsジャンプの時に複数ある時は一覧表示
-"nnoremap <C-]> g<C-]>
-
-noremap + <C-a>
-noremap - <C-x>
-noremap gp "0p
-noremap gP "0P
-
-""" Moving
-noremap <Leader>h ^
-noremap <Leader>H 0
-noremap <Leader>l $
-noremap <c-i> <c-i>zz
-noremap <c-o> <c-o>zz
-
-""" <ESC>
-inoremap jj <ESC>
-inoremap jk <ESC>
-inoremap jl <ESC><Right>
 
 """ Location List / QuickFix
 """ MEMO: Use [q, ]q for QuickFix! ([l, ]l can also be used for Location List.)
@@ -48,11 +10,11 @@ nnoremap <C-p> :lp<CR>
 nnoremap <Leader>a :cclose<CR>
 nnoremap <Leader><Leader>a :lclose<CR>
 
-""" Tab mapping
-nnoremap <S-Tab> <<
+""" Tab mapping nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
 """ Search and Replace
+"" zz: カーソル位置を中央に移動, zv: フォールディングを解除
 noremap  n nzzzv
 noremap  N Nzzzv
 nnoremap / /\v
@@ -69,7 +31,7 @@ nnoremap <Space><Space> "zyiw:let @/ = '\<' . @z . '\>'<CR>:set hlsearch<CR>
 vnoremap <Space><Space> "zy:let @/ = @z<CR>:set hlsearch<CR>
 
 """ Window and Tab operation
-nnoremap s <Nop>
+"nnoremap s <Nop>
 "nnoremap sj <C-w>j
 "nnoremap sk <C-w>k
 "nnoremap sl <C-w>l
@@ -81,25 +43,25 @@ nnoremap s <Nop>
 "nnoremap sr <C-w>r
 "nnoremap s= <C-w>=
 "nnoremap sw <C-w>w
-nnoremap so <C-w>_<C-w>|
-nnoremap s> <C-w>>
-nnoremap s< <C-w><
-nnoremap s+ <C-w>+
-nnoremap s- <C-w>-
-nnoremap sO <C-w>=
-nnoremap sN :<C-u>bn<CR>
-nnoremap sP :<C-u>bp<CR>
-nnoremap sn gt
-nnoremap sp gT
-for n in range(1, 9)
-    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
-endfor
-nnoremap st :<C-u>tabnew<CR>
-nnoremap sx :<C-u>tabclose<CR>
+"nnoremap so <C-w>_<C-w>|
+"nnoremap s> <C-w>>
+"nnoremap s< <C-w><
+"nnoremap s+ <C-w>+
+"nnoremap s- <C-w>-
+"nnoremap sO <C-w>=
+"nnoremap sN :<C-u>bn<CR>
+"nnoremap sP :<C-u>bp<CR>
+"nnoremap sn gt
+"nnoremap sp gT
+"for n in range(1, 9)
+"    execute 'nnoremap <silent> s'.n  ':<C-u>tabnext'.n.'<CR>'
+"endfor
+"nnoremap st :<C-u>tabnew<CR>
+"nnoremap sx :<C-u>tabclose<CR>
 "nnoremap ss :<C-u>sp<CR>
 "nnoremap sv :<C-u>vs<CR>
-nnoremap sq :<C-u>q<CR>
-nnoremap sQ :<C-u>bd<CR>
+"nnoremap sq :<C-u>q<CR>
+"nnoremap sQ :<C-u>bd<CR>
 
 """ Utility
 nnoremap c. q:<UP><CR>
