@@ -836,8 +836,8 @@ if [[ $? -ne 0 ]] ; then
 else
     alias drmca='docker ps -aq | xargs docker rm'
     alias drmia='docker images -aq | xargs docker rmi'
-    alias dco='docker-compose'
-    alias dcolf='docker-compose logs -f'
+    alias dco='docker compose'
+    alias dcolf='docker compose logs -f'
 fi
 
 ## Git
