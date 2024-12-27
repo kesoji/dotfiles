@@ -14,7 +14,7 @@ function echo_info {
     echo -e "\e[38;5;243m$@\e[m"
 }
 function comexec() {
-    echo ">>> $1"; eval $1
+    echo_info ">>> $1"; eval $1
 }
 function cached_eval {
     CACHE_DIR=~/.local/cache/zshrc-eval
@@ -413,11 +413,13 @@ set -o emacs
 #export TERM=xterm-256color
 export XDG_CONFIG_HOME=$HOME/.config
 
-export MANPATH=$HOME/my/share/man:$MANPATH
-export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
-export LDFLAGS="-L/usr/lib64 -L$HOME/my/lib $LDFLAGS"
-export CFLAGS="-I/usr/include/openssl $CFLAGS"
-export CPPFLAGS="-I$HOME/my/include $CPPFLAGS"
+# 自前ビルドしたやつ。最近やってないのでコメントアウト
+#export MANPATH=$HOME/my/share/man:$MANPATH
+#export LD_LIBRARY_PATH=$HOME/my/lib:$LD_LIBRARY_PATH
+#export LDFLAGS="-L/usr/lib64 -L$HOME/my/lib $LDFLAGS"
+#export CFLAGS="-I/usr/include/openssl $CFLAGS"
+#export CPPFLAGS="-I$HOME/my/include $CPPFLAGS"
+
 export EDITOR=vim
 export DISPLAY=:0.0
 if [ "$(uname)" = 'Darwin' ] ; then
@@ -551,17 +553,15 @@ else
 fi
 
 # diff-highlight
-if command -v diff-highlight >/dev/null ; then
-    ln -sf ~/dotfiles/tigrc_diffhighlight ~/.tigrc
-else
+command -v diff-highlight >/dev/null
+if [[ $? -ne 0 ]] ; then
     echo_info "diff-highlight isn't installed: my-diff-highlightinstall"
     function my-diff-highlightinstall() {
-        workdir="temp_git_diffhighlightinstall"
+        workdir=$(mktemp -d)
         comexec "git clone --depth 1 https://github.com/git/git $workdir" || return
         comexec "pushd $workdir/contrib/diff-highlight" || return
         comexec "make" || return
-        comexec "sudo cp diff-highlight /usr/local/bin" || return
-        comexec "popd; rm -rf $workdir" || return
+        comexec "cp diff-highlight $HOME/my/bin" || return
     }
 fi
 
@@ -570,11 +570,10 @@ command -v git-secrets 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "git-secrets isn't installed: my-git-secretsinstall"
     function my-git-secretsinstall() {
-        workdir="temp_git_gitsecretsinstall"
+        workdir=$(mktemp -d)
         comexec "git clone --depth 1 https://github.com/awslabs/git-secrets $workdir" || return
         comexec "pushd $workdir" || return
         comexec "sudo make install" || return
-        comexec "popd; rm -rf $workdir" || return
     }
 fi
 
@@ -980,10 +979,8 @@ command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "gibo isn't installed: my-giboinstall"
     function my-giboinstall (){
-        comexec "mkdir -p ~/my/bin" || return
-        comexec "curl -L https://raw.github.com/simonwhitaker/gibo/master/gibo -so ~/my/bin/gibo" || return
-        comexec "chmod +x ~/my/bin/gibo && ~/my/bin/gibo update" || return
-        echo "install finished"
+        comexec "go install github.com/simonwhitaker/gibo@latest"
+        gibo update
     }
 fi
 
