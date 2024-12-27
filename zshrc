@@ -628,28 +628,6 @@ else
     cached_eval "direnv hook zsh"
 fi
 
-function myutils() {
-    local -a ary=(
-        "ncdu|Graphical du"
-        "htop|Replacement for top"
-    )
-    for v in $ary; do
-        commandinstalled_withdesc $v
-    done
-}
-
-function mycheck() {
-    my-php
-    my-javascript
-}
-
-function my-javascript() {
-    echo ">>> Javascript <<<"
-    local -a ary=("yarn" "node" "tsc" "tsserver" "eslint")
-    for v in $ary; do
-        commandinstalled $v
-    done
-}
 
 if [ -e /usr/share/zsh/site-functions/ ]; then
     fpath=(/usr/share/zsh/sites-functions $fpath)
@@ -952,6 +930,15 @@ function my-colortable2() {
     done
     printf " \\\e[m\n"
 }
+
+# PHP (Temp)
+if $MAC; then
+    export PATH="/opt/homebrew/opt/php@8.2/bin:$PATH"
+    export PATH="/opt/homebrew/opt/php@8.2/sbin:$PATH"
+    my-buildphptoolflags() {
+        echo LDFLAGS="-L/opt/homebrew/opt/php@8.2/lib" CPPFLAGS="-I/opt/homebrew/opt/php@8.2/include"
+    }
+fi
 
 # Haskell
 command -v stack 2>/dev/null 1>&2
