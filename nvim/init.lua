@@ -123,6 +123,16 @@ else
             config = true,
           },
           {
+            "kylechui/nvim-surround",
+            version = "*", -- Use for stability; omit to use `main` branch for the latest features
+            event = "VeryLazy",
+            config = function()
+              require("nvim-surround").setup({
+                    -- Configuration here, or leave empty to use defaults
+              })
+            end
+          },
+          {
             "nvim-neo-tree/neo-tree.nvim",
             branch = "v3.x",
             dependencies = {
@@ -136,6 +146,11 @@ else
             }
           },
           { "github/copilot.vim" },
+          { "akinsho/bufferline.nvim", version = "*", dependencies = "nvim-tree/nvim-web-devicons",
+            config = function()
+              require("bufferline").setup({})
+            end
+          },
           {
             "utilyre/barbecue.nvim",
             name = "barbecue",
