@@ -18,6 +18,7 @@ brew "neovim"
 brew "neovide"
 brew "ripgrep"
 brew "vim"
+cask "bartender"
 cask "bettertouchtool"
 cask "cursor"
 cask "discord"
@@ -28,6 +29,7 @@ cask "jetbrains-toolbox"
 cask "karabiner-elements"
 cask "obs"
 cask "obsidian"
+cask "raindropio"
 cask "rustdesk"
 cask "tailscale"
 cask "visual-studio-code"
@@ -42,4 +44,5 @@ mas "Numbers", id: 409203825
 mas "Perplexity", id: 6714467650
 mas "RunCat", id: 1429033973
 mas "The Unarchiver", id: 425424353
+mas "TickTick", id: 966085870
 mas "Xcode", id: 497799835
