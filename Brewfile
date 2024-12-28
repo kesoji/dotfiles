@@ -32,6 +32,8 @@ cask "rustdesk"
 cask "tailscale"
 cask "visual-studio-code"
 cask "warp"
+cask "windows-app"
+mas "Developer", id: 640199958
 mas "Disk Speed Test", id: 425264550
 mas "Keynote", id: 409183694
 mas "Kindle", id: 302584613
@@ -40,3 +42,4 @@ mas "Numbers", id: 409203825
 mas "Perplexity", id: 6714467650
 mas "RunCat", id: 1429033973
 mas "The Unarchiver", id: 425424353
+mas "Xcode", id: 497799835
