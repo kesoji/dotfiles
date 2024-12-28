@@ -36,18 +36,19 @@ else
       {
         -- Configure any other settings here. See the documentation for more details.
         -- colorscheme that will be used when installing plugins.
-        install = { colorscheme = { "tokyonight" } },
+        install = { colorscheme = { "ayu-mirage" } },
         -- automatically check for plugin updates
         checker = { enabled = true },
         spec = {
           {
+            "Shatur/neovim-ayu",
+            lazy = false,
+            priority = 1000,
+          },
+          {
             "folke/tokyonight.nvim",
             lazy = false, -- make sure we load this during startup if it is your main colorscheme
             priority = 1000, -- make sure to load this before all the other start plugins
-            config = function()
-              -- load the colorscheme here
-              vim.cmd([[colorscheme tokyonight]])
-            end,
           },
           {
             'ggandor/leap.nvim',
@@ -147,7 +148,7 @@ else
               -- configurations go here
             },
             -- 効いていないきがする
-            config = function() require('barbecue').setup({ theme = 'tokyonight' }) end
+            config = function() require('barbecue').setup({ theme = 'ayu-mirage' }) end
           },
           {
             "williamboman/mason.nvim",

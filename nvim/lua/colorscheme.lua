@@ -1,6 +1,10 @@
 vim.cmd [[
 try
-  colorscheme tokyonight
+  colorscheme ayu-mirage
+  "colorscheme ayu-light
+  "colorscheme ayu-dark
+  "colorscheme ayu
+  "colorscheme tokyonight
   "colorscheme tokyonight-night
   "colorscheme tokyonight-storm
   "colorscheme tokyonight-day
