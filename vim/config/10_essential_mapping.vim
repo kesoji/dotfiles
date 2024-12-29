@@ -21,6 +21,9 @@ nnoremap <Leader><Leader>q :<C-u>qa<CR>
 nnoremap <Leader>Q :<C-u>q!<CR>
 nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
 
+""" バッファ
+nnoremap <Leader>x :<C-u>bd<CR>
+
 """ ベースの動きをスワップ
 "noremap ; :
 noremap j gj
