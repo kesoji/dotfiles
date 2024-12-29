@@ -102,13 +102,30 @@ else
           { "<leader>fm", "<cmd>Telescope oldfiles<cr>", desc = "Find recent files" },
         },
       },
-      { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+      {
+        "nvim-treesitter/nvim-treesitter",
+        build = ":TSUpdate",
+        config = function()
+          require("nvim-treesitter.configs").setup({
+            highlight = {
+              enable = true,
+            },
+            incremental_selection = {
+              enable = true,
+              keymaps = {
+                init_selection = "vv",
+                node_incremental = "v",
+                scope_incremental = "V",
+                node_decremental = "gv",
+              },
+            },
+          })
+        end,
+      },
       {
         "gen740/SmoothCursor.nvim",
         config = function()
-          require("smoothcursor").setup({
-            fancy = { enable = true },
-          })
+          require("smoothcursor").setup({ fancy = { enable = true } })
         end,
       },
       {
@@ -376,6 +393,8 @@ vim.cmd("autocmd! TermOpen term://*toggleterm#* lua set_terminal_keymaps()")
 vim.keymap.set("n", "gd", "<cmd>:lua vim.lsp.buf.definition()<CR>")
 
 vim.keymap.set("n", "<leader>ev", "<cmd>:e $MYVIMRC<CR>")
+-- なんで効かないの
+vim.keymap.set("n", "<C-/>", "gcc", { noremap = false })
 
 vim.keymap.set("n", "<leader>p", function()
   vim.lsp.buf.format({ async = true })
