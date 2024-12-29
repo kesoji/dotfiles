@@ -49,6 +49,21 @@ else
         lazy = false, -- make sure we load this during startup if it is your main colorscheme
         priority = 1000, -- make sure to load this before all the other start plugins
       },
+      -- 詰め合わせ。
+      {
+        "echasnovski/mini.nvim",
+        version = "*",
+        config = function()
+          require("mini.ai").setup()
+          require("mini.animate").setup()
+          require("mini.bracketed").setup()
+          require("mini.notify").setup()
+          require("mini.operators").setup()
+          require("mini.pairs").setup()
+          require("mini.starter").setup()
+          require("mini.statusline").setup()
+        end,
+      },
       {
         "ggandor/leap.nvim",
         lazy = false, -- Lazyが先に起動したときにSがぶつかるので..
@@ -59,6 +74,7 @@ else
       },
       {
         "j-hui/fidget.nvim",
+        version = "*",
         opts = {
           -- options
           logger = {
@@ -164,6 +180,25 @@ else
         },
       },
       { "github/copilot.vim" },
+      {
+        "CopilotC-Nvim/CopilotChat.nvim",
+        dependencies = {
+          { "github/copilot.vim" }, -- or zbirenbaum/copilot.lua
+          { "nvim-lua/plenary.nvim", branch = "master" }, -- for curl, log and async functions
+        },
+        build = "make tiktoken", -- Only on MacOS or Linux
+        opts = {
+          -- See Configuration section for options
+        },
+        keys = {
+          { "<leader>cc", "<cmd>CopilotChatOpen<cr>" },
+          { "<leader>ce", "<cmd>CopilotChatExplain<cr>" },
+          { "<leader>co", "<cmd>CopilotChatOptimize<cr>" },
+          { "<leader>cr", "<cmd>CopilotChatReview<cr>" },
+          { "<leader>cf", "<cmd>CopilotChatFix<cr>" },
+        },
+        -- See Commands section for default commands if you want to lazy load on them
+      },
       {
         "akinsho/bufferline.nvim",
         version = "*",
