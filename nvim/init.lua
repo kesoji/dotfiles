@@ -57,6 +57,9 @@ else
           require("mini.ai").setup()
           require("mini.animate").setup()
           require("mini.bracketed").setup()
+          require("mini.completion").setup() -- nvim-cmpにしたいかも？
+          require("mini.cursorword").setup()
+          require("mini.indentscope").setup()
           require("mini.notify").setup()
           require("mini.operators").setup()
           require("mini.pairs").setup()
