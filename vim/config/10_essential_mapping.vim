@@ -36,8 +36,8 @@ noremap gk k
 
 noremap + <C-a>
 noremap - <C-x>
-noremap gp "0p
-noremap gP "0P
+""noremap gp "0p -- Vpで良くなったと思う
+""noremap gP "0P -- VPで良くなったと思う
 
 """ Moving
 noremap <Leader>h ^
