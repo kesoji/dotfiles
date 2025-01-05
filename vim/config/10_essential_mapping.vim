@@ -14,22 +14,26 @@ inoremap jl <ESC><Right>
 nnoremap x "_x
 
 """ 終了 (TIPS: <C-u>は、 先頭まで削除。 基本的には範囲指定が混入した際の対処)
-nnoremap <Leader>w :<C-u>w<CR>
-nnoremap <Leader>W :<C-u>wq<CR>
-nnoremap <Leader>q :<C-u>q<CR>
-nnoremap <Leader><Leader>q :<C-u>qa<CR>
-nnoremap <Leader>Q :<C-u>q!<CR>
-nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
+"nnoremap <Leader>w :<C-u>w<CR>
+"nnoremap <Leader>W :<C-u>wq<CR>
+"nnoremap <Leader>q :<C-u>q<CR>
+"nnoremap <Leader><Leader>q :<C-u>qa<CR>
+"nnoremap <Leader>Q :<C-u>q!<CR>
+"nnoremap <Leader><Leader>Q :<C-u>qa!<CR>
 
 """ バッファ
-nnoremap <Leader>x :<C-u>bd<CR>
+"nnoremap <Leader>x :<C-u>bd<CR>
+nnoremap <C-n> :bn<CR>
+nnoremap <C-p> :bp<CR>
+
+""" ウィンドウ
 
 """ ベースの動きをスワップ
 "noremap ; :
-noremap j gj
-noremap k gk
-noremap gj j
-noremap gk k
+"noremap j gj
+"noremap k gk
+"noremap gj j
+"noremap gk k
 
 "tagsジャンプの時に複数ある時は一覧表示
 "nnoremap <C-]> g<C-]>

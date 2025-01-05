@@ -196,11 +196,11 @@ require("lazy").setup({
         -- See Configuration section for options
       },
       keys = {
-        { "<leader>cc", "<cmd>CopilotChatOpen<cr>" },
-        { "<leader>ce", "<cmd>CopilotChatExplain<cr>" },
-        { "<leader>co", "<cmd>CopilotChatOptimize<cr>" },
-        { "<leader>cr", "<cmd>CopilotChatReview<cr>" },
-        { "<leader>cf", "<cmd>CopilotChatFix<cr>" },
+        { "<leader>cc", "<cmd>CopilotChatOpen<cr>", mode = { "n", "v" } },
+        { "<leader>ce", "<cmd>CopilotChatExplain<cr>", mode = { "n", "v" } },
+        { "<leader>co", "<cmd>CopilotChatOptimize<cr>", mode = { "n", "v" } },
+        { "<leader>cr", "<cmd>CopilotChatReview<cr>", mode = { "n", "v" } },
+        { "<leader>cf", "<cmd>CopilotChatFix<cr>", mode = { "n", "v" } },
       },
       -- See Commands section for default commands if you want to lazy load on them
     },
