@@ -371,6 +371,7 @@ HISTSIZE=20000
 SAVEHIST=20000
 setopt share_history
 setopt histignorealldups
+setopt histignorespace
 # fzf may override these settings
 bindkey '^r' history-incremental-pattern-search-backward
 bindkey '^s' history-incremental-pattern-search-forward
@@ -855,8 +856,6 @@ function cssh() {
 alias ssh='cssh '
 
 # fzf
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
 command -v fzf 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "fzf isn't installed: my-fzfinstall"
@@ -865,6 +864,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "~/.fzf/install" || return
     }
 else
+    source <(fzf --zsh)
     command -v rg 2>/dev/null 1>&2
     if [[ $? -eq 0 ]] ; then
         export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
