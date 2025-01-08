@@ -568,6 +568,7 @@ if [[ $? -ne 0 ]] ; then
         comexec "pushd $workdir/contrib/diff-highlight" || return
         comexec "make" || return
         comexec "cp diff-highlight $HOME/my/bin" || return
+        comexec "popd" || return
     }
 fi
 
