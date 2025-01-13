@@ -857,6 +857,7 @@ function cssh() {
 alias ssh='cssh '
 
 # fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 command -v fzf 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "fzf isn't installed: my-fzfinstall"
