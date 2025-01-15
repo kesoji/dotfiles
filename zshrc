@@ -783,24 +783,6 @@ else
     fi
 fi
 
-## saml2aws
-command -v saml2aws 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "saml2aws isn't installed: my-saml2awsinstall"
-    function my-saml2awsinstall() {
-        if $MAC; then
-            comexec "$MAC_INSTALLER saml2aws"
-        else
-            CURRENT_VERSION=$(curl -Ls https://api.github.com/repos/Versent/saml2aws/releases/latest | grep 'tag_name' | cut -d'v' -f2 | cut -d'"' -f1)
-            comexec "wget -c https://github.com/Versent/saml2aws/releases/download/v${CURRENT_VERSION}/saml2aws_${CURRENT_VERSION}_linux_amd64.tar.gz -O - | tar -xzv -C ~/my/bin"
-            comexec "chmod u+x ~/my/bin/saml2aws"
-            comexec "hash -r"
-        fi
-    }
-fi
-alias saml2awsbrowser='SAML2AWS_IDP_PROVIDER=Browser saml2aws'
-
-
 ## Docker
 command -v docker 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
