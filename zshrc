@@ -503,6 +503,7 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     cached_eval "gh completion -s zsh"
+    alias ghprd='gh pr create --draft --fill'
 fi
 
 # bat
