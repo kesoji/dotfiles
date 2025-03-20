@@ -96,6 +96,8 @@
 	path = ~/.gitconfig.local
 [pull]
 	rebase = true
+[rebase]
+    autostash = true
 [ghq]
 	root = ~/go/src
 [filter "lfs"]
