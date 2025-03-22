@@ -25,3 +25,8 @@ set smartcase         " default: off / 大文字が入っている時はCase Sen
 set infercase         " default: off / 補完時に大文字小文字を区別しない
 
 let mapleader = "\<Space>"
+
+""" <ESC> / vscode-neovimの都合上、こちらに書く
+inoremap jj <ESC>
+inoremap jk <ESC>
+inoremap jl <ESC><Right>

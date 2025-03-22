@@ -4,11 +4,6 @@
 " Essential Mapping / Used for other text editor's plugin
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-""" <ESC>
-inoremap jj <ESC>
-inoremap jk <ESC>
-inoremap jl <ESC><Right>
-
 """ Editing
 "xでレジスタに入れない
 nnoremap x "_x

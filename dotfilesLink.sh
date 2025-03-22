@@ -36,9 +36,11 @@ ln -sf ~/dotfiles/dotconfig/rsync ~/.config/
 ln -sf ~/dotfiles/dotconfig/wezterm ~/.config/
 mkdir -p ~/.config/alacritty
 ln -sf ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
+mkdir -p ~/.config/goneovim
+ln -sf ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
 
 # vim-plug
-if [ ! -s ~/.vim/autoload/plug.vim ] ; then
-    curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
-        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+if [ ! -s ~/.vim/autoload/plug.vim ]; then
+  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 fi
