@@ -694,6 +694,7 @@ alias ts="tailscale"
 alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
+alias dpython='docker run --workdir=/work -v$PWD:/work --rm -it python:3.13-slim bash'
 alias clswp='rm -rf ~/.vim/swp/*'
 alias nanounixt='date +%s%3N'
 alias unixt='date +%s'

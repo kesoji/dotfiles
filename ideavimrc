@@ -109,3 +109,5 @@ nmap S <Action>(AceTargetAction)
 "nmap s <Action>(AceForwardAction)
 
 nmap gh :action Git.Add<CR>
+
+nmap <C-e> <Action>(ActivateProjectToolWindow)
