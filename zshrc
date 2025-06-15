@@ -518,7 +518,10 @@ if [[ $? -ne 0 ]] ; then
         fi
     }
 else
-    alias cat='bat --theme=Dracula'
+    # JunieがPagerでバグる..
+    if [[ "$TERM_PROGRAM" != "intellij" ]] ; then
+        alias cat='bat --theme=Dracula'
+    fi
 fi
 
 # lazygit
@@ -695,6 +698,7 @@ alias bins='bundle install'
 alias be='bundle exec'
 alias browsh='docker run --rm -it browsh/browsh'
 alias dpython='docker run --workdir=/work -v$PWD:/work --rm -it python:3.13-slim bash'
+alias dphp='docker run --workdir=/work -v$PWD:/work --rm -it php:8.2-cli bash'
 alias clswp='rm -rf ~/.vim/swp/*'
 alias nanounixt='date +%s%3N'
 alias unixt='date +%s'
@@ -1301,3 +1305,4 @@ helpme
 
 # Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
+alias claude="/Users/kesoji/.claude/local/claude"

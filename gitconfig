@@ -14,6 +14,8 @@
 	autocrlf = input
 	filemode = false
 	symlinks = true
+[init]
+  defaultBranch = main
 [commit]
 	verbose = true
 	#gpgsign = true
