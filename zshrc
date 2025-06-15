@@ -663,6 +663,8 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias clc="claude"
+alias ncu="npx npm-check-updates"
 alias ezsh="$EDITOR ~/.zshrc"
 alias reload='exec $SHELL'
 alias :q='exit'
