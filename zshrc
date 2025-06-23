@@ -1307,4 +1307,5 @@ helpme
 
 # Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
-alias claude="/Users/kesoji/.claude/local/claude"
+
+alias claude="/Users/kesoji/.config/claude/local/claude"
