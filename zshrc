@@ -1309,3 +1309,5 @@ helpme
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
 
 alias claude="/Users/kesoji/.config/claude/local/claude"
+
+export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
