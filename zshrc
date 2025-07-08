@@ -1,5 +1,6 @@
-# Q pre block. Keep at the top of this file.
+# Amazon Q pre block. Keep at the top of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
+# Q pre block. Keep at the top of this file.
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
     zcompile ~/.zshrc
 fi
@@ -65,6 +66,9 @@ if $MAC; then
         else
             comexec "$MAC_INSTALLER gsed"
         fi
+        if [[ -e "$HOMEBREW_PREFIX/opt/mysql-client" ]]; then
+          export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+        fi
     fi
 fi
 
@@ -118,6 +122,7 @@ fi
 
 export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
 export PATH=$HOME/.local/share/flutter/bin:$PATH
+
 
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
     # If you come from bash you might have to change your $PATH.
@@ -663,6 +668,7 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias claude="/Users/kesoji/.config/claude/local/claude"
 alias clc="claude"
 alias ncu="npx npm-check-updates"
 alias ezsh="$EDITOR ~/.zshrc"
@@ -718,11 +724,6 @@ function create-laravel-dev-container() {
     code $dir
 }
 alias laraveldevcontainer='create-laravel-dev-container'
-
-function helpme() {
-    echo ">>> Help <<<"
-    echo "最近作ったコマンド: ezsh"
-}
 
 function aws-list-ec2() {
     aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
@@ -1303,11 +1304,5 @@ export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
 
 
-helpme
-
-# Q post block. Keep at the bottom of this file.
+# Amazon Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
-
-alias claude="/Users/kesoji/.config/claude/local/claude"
-
-export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"

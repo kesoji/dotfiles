@@ -3,7 +3,9 @@
     "allow": [
       "Bash(make test:*)",
       "Bash(pip install:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(chmod:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }
