@@ -756,8 +756,10 @@ if [[ $? -ne 0 ]] ; then
 else
     alias tf='terraform'
     alias tfa='terraform apply'
+    alias tfap='terraform apply --parallelism=50'
     alias tfanor='terraform apply -refresh=false'
     alias tfp='terraform plan'
+    alias tfpp='terraform plan --parallelism=50'
     alias tfpnor='terraform plan -refresh=false'
     alias tfd='terraform destroy'
     alias tfi='terraform import'
@@ -765,8 +767,6 @@ else
     alias tfwl='terraform workspace list'
     alias tfws='terraform workspace select'
     alias tfi='terraform import'
-    export TF_CLI_ARGS_plan="--parallelism=40"
-    export TF_CLI_ARGS_apply="--parallelism=40"
 fi
 
 ## AWS CLI

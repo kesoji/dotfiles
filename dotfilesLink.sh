@@ -38,6 +38,8 @@ mkdir -p ~/.config/alacritty
 ln -sf ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 mkdir -p ~/.config/goneovim
 ln -sf ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
+mkdir -p ~/.config/ghostty
+ln -sf ~/dotfiles/ghostty ~/.config/ghostty/config
 
 # vim-plug
 if [ ! -s ~/.vim/autoload/plug.vim ]; then
