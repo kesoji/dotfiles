@@ -1,45 +1,63 @@
 #!/bin/sh
 
+# Function to create symlink only if it doesn't exist or points to different target
+safe_ln() {
+    local source="$1"
+    local target="$2"
+    
+    # If target doesn't exist or is not a symlink, create it
+    if [ ! -L "$target" ]; then
+        ln -sf "$source" "$target"
+        return
+    fi
+    
+    # If target exists and is a symlink, check if it points to the correct source
+    local current_target=$(readlink "$target")
+    if [ "$current_target" != "$source" ]; then
+        ln -sf "$source" "$target"
+    fi
+}
+
 # vim
 mkdir -p ~/.vim
 mkdir -p ~/.vim/backup
 mkdir -p ~/.vim/swp
 mkdir -p ~/.vim/undo
-ln -sf ~/dotfiles/vimrc ~/.vimrc
-ln -sf ~/dotfiles/gvimrc ~/.gvimrc
-ln -sf ~/dotfiles/ideavimrc ~/.ideavimrc
-ln -sf ~/dotfiles/vim/config ~/.vim/
-ln -sf ~/dotfiles/vim/rc ~/.vim/
-ln -sf ~/dotfiles/vim/snippets ~/.vim/
-ln -sf ~/dotfiles/vim/after ~/.vim/
-ln -sf ~/dotfiles/vim/memo ~/.vim/
-ln -sf ~/dotfiles/vim/template ~/.vim/
+safe_ln ~/dotfiles/vimrc ~/.vimrc
+safe_ln ~/dotfiles/gvimrc ~/.gvimrc
+safe_ln ~/dotfiles/ideavimrc ~/.ideavimrc
+safe_ln ~/dotfiles/vim/config ~/.vim/config
+safe_ln ~/dotfiles/vim/rc ~/.vim/rc
+safe_ln ~/dotfiles/vim/snippets ~/.vim/snippets
+safe_ln ~/dotfiles/vim/after ~/.vim/after
+safe_ln ~/dotfiles/vim/memo ~/.vim/memo
+safe_ln ~/dotfiles/vim/template ~/.vim/template
 # neovim
-ln -sf ~/dotfiles/nvim ~/.config/
+safe_ln ~/dotfiles/nvim ~/.config/nvim
 
 # others
-ln -sf ~/dotfiles/tmux.conf ~/.tmux.conf
-ln -sf ~/dotfiles/gitconfig ~/.gitconfig
-ln -sf ~/dotfiles/gitignore_global ~/.gitignore_global
-ln -sf ~/dotfiles/zshrc ~/.zshrc
-ln -sf ~/dotfiles/zshenv ~/.zshenv
-ln -sf ~/dotfiles/sshrc ~/.sshrc
-ln -sf ~/dotfiles/tigrc ~/.tigrc
-ln -sf ~/dotfiles/inputrc ~/.inputrc
-ln -sf ~/dotfiles/globalrc ~/.globalrc
-ln -sf ~/dotfiles/irbrc ~/.irbrc
-ln -sf ~/dotfiles/sshrc.d ~/.sshrc.d
+safe_ln ~/dotfiles/tmux.conf ~/.tmux.conf
+safe_ln ~/dotfiles/gitconfig ~/.gitconfig
+safe_ln ~/dotfiles/gitignore_global ~/.gitignore_global
+safe_ln ~/dotfiles/zshrc ~/.zshrc
+safe_ln ~/dotfiles/zshenv ~/.zshenv
+safe_ln ~/dotfiles/sshrc ~/.sshrc
+safe_ln ~/dotfiles/tigrc ~/.tigrc
+safe_ln ~/dotfiles/inputrc ~/.inputrc
+safe_ln ~/dotfiles/globalrc ~/.globalrc
+safe_ln ~/dotfiles/irbrc ~/.irbrc
+safe_ln ~/dotfiles/sshrc.d ~/.sshrc.d
 
 # .config
 mkdir -p ~/.config
-ln -sf ~/dotfiles/dotconfig/rsync ~/.config/
-ln -sf ~/dotfiles/dotconfig/wezterm ~/.config/
+safe_ln ~/dotfiles/dotconfig/rsync ~/.config/rsync
+safe_ln ~/dotfiles/dotconfig/wezterm ~/.config/wezterm
 mkdir -p ~/.config/alacritty
-ln -sf ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
+safe_ln ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 mkdir -p ~/.config/goneovim
-ln -sf ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
+safe_ln ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
 mkdir -p ~/.config/ghostty
-ln -sf ~/dotfiles/ghostty ~/.config/ghostty/config
+safe_ln ~/dotfiles/ghostty ~/.config/ghostty/config
 
 # vim-plug
 if [ ! -s ~/.vim/autoload/plug.vim ]; then
