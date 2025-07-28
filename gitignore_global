@@ -1,6 +1,7 @@
 GTAGS
 GRTAGS
 GPATH
+**/.claude/settings.local.json
 .python-version
 git-worktrees/*
 .envrc

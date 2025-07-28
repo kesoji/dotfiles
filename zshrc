@@ -668,8 +668,8 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
-alias claude="/Users/kesoji/.config/claude/local/claude"
 alias clc="claude"
+alias marp="npx @marp-team/marp-cli@latest"
 alias ncu="npx npm-check-updates"
 alias ezsh="$EDITOR ~/.zshrc"
 alias reload='exec $SHELL'
@@ -1306,3 +1306,5 @@ export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
 
 # Amazon Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
+
+alias claude="/Users/kesoji/.claude/local/claude"
