@@ -3,7 +3,8 @@
     "allow": [
       "Bash(chmod:*)",
       "Bash(python3:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

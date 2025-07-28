@@ -59,6 +59,19 @@ safe_ln ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
 mkdir -p ~/.config/ghostty
 safe_ln ~/dotfiles/ghostty ~/.config/ghostty/config
 
+# claude
+mkdir -p ~/.claude
+safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
+if [ -d ~/dotfiles/claude/commands ]; then
+    mkdir -p ~/.claude/commands
+    for cmd_file in ~/dotfiles/claude/commands/*; do
+        if [ -f "$cmd_file" ]; then
+            cmd_name=$(basename "$cmd_file")
+            safe_ln "$cmd_file" ~/.claude/commands/"$cmd_name"
+        fi
+    done
+fi
+
 # vim-plug
 if [ ! -s ~/.vim/autoload/plug.vim ]; then
   curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
