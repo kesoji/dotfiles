@@ -258,7 +258,7 @@ function my-neoviminstall() {
     arch=$(uname -m)
     case $arch in
         x86_64)
-            arch_name="linux64"
+            arch_name="linux-x86_64"
             ;;
         aarch64)
             arch_name="linux-arm64"
