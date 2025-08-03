@@ -229,7 +229,7 @@ if [[ -d "$HOME/.oh-my-zsh" ]]; then
 else
     echo_info "oh-my-zsh isn't installed: my-ohmyzshinstall"
     function my-ohmyzshinstall() {
-        comexec "git clone https://github.com/ohmyzsh/ohmyzsh $HOME/.oh-my-zsh"
+        comexec 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
     }
 fi
 
@@ -1294,8 +1294,10 @@ if (which zprof > /dev/null) ;then
   zprof | less
 fi
 
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-export PATH=$JAVA_HOME/bin:$PATH
+if [[ -e /usr/libexec/java_home ]]; then
+    export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+    export PATH=$JAVA_HOME/bin:$PATH
+fi
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 #export SDKMAN_DIR="$HOME/.sdkman"
