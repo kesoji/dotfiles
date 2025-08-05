@@ -668,6 +668,7 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+alias claude="/Users/kesoji/.claude/local/claude"
 alias clc="claude"
 alias marp="npx @marp-team/marp-cli@latest"
 alias ncu="npx npm-check-updates"
@@ -1033,6 +1034,28 @@ else
     alias fd='fdfind'
 fi
 
+# ffmpeg
+ffmpeg_compress720p() {
+    local input="$1"
+    if [[ -z "$input" ]]; then
+        echo "Usage: $0 <input_file>"
+        return 1
+    fi
+    
+    if [[ ! -f "$input" ]]; then
+        echo "Error: File '$input' not found"
+        return 1
+    fi
+    
+    local output="${input%.*}_720p_2mbps.${input##*.}"
+    
+    ffmpeg -i "$input" \
+        -vf "scale=min(1280\,iw):min(720\,ih):force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" \
+        -c:v libx264 -b:v 2M -maxrate 2M -bufsize 4M \
+        -c:a aac -b:a 128k \
+        "$output"
+}
+
 
 # atcoder-tools
 command -v atcoder-tools 2>/dev/null 1>&2
@@ -1309,4 +1332,3 @@ export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
 # Amazon Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
 
-alias claude="/Users/kesoji/.claude/local/claude"
