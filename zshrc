@@ -1329,6 +1329,109 @@ export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
 
 
+function 2ndapprove() {
+    if [ -z "$1" ]; then
+        echo "Usage: 2ndapprove <GitHub PR URL>"
+        return 1
+    fi
+
+    # Extract repository info and PR number from URL
+    local pr_url="$1"
+    local repo_info
+    local pr_number
+    
+    # Handle both full PR URLs and PR file URLs (/files, /commits, etc.)
+    if [[ "$pr_url" =~ github\.com/([^/]+)/([^/]+)/pull/([0-9]+) ]]; then
+        local owner="${match[1]}"
+        local repo="${match[2]}"
+        pr_number="${match[3]}"
+        repo_info="${owner}/${repo}"
+    else
+        echo "Error: Invalid GitHub PR URL format"
+        return 1
+    fi
+
+    echo "Processing PR #${pr_number} in ${repo_info}..."
+
+    # 1. Approve the PR
+    echo "Approving PR..."
+    gh pr review "$pr_number" --repo "$repo_info" --approve || {
+        echo "Error: Failed to approve PR"
+        return 1
+    }
+
+    # 2. Get PR author and current assignees info
+    local pr_data
+    pr_data=$(gh pr view "$pr_number" --repo "$repo_info" --json author,assignees,labels) || {
+        echo "Error: Failed to get PR data"
+        return 1
+    }
+
+    local pr_author
+    pr_author=$(echo "$pr_data" | jq -r '.author.login')
+
+    # 3. Get all reviewers who have approved (excluding current user)
+    local current_user
+    current_user=$(gh api user --jq '.login')
+    
+    local approved_reviewers
+    approved_reviewers=$(gh pr view "$pr_number" --repo "$repo_info" --json reviews | \
+        jq -r --arg current_user "$current_user" \
+        '.reviews[] | select(.state == "APPROVED" and .author.login != $current_user) | .author.login' | \
+        sort -u | tr '\n' ' ')
+
+    # 4. Remove all current assignees
+    local current_assignees
+    current_assignees=$(echo "$pr_data" | jq -r '.assignees[].login' | tr '\n' ',')
+    current_assignees=${current_assignees%,}  # Remove trailing comma
+    
+    if [ -n "$current_assignees" ]; then
+        echo "Removing current assignees: $current_assignees"
+        gh pr edit "$pr_number" --repo "$repo_info" --remove-assignee "$current_assignees" || {
+            echo "Warning: Failed to remove assignees"
+        }
+    fi
+
+    # 5. Add PR author and approved reviewers as assignees
+    local new_assignees="$pr_author"
+    if [ -n "$approved_reviewers" ]; then
+        # Convert space-separated to comma-separated
+        local formatted_reviewers=$(echo "$approved_reviewers" | tr ' ' ',')
+        new_assignees="$new_assignees,$formatted_reviewers"
+    fi
+    new_assignees=${new_assignees%,}  # Remove trailing comma
+    
+    if [ -n "$new_assignees" ]; then
+        echo "Adding assignees: $new_assignees"
+        gh pr edit "$pr_number" --repo "$repo_info" --add-assignee "$new_assignees" || {
+            echo "Warning: Failed to add assignees"
+        }
+    fi
+
+    # 6. Remove labels containing "2nd"
+    local labels_to_remove
+    labels_to_remove=$(echo "$pr_data" | jq -r '.labels[] | select(.name | contains("2nd")) | .name')
+    
+    if [ -n "$labels_to_remove" ]; then
+        echo "Removing labels containing '2nd'..."
+        while IFS= read -r label; do
+            if [ -n "$label" ]; then
+                gh pr edit "$pr_number" --repo "$repo_info" --remove-label "$label" || {
+                    echo "Warning: Failed to remove label $label"
+                }
+            fi
+        done <<< "$labels_to_remove"
+    fi
+
+    # 7. Add "CanBeMerged" label
+    echo "Adding 'CanBeMerged' label..."
+    gh pr edit "$pr_number" --repo "$repo_info" --add-label "CanBeMerged" || {
+        echo "Warning: Failed to add 'CanBeMerged' label"
+    }
+
+    echo "✅ Successfully processed PR #${pr_number}"
+}
+
 # Amazon Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
 
