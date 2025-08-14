@@ -669,6 +669,8 @@ setopt hist_no_store
 
 # Alias
 alias claude="/Users/kesoji/.claude/local/claude"
+alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server
+"
 alias clc="claude"
 alias marp="npx @marp-team/marp-cli@latest"
 alias ncu="npx npm-check-updates"
