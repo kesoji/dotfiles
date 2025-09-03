@@ -4,7 +4,9 @@
       "Bash(chmod:*)",
       "Bash(python3:*)",
       "Bash(rm:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(source:*)",
+      "Bash(2ndapprove:*)"
     ],
     "deny": []
   }
