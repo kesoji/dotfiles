@@ -3,10 +3,9 @@ font-feature = -dlig
 theme = Dracula
 
 # keybind. superはmacだとcmd
+keybind = super+r=reload_config
 
 keybind = shift+enter=text:\n
-
-keybind = super+r=reload_config
 
 #keybind = ctrl+h=goto_split:left
 #keybind = ctrl+j=goto_split:bottom
@@ -29,3 +28,8 @@ keybind = ctrl+a>p=previous_tab
 
 window-save-state = always
 
+quick-terminal-position = top
+quick-terminal-size = 50%
+quick-terminal-screen = main
+quick-terminal-animation-duration = 0.2
+keybind = "global:cmd+shift+ctrl+[=toggle_quick_terminal"
