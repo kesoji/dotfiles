@@ -673,6 +673,7 @@ alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-s
 "
 alias clc="claude"
 alias marp="npx @marp-team/marp-cli@latest"
+alias wrangler="npx wrangler@latest"
 alias ncu="npx npm-check-updates"
 alias ezsh="$EDITOR ~/.zshrc"
 alias reload='exec $SHELL'
@@ -1320,8 +1321,12 @@ if (which zprof > /dev/null) ;then
 fi
 
 if [[ -e /usr/libexec/java_home ]]; then
-    export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-    export PATH=$JAVA_HOME/bin:$PATH
+    JAVAHOME=$(/usr/libexec/java_home -v 21 2>/dev/null)
+    if [[ $? -eq 0 ]]; then
+        echo_info "Setting JAVA_HOME to $JAVAHOME"
+        export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+        export PATH=$JAVA_HOME/bin:$PATH
+    fi
 fi
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
