@@ -668,6 +668,10 @@ setopt no_beep
 setopt hist_no_store
 
 # Alias
+## Security
+alias npm="socket npm"
+alias npx="socket npx"
+
 alias claude="/Users/kesoji/.claude/local/claude"
 alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server
 "
@@ -1438,7 +1442,6 @@ function 2ndapprove() {
 
     echo "✅ Successfully processed PR #${pr_number}"
 }
-
+[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
 # Amazon Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
-

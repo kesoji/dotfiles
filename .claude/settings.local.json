@@ -6,7 +6,8 @@
       "Bash(rm:*)",
       "Bash(cat:*)",
       "Bash(source:*)",
-      "Bash(2ndapprove:*)"
+      "Bash(2ndapprove:*)",
+      "Bash(./dotfilesLink.sh:*)"
     ],
     "deny": []
   }

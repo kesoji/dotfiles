@@ -52,6 +52,7 @@ safe_ln ~/dotfiles/sshrc.d ~/.sshrc.d
 mkdir -p ~/.config
 safe_ln ~/dotfiles/dotconfig/rsync ~/.config/rsync
 safe_ln ~/dotfiles/dotconfig/wezterm ~/.config/wezterm
+safe_ln ~/dotfiles/dotconfig/pnpm ~/.config/pnpm
 mkdir -p ~/.config/alacritty
 safe_ln ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 mkdir -p ~/.config/goneovim
