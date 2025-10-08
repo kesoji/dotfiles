@@ -251,6 +251,10 @@ else
     fi
 fi
 
+if [ -e /snap ]; then
+    export PATH="/snap/bin:$PATH"
+fi
+
 # neovim
 function my-neoviminstall() {
     temp_dir=$(mktemp -d)
