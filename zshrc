@@ -1447,7 +1447,7 @@ function 2ndapprove() {
     echo "✅ Successfully processed PR #${pr_number}"
 }
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
+export PATH=/Users/kesoji/.tiup/bin:$PATH
+
 # Amazon Q post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
-
-export PATH=/Users/kesoji/.tiup/bin:$PATH
