@@ -2,6 +2,8 @@
 	name = kesoji
 	email = 6465251+kesoji@users.noreply.github.com
 	signingkey = 8B063D6FBABCDBDA5517BEB376F40B209A5D42C4
+[gui]
+	encoding = utf-8
 [color]
 	ui = true
 	diff = auto
@@ -9,13 +11,27 @@
 	branch = auto
 [core]
 	editor = vim
+	pager = delta
 	excludesfile = ~/.gitignore_global
 	quotepath = false
 	autocrlf = input
 	filemode = false
 	symlinks = true
 [init]
-  defaultBranch = main
+	defaultBranch = main
+[delta]
+	navigate = true
+#[pager]
+#	log  = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
+#	show = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
+#	diff = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
+[interactiove]
+	diffFilter = delta --color-only
+[diff]
+	compactionHeuristic = true
+[merge]
+	conflictstyle = zdiff3
+	tool = vimdiff
 [commit]
 	verbose = true
 	#gpgsign = true
@@ -64,6 +80,8 @@
 	d1 = diff HEAD~
 	d2 = diff HEAD~2
 	d3 = diff HEAD~3
+	dM = diff --diff-filter=M
+	dD = diff --diff-filter=D
 	alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
 	sm = submodule
 	smup = submodule update --init --recursive
@@ -71,35 +89,16 @@
 	sb = show-branch
 	emptycommit = commit --allow-empty -m
 	delete-merged-branches = !git branch --merged | grep -v \\* | grep -Ev '(main|master|staging)' | xargs -I % git branch -d %
-[gui]
-	encoding = utf-8
-[difftool "sourcetree"]
-	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-	path =
-[mergetool "sourcetree"]
-	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
-	trustExitCode = true
 [url "git@github.com:"]
 	insteadOf = https://github.com/
 [url "https://"]
 	insteadOf = git://
-[pager]
-	log  = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
-	show = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
-	diff = (diff-highlight 2>/dev/null || cat) | ${PAGER:-less}
-[interactive]
-	diffFilter = (diff-highlight 2>/dev/null || cat)
-[diff]
-	compactionHeuristic = true
-[merge]
-	conflictstyle = diff3
-	tool = vimdiff
 [include]
 	path = ~/.gitconfig.local
 [pull]
 	rebase = true
 [rebase]
-    autostash = true
+	autostash = true
 [ghq]
 	root = ~/go/src
 [filter "lfs"]
