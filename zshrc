@@ -552,6 +552,14 @@ else
     alias lg='lazygit'
 fi
 
+command -v delta 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+  echo_info "delta installed: my-delta-install"
+  function my-delta-install() {
+    comexec "brew install git-delta" || return
+  }
+fi
+
 # lazydocker
 command -v lazydocker 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then

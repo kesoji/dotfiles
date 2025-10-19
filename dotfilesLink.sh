@@ -59,6 +59,8 @@ mkdir -p ~/.config/goneovim
 safe_ln ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
 mkdir -p ~/.config/ghostty
 safe_ln ~/dotfiles/ghostty ~/.config/ghostty/config
+mkdir -p ~/.config/lazygit
+safe_ln ~/dotfiles/lazygit/config.yml ~/.config/lazygit/config.yml
 
 # claude
 mkdir -p ~/.claude

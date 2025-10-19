@@ -1,0 +1,10 @@
+git:
+  #pagers:
+  #  - pager: delta --paging=never --side-by-side
+  #    colorArg: always
+  paging:
+    colorArg: always
+    pager: delta --paging=never --side-by-side
+keybinding:
+  universal:
+    quit: q #sample
