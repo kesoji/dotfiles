@@ -242,7 +242,8 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     # https://mise.jdx.dev/dev-tools/shims.html
-    eval "$(mise activate zsh --shims)" # should be first
+    #こっちはnot interactive用らしい。
+    #eval "$(mise activate zsh --shims)" # should be first 
     eval "$(mise activate zsh)"
     # eval "$(mise hook-env -s zsh)"
     if [[ ! -e ~/.local/share/zsh/completions/_mise ]]; then
@@ -681,8 +682,8 @@ setopt hist_no_store
 
 # Alias
 ## Security
-alias npm="socket npm"
-alias npx="socket npx"
+#alias npm="socket npm"
+#alias npx="socket npx"
 
 alias claude="/Users/kesoji/.claude/local/claude"
 alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server
