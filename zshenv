@@ -8,3 +8,4 @@ fi
 if [[ -e $HOME/.cargo ]]; then
     . "$HOME/.cargo/env"
 fi
+export PATH="/Users/kesoji/.local/share/flutter/bin:$PATH"
