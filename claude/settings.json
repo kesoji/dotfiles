@@ -13,6 +13,9 @@
     ],
     "deny": []
   },
+  "enabledPlugins": {
+    "example-skills@anthropic-agent-skills": true
+  },
   "alwaysThinkingEnabled": false,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338

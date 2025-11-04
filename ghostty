@@ -28,6 +28,11 @@ keybind = ctrl+a>ctrl+f=toggle_split_zoom
 keybind = ctrl+a>ctrl+n=next_tab
 keybind = ctrl+a>ctrl+p=previous_tab
 
+keybind = super+[=goto_split:previous
+keybind = super+]=goto_split:next
+keybind = super+shift+[=previous_tab
+keybind = super+shift+]=next_tab
+
 window-save-state = always
 
 quick-terminal-position = top
