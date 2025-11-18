@@ -17,7 +17,7 @@
     "example-skills@anthropic-agent-skills": true,
     "document-skills@anthropic-agent-skills": true
   },
-  "alwaysThinkingEnabled": false,
+  "alwaysThinkingEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
   }
