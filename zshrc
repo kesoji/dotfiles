@@ -706,10 +706,7 @@ setopt hist_no_store
 #alias npm="socket npm"
 #alias npx="socket npx"
 
-alias claude="/Users/kesoji/.claude/local/claude"
-alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server
-"
-alias clc="claude"
+alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server"
 alias marp="npx @marp-team/marp-cli@latest"
 alias wrangler="npx wrangler@latest"
 alias ncu="npx npm-check-updates"
@@ -790,6 +787,12 @@ function md5check() {
     diff <(find "$1" -maxdepth 1 -type f | xargs md5sum | sed -e 's@/.*/@@g') <(find "$2" -maxdepth 1 -type f | xargs md5sum | sed -e 's@/.*/@@g')
 }
 
+## Claude Code
+if [[ -f $HOME/.claude/local/claude ]] ; then
+  export PATH="/Users/kesoji/.claude/local:$PATH"
+  alias clc="claude"
+  alias cla="claude"
+fi
 
 ## Terraform
 command -v terraform 2>/dev/null 1>&2
