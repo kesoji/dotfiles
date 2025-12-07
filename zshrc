@@ -1,5 +1,5 @@
-# Amazon Q pre block. Keep at the top of this file.
-[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
+# Kiro CLI pre block. Keep at the top of this file.
+[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh"
 # Q pre block. Keep at the top of this file.
 # Disabled for faster startup - zcompile happens automatically by zsh
 # Removing this check eliminates ~7% startup time overhead
@@ -1205,131 +1205,104 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 
 
 # if bash rename "handler" to "handle"
-command_not_found_handler() {
-    ####
-    # 変数の定義
-    ####
-    # 変数(ASCII ART)定義
-    AA1="
-        ＿＿＿_
-      ／ ＼  ／＼ ｷﾘｯ
-     ／（ー）（ー)＼
-    ／⌒（__人__）⌒＼     「$1」、
-    |     |r┬-|     |
-     ＼    \`ー'´  ／
-     ノ         ＼
-     ／´            ヽ
-    | ｌ              ＼
-    ヽ -''\"~｀\`'ー-､ -一'''''ー-､.
-   ヽ ＿＿(⌒)(⌒)⌒) ) (⌒＿(⌒)⌒)⌒))"
+#command_not_found_handler() {
+#    ####
+#    # 変数の定義
+#    ####
+#    # 変数(ASCII ART)定義
+#    AA1="
+#        ＿＿＿_
+#      ／ ＼  ／＼ ｷﾘｯ
+#     ／（ー）（ー)＼
+#    ／⌒（__人__）⌒＼     「$1」、
+#    |     |r┬-|     |
+#     ＼    \`ー'´  ／
+#     ノ         ＼
+#     ／´            ヽ
+#    | ｌ              ＼
+#    ヽ -''\"~｀\`'ー-､ -一'''''ー-､.
+#   ヽ ＿＿(⌒)(⌒)⌒) ) (⌒＿(⌒)⌒)⌒))"
+#
+#    AA2_1="
+#           ＿＿＿＿
+#        ／_ノ  ヽ､＼
+# ﾐ ﾐ ﾐ  oﾟ((●)) ((●))ﾟo      ﾐ ﾐ ﾐ
+# /⌒) ⌒) ⌒.::⌒（__人__）⌒:::    /⌒ )⌒ )⌒)
+#| / / /     |r┬-|    | (⌒)/ / / /／  だっておｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗ
+#| :::::::(⌒)   | | |   ／  ゝ ::::::/   そんなコマンドないおｗｗｗｗｗｗｗｗｗｗｗｗｗ
+#|     ノ    | | |   ＼  / )   /
+#ヽ    /     \`ー'´    ヽ  /    ／      バ
+# |    |  l|l        l||l 从 ノ    バ   ン
+# ヽ    -''\"~｀\`'ー-､    -一'''''ー-､    ン
+#  ヽ ＿＿          ＿＿／"
+#
+#    AA2_2="
+#          ＿＿＿＿
+#        ／_ノ  ヽ､＼
+# ﾐ ﾐ ﾐ  oﾟ((●)) ((●))ﾟo      ﾐ ﾐ ﾐ
+# /⌒) ⌒) ⌒.::⌒（__人__）⌒:::    /⌒ )⌒ )⌒)
+#| / / /     |r┬-|    | (⌒)/ / / /／  だっておｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗ
+#| :::::::(⌒)   | | |   ／  ゝ ::::::/   そんなコマンドないおｗｗｗｗｗｗｗｗｗｗｗｗｗ
+#|     ノ    | | |   ＼  / )   /
+#ヽ    /     \`ー'´    ヽ  /    ／     バ
+# |    |  l|l 从人 l|l   l||l 从 人 l|l  バ   ン
+# ヽ    -''\"~｀\`'ー-､    -一'''''ー-､    ン
+#  ヽ ＿＿＿＿(⌒)(⌒)⌒) )    (⌒＿(⌒)⌒)⌒))"
+#
+#    AA2_3="
+#          ＿＿＿＿
+#        ／_ノ  ヽ､＼
+#       oﾟ((●)) ((●))ﾟo
+#      ／:::⌒（__人__）⌒:::
+#     |     |r┬-|     |          だっておｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗ
+#     ＼    | | |   ／           そんなコマンドないおｗｗｗｗｗｗｗｗｗｗｗｗｗ
+#      ノ    | | |   ＼
+#    ／´     \`ー'´    ヽ           バ
+#    | |            ＼        バ   ン
+#    ヽ  -''\"~｀\`'ー-､    -一'''''ー-､    ン
+#    ヽ ＿＿(⌒)(⌒)⌒) )    (⌒＿(⌒)⌒)⌒))"
+#
+#
+#    AA_NUM_MIN=1
+#    AA_NUM_MAX=3
+#    COUNT=20
+#    SUFFIX="AA2_"
+#
+#    # if you want to disable Ctrl-C, comment-in
+#    #trap '' 1 2 3 4 5 15
+#
+#
+#    ####
+#    # メインの処理
+#    ####
+#    # 最初のAA(AA1)の出力
+#    echo -e "$AA1"
+#    sleep 1
+#
+#    # COUNT分のループ処理(AA2_1〜AA2_3の出力)
+#    LINE=$(echo -e "${AA1}"|wc -l)
+#    NUM=${AA_NUM_MIN}
+#    until [ ${COUNT} -eq 0 ];
+#    do
+#        for i in $(seq 1 ${LINE});do
+#            echo $'\e[1A' $'\e[1G' $'\e[2K' $'\e[1A'
+#        done
+#
+#        eval echo \"\${${SUFFIX}${NUM}}\"
+#        sleep 0.1
+#
+#        LINE=$(eval echo -e \"\${${SUFFIX}${NUM}}\"|wc -l)
+#        NUM=$((${NUM} + 1))
+#        if [ ${NUM} -gt ${AA_NUM_MAX} ];then
+#            NUM=${AA_NUM_MIN}
+#        fi
+#
+#        COUNT=$((COUNT - 1))
+#    done
+#
+#    return 1
+#}
 
-    AA2_1="
-           ＿＿＿＿
-        ／_ノ  ヽ､＼
- ﾐ ﾐ ﾐ  oﾟ((●)) ((●))ﾟo      ﾐ ﾐ ﾐ
- /⌒) ⌒) ⌒.::⌒（__人__）⌒:::    /⌒ )⌒ )⌒)
-| / / /     |r┬-|    | (⌒)/ / / /／  だっておｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗ
-| :::::::(⌒)   | | |   ／  ゝ ::::::/   そんなコマンドないおｗｗｗｗｗｗｗｗｗｗｗｗｗ
-|     ノ    | | |   ＼  / )   /
-ヽ    /     \`ー'´    ヽ  /    ／      バ
- |    |  l|l        l||l 从 ノ    バ   ン
- ヽ    -''\"~｀\`'ー-､    -一'''''ー-､    ン
-  ヽ ＿＿          ＿＿／"
-
-    AA2_2="
-          ＿＿＿＿
-        ／_ノ  ヽ､＼
- ﾐ ﾐ ﾐ  oﾟ((●)) ((●))ﾟo      ﾐ ﾐ ﾐ
- /⌒) ⌒) ⌒.::⌒（__人__）⌒:::    /⌒ )⌒ )⌒)
-| / / /     |r┬-|    | (⌒)/ / / /／  だっておｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗ
-| :::::::(⌒)   | | |   ／  ゝ ::::::/   そんなコマンドないおｗｗｗｗｗｗｗｗｗｗｗｗｗ
-|     ノ    | | |   ＼  / )   /
-ヽ    /     \`ー'´    ヽ  /    ／     バ
- |    |  l|l 从人 l|l   l||l 从 人 l|l  バ   ン
- ヽ    -''\"~｀\`'ー-､    -一'''''ー-､    ン
-  ヽ ＿＿＿＿(⌒)(⌒)⌒) )    (⌒＿(⌒)⌒)⌒))"
-
-    AA2_3="
-          ＿＿＿＿
-        ／_ノ  ヽ､＼
-       oﾟ((●)) ((●))ﾟo
-      ／:::⌒（__人__）⌒:::
-     |     |r┬-|     |          だっておｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗｗ
-     ＼    | | |   ／           そんなコマンドないおｗｗｗｗｗｗｗｗｗｗｗｗｗ
-      ノ    | | |   ＼
-    ／´     \`ー'´    ヽ           バ
-    | |            ＼        バ   ン
-    ヽ  -''\"~｀\`'ー-､    -一'''''ー-､    ン
-    ヽ ＿＿(⌒)(⌒)⌒) )    (⌒＿(⌒)⌒)⌒))"
-
-
-    AA_NUM_MIN=1
-    AA_NUM_MAX=3
-    COUNT=20
-    SUFFIX="AA2_"
-
-    # if you want to disable Ctrl-C, comment-in
-    #trap '' 1 2 3 4 5 15
-
-
-    ####
-    # メインの処理
-    ####
-    # 最初のAA(AA1)の出力
-    echo -e "$AA1"
-    sleep 1
-
-    # COUNT分のループ処理(AA2_1〜AA2_3の出力)
-    LINE=$(echo -e "${AA1}"|wc -l)
-    NUM=${AA_NUM_MIN}
-    until [ ${COUNT} -eq 0 ];
-    do
-        for i in $(seq 1 ${LINE});do
-            echo $'\e[1A' $'\e[1G' $'\e[2K' $'\e[1A'
-        done
-
-        eval echo \"\${${SUFFIX}${NUM}}\"
-        sleep 0.1
-
-        LINE=$(eval echo -e \"\${${SUFFIX}${NUM}}\"|wc -l)
-        NUM=$((${NUM} + 1))
-        if [ ${NUM} -gt ${AA_NUM_MAX} ];then
-            NUM=${AA_NUM_MIN}
-        fi
-
-        COUNT=$((COUNT - 1))
-    done
-
-    return 1
-}
-
-
-awssts() {
-    if [[ "$1" == "" ]] ; then
-        echo "トークンコードが無いです"
-    else
-        mfa=`aws iam list-mfa-devices --user-name kesoji | jq '.MFADevices[0].SerialNumber' -r`
-        if [[ $? -ne 0 ]] ; then
-            return
-        fi
-
-        data=`aws sts get-session-token --serial-number $mfa --token-code $1`
-        if [[ $? -ne 0 ]] ; then
-            return
-        fi
-
-        key=`echo $data | jq '.Credentials.AccessKeyId' -r`
-        secret=`echo $data | jq '.Credentials.SecretAccessKey' -r`
-        session=`echo $data | jq '.Credentials.SessionToken' -r`
-
-        unset AWS_PROFILE
-        export AWS_ACCESS_KEY_ID=$key
-        export AWS_SECRET_ACCESS_KEY=$secret
-        export AWS_SESSION_TOKEN=$session
-        export AWS_DEFAULT_REGION=ap-northeast-1
-        export AWS_STS_SESSION="IN-SESSION"
-    fi
-}
 
 complete-ssh-host-fzf() {
     local host="$(egrep -i '^Host\s+.+' ~/.ssh/config $(find ~/.ssh/conf.d -type f 2>/dev/null) | egrep -v '[*?]' | awk '{print $2}' | sort | fzf)"
@@ -1373,12 +1346,13 @@ export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
 
 function 2ndapprove() {
     if [ -z "$1" ]; then
-        echo "Usage: 2ndapprove <GitHub PR URL>"
+        echo "Usage: 2ndapprove <GitHub PR URL> [<Comment>]"
         return 1
     fi
 
     # Extract repository info and PR number from URL
     local pr_url="$1"
+    local approve_comment="$2"
     local repo_info
     local pr_number
     
@@ -1482,5 +1456,5 @@ if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc' ]; then . '/U
 # The next line enables shell command completion for gcloud.
 if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/kesoji/.local/share/google-cloud-sdk/completion.zsh.inc'; fi
 
-# Amazon Q post block. Keep at the bottom of this file.
-[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
+# Kiro CLI post block. Keep at the bottom of this file.
+[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"

@@ -1,6 +1,7 @@
 font-feature = -calt
 font-feature = -dlig
 theme = Dracula
+background-opacity = 0.9
 
 # keybind. superはmacだとcmd
 keybind = super+r=reload_config
