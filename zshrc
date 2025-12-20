@@ -236,14 +236,6 @@ else
     }
 fi
 
-# devbox
-command -v devbox 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "devbox isn't installed: TODO"
-else
-    eval "$(devbox global shellenv)"
-fi
-
 # mise
 command -v mise 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -262,6 +254,15 @@ else
         mise completion zsh > ~/.local/share/zsh/completions/_mise
     fi
 fi
+
+# devbox
+command -v devbox 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "devbox isn't installed: TODO"
+else
+    eval "$(devbox global shellenv)"
+fi
+
 
 if [ -e /snap ]; then
     export PATH="/snap/bin:$PATH"
