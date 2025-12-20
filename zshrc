@@ -712,9 +712,11 @@ setopt hist_no_store
 
 # Alias
 ## Security
-alias npm="socket npm"
-alias npx="socket npx"
-
+command -v socket 2>/dev/null 1>&2
+if [[ $? -eq 0 ]] ; then
+  alias npm="socket npm"
+  alias npx="socket npx"
+fi
 alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server"
 alias marp="npx @marp-team/marp-cli@latest"
 alias wrangler="npx wrangler@latest"
