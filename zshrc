@@ -236,6 +236,14 @@ else
     }
 fi
 
+# devbox
+command -v devbox 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "devbox isn't installed: TODO"
+else
+    eval "$(devbox global shellenv)"
+fi
+
 # mise
 command -v mise 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -703,8 +711,8 @@ setopt hist_no_store
 
 # Alias
 ## Security
-#alias npm="socket npm"
-#alias npx="socket npx"
+alias npm="socket npm"
+alias npx="socket npx"
 
 alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server"
 alias marp="npx @marp-team/marp-cli@latest"

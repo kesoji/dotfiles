@@ -9,8 +9,9 @@
       "Bash(git add:*)",
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
-      "Bash(ffmpeg::*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(devbox:*)"
     ],
     "deny": []
   },
@@ -18,7 +19,6 @@
     "example-skills@anthropic-agent-skills": true,
     "document-skills@anthropic-agent-skills": true
   },
-  "alwaysThinkingEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
   }
