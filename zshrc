@@ -261,6 +261,10 @@ if [[ $? -ne 0 ]] ; then
     echo_info "devbox isn't installed: TODO"
 else
     eval "$(devbox global shellenv)"
+    if [[ ! -e ~/.oh-my-zsh/completions/_devbox ]]; then
+        mkdir -p ~/.oh-my-zsh/completions
+        devbox completion zsh > ~/.oh-my-zsh/completions/_devbox
+    fi
 fi
 
 

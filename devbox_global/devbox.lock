@@ -1,6 +1,54 @@
 {
   "lockfile_version": "1",
   "packages": {
+    "cargo@latest": {
+      "last_modified": "2025-11-23T21:50:36Z",
+      "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#cargo",
+      "source": "devbox-search",
+      "version": "1.91.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/45b258b3av4kwr5pljhaghpkn2b076gp-cargo-1.91.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/45b258b3av4kwr5pljhaghpkn2b076gp-cargo-1.91.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/0dc8isk49j5nixxswvl8kdsvz8wvzah8-cargo-1.91.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/0dc8isk49j5nixxswvl8kdsvz8wvzah8-cargo-1.91.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/vc9ij5iq2ga02875g3i8dxz7mpa11ygf-cargo-1.91.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/vc9ij5iq2ga02875g3i8dxz7mpa11ygf-cargo-1.91.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/742kq790y4nd92s4l4arg7ij8h7is5ar-cargo-1.91.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/742kq790y4nd92s4l4arg7ij8h7is5ar-cargo-1.91.1"
+        }
+      }
+    },
     "delta@latest": {
       "last_modified": "2025-11-25T14:41:04Z",
       "resolved": "github:NixOS/nixpkgs/dc205f7b4fdb04c8b7877b43edb7b73be7730081#delta",
@@ -358,6 +406,54 @@
             }
           ],
           "store_path": "/nix/store/0a3dyfq09dnkw28ap2i450wjimvdmv6s-go-1.25.4"
+        }
+      }
+    },
+    "haskell-language-server@latest": {
+      "last_modified": "2025-12-15T12:53:45Z",
+      "resolved": "github:NixOS/nixpkgs/ac9a217389ee622d4e1e727c4efcc9c4bc9089ba#haskell-language-server",
+      "source": "devbox-search",
+      "version": "2.12.0.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/5galwgdqkppkjwn8459mqzivx6fd1blv-haskell-language-server-2.12.0.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/5galwgdqkppkjwn8459mqzivx6fd1blv-haskell-language-server-2.12.0.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/w4h2aw3h8j1x8dn58p4k9qm9z4wvysxh-haskell-language-server-2.12.0.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/w4h2aw3h8j1x8dn58p4k9qm9z4wvysxh-haskell-language-server-2.12.0.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/dyypjsbzy58l0pjjmrvg8731aqj4hywj-haskell-language-server-2.12.0.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/dyypjsbzy58l0pjjmrvg8731aqj4hywj-haskell-language-server-2.12.0.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/6v5kfr9v29mccykkjmnszwn4h1bj1b6h-haskell-language-server-2.12.0.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/6v5kfr9v29mccykkjmnszwn4h1bj1b6h-haskell-language-server-2.12.0.0"
         }
       }
     },
@@ -800,6 +896,44 @@
             }
           ],
           "store_path": "/nix/store/p01drvm8hyln0drryav1ksypfmgv28rz-rust-analyzer-2025-12-15"
+        }
+      }
+    },
+    "stack@latest": {
+      "last_modified": "2025-11-23T21:50:36Z",
+      "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#stack",
+      "source": "devbox-search",
+      "version": "3.7.1",
+      "systems": {
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3i7zscx33jkg6v7f88b27n1wdxljmh22-stack-3.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/3i7zscx33jkg6v7f88b27n1wdxljmh22-stack-3.7.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/pa30xwla76zvf4mj37pc9fssdns0x1hz-stack-3.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/pa30xwla76zvf4mj37pc9fssdns0x1hz-stack-3.7.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/lanmxpzj7c8frmxg2jjrmdgzkip9kdfm-stack-3.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/lanmxpzj7c8frmxg2jjrmdgzkip9kdfm-stack-3.7.1"
         }
       }
     },

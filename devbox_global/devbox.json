@@ -1,22 +1,25 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": [
-    "nodejs@22",
+    "direnv@latest",
     "ripgrep@latest",
     "fd@latest",
     "lazygit@latest",
     "ghq@latest",
-    "terraform@latest",
     "gh@latest",
     "delta@latest",
     "lazydocker@latest",
-    "rust-analyzer@latest",
+    "nodejs@22",
     "fzf@latest",
     "python@latest",
     "lua54Packages.lua@latest",
     "lua54Packages.luarocks@latest",
     "go@latest",
-    "direnv@latest"
+    "cargo@latest",
+    "rust-analyzer@latest",
+    "stack@latest",
+    "haskell-language-server@latest",
+    "terraform@latest"
   ],
   "shell": {
     "init_hook": [
