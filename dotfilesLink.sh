@@ -76,6 +76,11 @@ if [ -d ~/dotfiles/claude/commands ]; then
     done
 fi
 
+# devbox global
+mkdir -p ~/.local/share/devbox/global/default
+safe_ln ~/dotfiles/devbox_global/devbox.json ~/.local/share/devbox/global/default/devbox.json
+safe_ln ~/dotfiles/devbox_global/devbox.lock ~/.local/share/devbox/global/default/devbox.lock
+
 # vim-plug
 if [ ! -s ~/.vim/autoload/plug.vim ]; then
   curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
