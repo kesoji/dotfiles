@@ -1,3 +1,5 @@
+gui:
+  language: "en"
 git:
   #pagers:
   #  - pager: delta --paging=never --side-by-side
