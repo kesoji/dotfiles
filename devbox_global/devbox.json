@@ -11,7 +11,10 @@
     "delta@latest",
     "lazydocker@latest",
     "rust-analyzer@latest",
-    "lua@latest"
+    "fzf@latest",
+    "python@latest",
+    "lua54Packages.lua@latest",
+    "lua54Packages.luarocks@latest"
   ],
   "shell": {
     "init_hook": [
