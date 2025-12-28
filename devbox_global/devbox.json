@@ -14,7 +14,8 @@
     "fzf@latest",
     "python@latest",
     "lua54Packages.lua@latest",
-    "lua54Packages.luarocks@latest"
+    "lua54Packages.luarocks@latest",
+    "go@latest"
   ],
   "shell": {
     "init_hook": [
