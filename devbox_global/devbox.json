@@ -15,7 +15,8 @@
     "python@latest",
     "lua54Packages.lua@latest",
     "lua54Packages.luarocks@latest",
-    "go@latest"
+    "go@latest",
+    "direnv@latest"
   ],
   "shell": {
     "init_hook": [

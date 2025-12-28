@@ -49,6 +49,54 @@
         }
       }
     },
+    "direnv@latest": {
+      "last_modified": "2025-11-23T21:50:36Z",
+      "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#direnv",
+      "source": "devbox-search",
+      "version": "2.37.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/jvqli6w4plrjipvq1zs2k096rmiq5a3j-direnv-2.37.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/jvqli6w4plrjipvq1zs2k096rmiq5a3j-direnv-2.37.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/bimg3r15l5y511f0nwsbj05za20h682y-direnv-2.37.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/bimg3r15l5y511f0nwsbj05za20h682y-direnv-2.37.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/likv1z3frckgb92yzj92d8lbc3ahzpq0-direnv-2.37.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/likv1z3frckgb92yzj92d8lbc3ahzpq0-direnv-2.37.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/wpj4la1jgf0p8aimfzx49gfr3228vk8f-direnv-2.37.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/wpj4la1jgf0p8aimfzx49gfr3228vk8f-direnv-2.37.1"
+        }
+      }
+    },
     "fd@latest": {
       "last_modified": "2025-11-23T21:50:36Z",
       "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#fd",
