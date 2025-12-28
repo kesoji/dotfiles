@@ -47,6 +47,7 @@ safe_ln ~/dotfiles/inputrc ~/.inputrc
 safe_ln ~/dotfiles/globalrc ~/.globalrc
 safe_ln ~/dotfiles/irbrc ~/.irbrc
 safe_ln ~/dotfiles/sshrc.d ~/.sshrc.d
+safe_ln ~/dotfiles/npmrc ~/.npmrc
 
 # .config
 mkdir -p ~/.config
