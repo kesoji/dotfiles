@@ -3,10 +3,7 @@ GRTAGS
 GPATH
 **/.claude/settings.local.json
 .python-version
-git-worktrees/*
-.envrc
 .vimsessions
-.mise.toml
 
 ### https://raw.github.com/github/gitignore/a018c720b7c69c8280038c016ba88b5060969bfe/Global/Windows.gitignore
 
@@ -81,15 +78,6 @@ Session.vim
 tags
 # Persistent undo
 [._]*.un~
-
-
-### https://raw.github.com/github/gitignore/e313e296c1e284d908adcb95bf4f2812617d4de1/Global/VisualStudioCode.gitignore
-
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm

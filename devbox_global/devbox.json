@@ -19,7 +19,8 @@
     "rust-analyzer@latest",
     "stack@latest",
     "haskell-language-server@latest",
-    "terraform@latest"
+    "terraform@latest",
+    "git-secrets@latest"
   ],
   "shell": {
     "init_hook": [

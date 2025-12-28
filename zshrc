@@ -993,37 +993,6 @@ function my-colortable2() {
     printf " \\\e[m\n"
 }
 
-# PHP (Temp)
-if $MAC; then
-    export PATH="/opt/homebrew/opt/php@8.2/bin:$PATH"
-    export PATH="/opt/homebrew/opt/php@8.2/sbin:$PATH"
-    my-buildphptoolflags() {
-        echo LDFLAGS="-L/opt/homebrew/opt/php@8.2/lib" CPPFLAGS="-I/opt/homebrew/opt/php@8.2/include"
-    }
-fi
-
-# Haskell
-command -v stack 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "stack (Haskell) isn't installed: my-haskellstackinstall"
-    function my-haskellstackinstall (){
-        comexec "curl -sSL https://get.haskellstack.org/ | sh" || return
-    }
-else
-    eval "$(stack --bash-completion-script stack)"
-    alias ghci='stack ghci'
-    alias ghc='stack ghci --'
-    alias runghc='stack runghc --'
-fi
-
-# Rust
-if [[ ! -e $HOME/.cargo ]] ; then
-    echo_info "Cargo(Rust) isn't installed: my-rustinstall"
-    function my-rustinstall (){
-        comexec "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" || return
-    }
-fi
-
 command -v gibo 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "gibo isn't installed: my-giboinstall"

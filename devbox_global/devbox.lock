@@ -357,6 +357,54 @@
         }
       }
     },
+    "git-secrets@latest": {
+      "last_modified": "2025-11-23T21:50:36Z",
+      "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#git-secrets",
+      "source": "devbox-search",
+      "version": "1.3.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/yq55yvrsa53akkrq83c1xnyajv8ylgg4-git-secrets-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/yq55yvrsa53akkrq83c1xnyajv8ylgg4-git-secrets-1.3.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/qncbzs6ndllf59b6fm3jia187mdzlw4m-git-secrets-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/qncbzs6ndllf59b6fm3jia187mdzlw4m-git-secrets-1.3.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/fkdhkbykkhi07fl2kvaygdppgycpnla5-git-secrets-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/fkdhkbykkhi07fl2kvaygdppgycpnla5-git-secrets-1.3.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/8pj30c407gjwgh44wbg6amywxmr279bv-git-secrets-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/8pj30c407gjwgh44wbg6amywxmr279bv-git-secrets-1.3.0"
+        }
+      }
+    },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
       "last_modified": "2025-12-27T12:56:01Z",
       "resolved": "github:NixOS/nixpkgs/3edc4a30ed3903fdf6f90c837f961fa6b49582d1?lastModified=1766840161"
