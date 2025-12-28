@@ -4,8 +4,9 @@
     "allow": [
       "Bash(scc:*)",
       "Bash(ls:*)",
-      "Bash(find:*)",
       "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(mkdir:*)",
       "Bash(git add:*)",
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
