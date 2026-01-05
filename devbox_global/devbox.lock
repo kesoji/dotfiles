@@ -1,6 +1,54 @@
 {
   "lockfile_version": "1",
   "packages": {
+    "_1password-cli@latest": {
+      "last_modified": "2025-11-23T21:50:36Z",
+      "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#_1password-cli",
+      "source": "devbox-search",
+      "version": "2.32.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/jk5n2vzpn5m9vvqjnjd32ka727xvjr7q-1password-cli-2.32.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/jk5n2vzpn5m9vvqjnjd32ka727xvjr7q-1password-cli-2.32.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/88vlfvds135a722fl7igycdikwqcx8xa-1password-cli-2.32.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/88vlfvds135a722fl7igycdikwqcx8xa-1password-cli-2.32.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/9fgd80nx52w9q14rly50brq04vpm467r-1password-cli-2.32.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/9fgd80nx52w9q14rly50brq04vpm467r-1password-cli-2.32.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/jca7yby6iwgi0slkffk8kq49w6ggx229-1password-cli-2.32.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/jca7yby6iwgi0slkffk8kq49w6ggx229-1password-cli-2.32.0"
+        }
+      }
+    },
     "cargo@latest": {
       "last_modified": "2025-11-23T21:50:36Z",
       "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#cargo",
@@ -98,8 +146,8 @@
       }
     },
     "direnv@latest": {
-      "last_modified": "2025-11-23T21:50:36Z",
-      "resolved": "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261#direnv",
+      "last_modified": "2025-12-29T16:45:58Z",
+      "resolved": "github:NixOS/nixpkgs/346dd96ad74dc4457a9db9de4f4f57dab2e5731d#direnv",
       "source": "devbox-search",
       "version": "2.37.1",
       "systems": {
@@ -107,41 +155,41 @@
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/jvqli6w4plrjipvq1zs2k096rmiq5a3j-direnv-2.37.1",
+              "path": "/nix/store/jizlvqimvq2favjg9ksr7v5dpy9akj5y-direnv-2.37.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/jvqli6w4plrjipvq1zs2k096rmiq5a3j-direnv-2.37.1"
+          "store_path": "/nix/store/jizlvqimvq2favjg9ksr7v5dpy9akj5y-direnv-2.37.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/bimg3r15l5y511f0nwsbj05za20h682y-direnv-2.37.1",
+              "path": "/nix/store/g72z6bqr3vs096jib0lhpqh6978b3l55-direnv-2.37.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/bimg3r15l5y511f0nwsbj05za20h682y-direnv-2.37.1"
+          "store_path": "/nix/store/g72z6bqr3vs096jib0lhpqh6978b3l55-direnv-2.37.1"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/likv1z3frckgb92yzj92d8lbc3ahzpq0-direnv-2.37.1",
+              "path": "/nix/store/68zsqgl41q85ajvr8sdxlzfd9lsj0g59-direnv-2.37.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/likv1z3frckgb92yzj92d8lbc3ahzpq0-direnv-2.37.1"
+          "store_path": "/nix/store/68zsqgl41q85ajvr8sdxlzfd9lsj0g59-direnv-2.37.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/wpj4la1jgf0p8aimfzx49gfr3228vk8f-direnv-2.37.1",
+              "path": "/nix/store/gfg3dylip40y30406aizr8v9n8633z1g-direnv-2.37.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/wpj4la1jgf0p8aimfzx49gfr3228vk8f-direnv-2.37.1"
+          "store_path": "/nix/store/gfg3dylip40y30406aizr8v9n8633z1g-direnv-2.37.1"
         }
       }
     },
@@ -406,8 +454,8 @@
       }
     },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
-      "last_modified": "2025-12-27T12:56:01Z",
-      "resolved": "github:NixOS/nixpkgs/3edc4a30ed3903fdf6f90c837f961fa6b49582d1?lastModified=1766840161"
+      "last_modified": "2026-01-02T14:39:32Z",
+      "resolved": "github:NixOS/nixpkgs/16c7794d0a28b5a37904d55bcca36003b9109aaa?lastModified=1767364772"
     },
     "go@latest": {
       "last_modified": "2025-11-23T21:50:36Z",
@@ -900,50 +948,50 @@
       }
     },
     "rust-analyzer@latest": {
-      "last_modified": "2025-12-18T02:44:17Z",
-      "resolved": "github:NixOS/nixpkgs/def3da69945bbe338c373fddad5a1bb49cf199ce#rust-analyzer",
+      "last_modified": "2025-12-27T03:48:10Z",
+      "resolved": "github:NixOS/nixpkgs/4eec65df50d796a8fd9c146a09b5007916ce376b#rust-analyzer",
       "source": "devbox-search",
-      "version": "2025-12-15",
+      "version": "2025-12-22",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/jf1lwwrac8n9x9n4r237bw3za817gmsh-rust-analyzer-2025-12-15",
+              "path": "/nix/store/jgmgaay2v35inpirybjiz2xfqh5jbx74-rust-analyzer-2025-12-22",
               "default": true
             }
           ],
-          "store_path": "/nix/store/jf1lwwrac8n9x9n4r237bw3za817gmsh-rust-analyzer-2025-12-15"
+          "store_path": "/nix/store/jgmgaay2v35inpirybjiz2xfqh5jbx74-rust-analyzer-2025-12-22"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/p01l542camvd7gw8b5am8qxxkvv6xfvn-rust-analyzer-2025-12-15",
+              "path": "/nix/store/16kq4i04c1wxv5yqksd6m73hp4c06aw5-rust-analyzer-2025-12-22",
               "default": true
             }
           ],
-          "store_path": "/nix/store/p01l542camvd7gw8b5am8qxxkvv6xfvn-rust-analyzer-2025-12-15"
+          "store_path": "/nix/store/16kq4i04c1wxv5yqksd6m73hp4c06aw5-rust-analyzer-2025-12-22"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/hpdc95ycclpj2qyjhajbfh5ikfj5qhyd-rust-analyzer-2025-12-15",
+              "path": "/nix/store/nbkv4bnkzjdqhr4z7ivip07z58dxy7a5-rust-analyzer-2025-12-22",
               "default": true
             }
           ],
-          "store_path": "/nix/store/hpdc95ycclpj2qyjhajbfh5ikfj5qhyd-rust-analyzer-2025-12-15"
+          "store_path": "/nix/store/nbkv4bnkzjdqhr4z7ivip07z58dxy7a5-rust-analyzer-2025-12-22"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/p01drvm8hyln0drryav1ksypfmgv28rz-rust-analyzer-2025-12-15",
+              "path": "/nix/store/yan20565gga1qa7qz8r6n3r2y45k7z5v-rust-analyzer-2025-12-22",
               "default": true
             }
           ],
-          "store_path": "/nix/store/p01drvm8hyln0drryav1ksypfmgv28rz-rust-analyzer-2025-12-15"
+          "store_path": "/nix/store/yan20565gga1qa7qz8r6n3r2y45k7z5v-rust-analyzer-2025-12-22"
         }
       }
     },
@@ -953,6 +1001,14 @@
       "source": "devbox-search",
       "version": "3.7.1",
       "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/wldpvvmvmdbdf01g8slah3w20v83q42f-stack-3.7.1",
+              "default": true
+            }
+          ]
+        },
         "aarch64-linux": {
           "outputs": [
             {

@@ -1,3 +1,5 @@
+auto-update-channel = tip
+
 font-feature = -calt
 font-feature = -dlig
 theme = Dracula

@@ -18,9 +18,11 @@
   },
   "enabledPlugins": {
     "example-skills@anthropic-agent-skills": true,
-    "document-skills@anthropic-agent-skills": true
+    "document-skills@anthropic-agent-skills": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
-  }
+  },
+  "model": "sonnet"
 }

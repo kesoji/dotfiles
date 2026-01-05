@@ -20,7 +20,8 @@
     "stack@latest",
     "haskell-language-server@latest",
     "terraform@latest",
-    "git-secrets@latest"
+    "git-secrets@latest",
+    "_1password-cli@latest"
   ],
   "shell": {
     "init_hook": [
