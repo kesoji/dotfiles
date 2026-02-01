@@ -21,7 +21,8 @@
     "haskell-language-server@latest",
     "terraform@latest",
     "git-secrets@latest",
-    "_1password-cli@latest"
+    "_1password-cli@latest",
+    "neovim@latest"
   ],
   "shell": {
     "init_hook": [
