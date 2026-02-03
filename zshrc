@@ -591,14 +591,6 @@ else
     alias lg='lazygit'
 fi
 
-command -v delta 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-  echo_info "delta installed: my-delta-install"
-  function my-delta-install() {
-    comexec "brew install git-delta" || return
-  }
-fi
-
 # lazydocker
 command -v lazydocker 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -616,20 +608,6 @@ if [[ $? -ne 0 ]] ; then
     }
 else
     alias ldo='lazydocker'
-fi
-
-# diff-highlight
-command -v diff-highlight >/dev/null
-if [[ $? -ne 0 ]] ; then
-    echo_info "diff-highlight isn't installed: my-diff-highlightinstall"
-    function my-diff-highlightinstall() {
-        workdir=$(mktemp -d)
-        comexec "git clone --depth 1 https://github.com/git/git $workdir" || return
-        comexec "pushd $workdir/contrib/diff-highlight" || return
-        comexec "make" || return
-        comexec "cp diff-highlight $HOME/my/bin" || return
-        comexec "popd" || return
-    }
 fi
 
 # git-secrets
