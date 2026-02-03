@@ -23,7 +23,8 @@
     "git-secrets@latest",
     "_1password-cli@latest",
     "neovim@latest",
-    "bat@latest"
+    "bat@latest",
+    "hexyl@latest"
   ],
   "shell": {
     "init_hook": [

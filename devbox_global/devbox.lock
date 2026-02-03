@@ -601,6 +601,54 @@
         }
       }
     },
+    "hexyl@latest": {
+      "last_modified": "2026-01-23T17:20:52Z",
+      "resolved": "github:NixOS/nixpkgs/a1bab9e494f5f4939442a57a58d0449a109593fe#hexyl",
+      "source": "devbox-search",
+      "version": "0.16.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/gr9l6jmda70hyk7zhlsak03wrlyhxq0p-hexyl-0.16.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/gr9l6jmda70hyk7zhlsak03wrlyhxq0p-hexyl-0.16.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/9dp79vpwv5lxzyqp8ip92adx93mfgadf-hexyl-0.16.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/9dp79vpwv5lxzyqp8ip92adx93mfgadf-hexyl-0.16.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/qnda7c3mcyb94zg8a1dxvy13gilc4wwm-hexyl-0.16.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/qnda7c3mcyb94zg8a1dxvy13gilc4wwm-hexyl-0.16.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/q6avyh3jdzyaxb4qx6c4q6kyy1qq1rm2-hexyl-0.16.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/q6avyh3jdzyaxb4qx6c4q6kyy1qq1rm2-hexyl-0.16.0"
+        }
+      }
+    },
     "lazydocker@latest": {
       "last_modified": "2025-12-21T10:48:17Z",
       "resolved": "github:NixOS/nixpkgs/306ea70f9eb0fb4e040f8540e2deab32ed7e2055#lazydocker",

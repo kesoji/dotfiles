@@ -621,12 +621,6 @@ if [[ $? -ne 0 ]] ; then
     }
 fi
 
-# hexyl
-command -v hexyl 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "hexyl (bindump tool) isn't installed: https://github.com/sharkdp/hexyl"
-fi
-
 # asciinema
 command -v asciinema 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
@@ -636,23 +630,6 @@ if [[ $? -ne 0 ]] ; then
         comexec "sudo apt-get update"
         comexec "sudo apt-get install asciinema"
     }
-fi
-
-# direnv
-command -v direnv 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "direnv isn't installed: my-direnvinstall"
-    function my-direnvinstall {
-        tmpdir=~/__direnv__tmp
-        [[ -d $tmpdir ]] && comexec "rm -rf $tmpdir"
-        comexec "git clone git@github.com:direnv/direnv.git $tmpdir" || return
-        comexec "pushd $tmpdir" || return
-        comexec "make" || return
-        comexec "make install PREFIX=$HOME/my" || return
-        comexec "popd; rm -rf $tmpdir" || return
-    }
-else
-    cached_eval "direnv hook zsh"
 fi
 
 
