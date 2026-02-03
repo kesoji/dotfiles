@@ -22,7 +22,8 @@
     "terraform@latest",
     "git-secrets@latest",
     "_1password-cli@latest",
-    "neovim@latest"
+    "neovim@latest",
+    "bat@latest"
   ],
   "shell": {
     "init_hook": [

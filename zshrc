@@ -554,24 +554,6 @@ else
     alias ghprd='gh pr create --draft --fill'
 fi
 
-# bat
-command -v bat 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "bat isn't installed: my-batinstall"
-    function my-batinstall() {
-        if $MAC; then
-            comexec "brew install bat" || return
-        else
-            comexec "sudo apt-get install bat" || return
-        fi
-    }
-else
-    # JunieがPagerでバグる..
-    if [[ "$TERM_PROGRAM" != "intellij" ]] ; then
-        alias cat='bat --theme=Dracula'
-    fi
-fi
-
 # lazygit
 command -v lazygit 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
