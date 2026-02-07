@@ -914,15 +914,6 @@ function my-colortable2() {
     printf " \\\e[m\n"
 }
 
-command -v gibo 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "gibo isn't installed: my-giboinstall"
-    function my-giboinstall (){
-        comexec "go install github.com/simonwhitaker/gibo@latest"
-        gibo update
-    }
-fi
-
 # Ctrl-z switch back
 function switch-back-ctrl-z () {
     if [[ $#BUFFER -eq 0 ]]; then
