@@ -369,24 +369,8 @@ if [[ $? -ne 0 ]]; then
 else
     alias tmux='tmux -2'
     alias tma='tmux -2 a'
-    # run tmux avoiding nest / intellijはintellij側に設定する
-    if [[ -z "$TMUX" \
-        && "$TERM_PROGRAM" != "vscode" \
-        && "$TERM_PROGRAM" != "intellij" \
-        && "$TERM_PROGRAM" != "WarpTerminal" \
-        && "$TERM_PROGRAM" != "ghostty" \
-        && $TERMINAL_EMULATOR != "JetBrains-JediTerm" ]]; then
-        check=`tmux ls 2>&1`
-        if [[ $? -eq 0 ]]; then
-            if [[ -z $check ]]; then
-                tmux -2
-            else
-                echo $check | grep -q "no session" && tmux -2 || tmux -2 a
-            fi
-        else
-            tmux -2
-        fi
-    fi
+    alias tmux-zsh='SHELL=/bin/zsh tmux'
+    alias tma-zsh='SHELL=/bin/zsh tmux -2 a'
 fi
 
 # Performance optimization: Skip compaudit security checks
