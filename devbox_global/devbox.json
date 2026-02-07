@@ -24,7 +24,8 @@
     "_1password-cli@latest",
     "neovim@latest",
     "bat@latest",
-    "hexyl@latest"
+    "hexyl@latest",
+    "yazi@latest"
   ],
   "shell": {
     "init_hook": [

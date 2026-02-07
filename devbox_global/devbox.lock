@@ -1232,6 +1232,54 @@
           "store_path": "/nix/store/0mnsjyyshx8kiyb2x4jj1a8plgi63y2m-terraform-1.14.3"
         }
       }
+    },
+    "yazi@latest": {
+      "last_modified": "2026-01-23T17:20:52Z",
+      "resolved": "github:NixOS/nixpkgs/a1bab9e494f5f4939442a57a58d0449a109593fe#yazi",
+      "source": "devbox-search",
+      "version": "26.1.22",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/kmxlhmcfjjba06xxb0fk4shdi5dm53a0-yazi-26.1.22",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/kmxlhmcfjjba06xxb0fk4shdi5dm53a0-yazi-26.1.22"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/v7ml0gf70f4xabsml6ph9vf3m25mkmpp-yazi-26.1.22",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/v7ml0gf70f4xabsml6ph9vf3m25mkmpp-yazi-26.1.22"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/n2j8j8j2vhrfqmqp3ibdi95icsvhr3kr-yazi-26.1.22",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/n2j8j8j2vhrfqmqp3ibdi95icsvhr3kr-yazi-26.1.22"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/v1pazjgyyq022bjvm5cjb9jxbkd9nm68-yazi-26.1.22",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/v1pazjgyyq022bjvm5cjb9jxbkd9nm68-yazi-26.1.22"
+        }
+      }
     }
   }
 }
