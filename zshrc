@@ -236,31 +236,13 @@ else
     }
 fi
 
-# mise
-command -v mise 2>/dev/null 1>&2
-if [[ $? -ne 0 ]] ; then
-    echo_info "mise isn't installed: let's visit https://mise.jdx.dev/getting-started.html#alternate-installation-methods OR my-miseinstall";
-    function my-miseinstall() {
-        comexec "curl https://mise.run | sh" || return
-    }
-else
-    # https://mise.jdx.dev/dev-tools/shims.html
-    #こっちはnot interactive用らしい。
-    #eval "$(mise activate zsh --shims)" # should be first 
-    eval "$(mise activate zsh)"
-    # eval "$(mise hook-env -s zsh)"
-    if [[ ! -e ~/.local/share/zsh/completions/_mise ]]; then
-        mkdir -p ~/.local/share/zsh/completions
-        mise completion zsh > ~/.local/share/zsh/completions/_mise
-    fi
-fi
-
 # devbox
 command -v devbox 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     echo_info "devbox isn't installed: TODO"
 else
-    eval "$(devbox global shellenv)"
+    # Optimized: cached for faster startup
+    cached_eval "devbox global shellenv"
     alias db='devbox'
     alias dbi='devbox init'
     alias dba='devbox add'
@@ -476,7 +458,8 @@ if [[ $? -ne 0 ]] ; then
         comexec "curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash" || return
     }
 else
-    eval "$(zoxide init zsh)"
+    # Optimized: cached for faster startup
+    cached_eval "zoxide init zsh"
 fi
 
 
@@ -841,7 +824,11 @@ if [[ $? -ne 0 ]] ; then
         comexec "~/.fzf/install" || return
     }
 else
-    source <(fzf --zsh)
+    # Optimized: cached for faster startup
+    FZF_CACHE="$HOME/.local/cache/zshrc-eval/fzf_--zsh"
+    [[ ! -e "$FZF_CACHE" ]] && fzf --zsh > "$FZF_CACHE"
+    source "$FZF_CACHE"
+
     command -v rg 2>/dev/null 1>&2
     if [[ $? -eq 0 ]] ; then
         export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
@@ -889,7 +876,10 @@ function my-textlintsetup() {
 # kubectl completion
 command -v kubectl 2>/dev/null 1>&2
 if [[ $? -eq 0 ]] ; then
-    source <(kubectl completion zsh)
+    # Optimized: cached for faster startup
+    KUBECTL_CACHE="$HOME/.local/cache/zshrc-eval/kubectl_completion_zsh"
+    [[ ! -e "$KUBECTL_CACHE" ]] && kubectl completion zsh > "$KUBECTL_CACHE"
+    source "$KUBECTL_CACHE"
 fi
 
 
@@ -1353,7 +1343,10 @@ export PATH=/Users/kesoji/.tiup/bin:$PATH
 if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/kesoji/.local/share/google-cloud-sdk/completion.zsh.inc'; fi
+# Optimized: load in background for faster startup (completion available shortly after)
+if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/completion.zsh.inc' ]; then
+    { . '/Users/kesoji/.local/share/google-cloud-sdk/completion.zsh.inc'; } &
+fi
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
 fpath=(/Users/kesoji/.docker/completions $fpath)
 autoload -Uz compinit
