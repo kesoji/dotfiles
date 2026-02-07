@@ -9,7 +9,8 @@
       "Bash(2ndapprove:*)",
       "Bash(./dotfilesLink.sh:*)",
       "Bash(echo:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(tmux ls:*)"
     ],
     "deny": []
   }

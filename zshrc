@@ -367,10 +367,9 @@ if [[ $? -ne 0 ]]; then
         fi
     }
 else
-    alias tmux='tmux -2'
-    alias tma='tmux -2 a'
-    alias tmux-zsh='SHELL=/bin/zsh tmux'
-    alias tma-zsh='SHELL=/bin/zsh tmux -2 a'
+    alias tm='tmux'
+    alias tma='tmux a'
+    alias tmz='SHELL=/bin/zsh tmux new-session /bin/zsh'
 fi
 
 # Performance optimization: Skip compaudit security checks
