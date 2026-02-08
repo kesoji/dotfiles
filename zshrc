@@ -462,6 +462,20 @@ else
     cached_eval "zoxide init zsh"
 fi
 
+# yazi
+command -v yazi 2>/dev/null 1>&2
+if [[ $? -ne 0 ]] ; then
+    echo_info "yazi isn't installed"
+else
+  function y() {
+    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    command yazi "$@" --cwd-file="$tmp"
+    IFS= read -r -d '' cwd < "$tmp"
+    [ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd"
+    rm -f -- "$tmp"
+  }
+fi
+
 
 # go
 command -v go 2>/dev/null 1>&2

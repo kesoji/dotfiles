@@ -23,6 +23,7 @@
     "git-secrets@latest",
     "_1password-cli@latest",
     "neovim@latest",
+    "uv@latest",
     "bat@latest",
     "hexyl@latest",
     "yazi@latest"
