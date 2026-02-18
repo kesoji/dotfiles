@@ -26,7 +26,8 @@
     "uv@latest",
     "bat@latest",
     "hexyl@latest",
-    "yazi@latest"
+    "yazi@latest",
+    "awscli2@latest"
   ],
   "shell": {
     "init_hook": [
