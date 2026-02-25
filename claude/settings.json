@@ -7,14 +7,17 @@
       "Bash(cat:*)",
       "Bash(echo:*)",
       "Bash(mkdir:*)",
-      "Bash(git add:*)",
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
       "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
       "Bash(ffmpeg:*)",
       "Bash(devbox:*)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(git add .:*)",
+      "Bash(git add -A:*)"
+    ]
   },
   "model": "sonnet",
   "enabledPlugins": {
@@ -26,5 +29,6 @@
   },
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
-  }
+  },
+  "skipDangerousModePermissionPrompt": true
 }
