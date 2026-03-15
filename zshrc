@@ -308,11 +308,14 @@ function my-neoviminstall() {
 
 ###### SSH Setting ######
 function my-sshkeyadd (){
+  WORK_KEY="~/.ssh/id_ed25519_work"
+  if [ -e $WORK_KEY ]; then
     if $MAC; then
-        ssh-add --apple-use-keychain ~/.ssh/id_ed25519_work
+        ssh-add --apple-use-keychain $WORK_KEY
     else
-        ssh-add -t 72h ~/.ssh/id_ed25519_work
+        ssh-add -t 72h $WORK_KEY
     fi
+  fi
 }
 function my-sshkeyadd_agentoff (){
     eval $(ssh-agent -k)
@@ -322,9 +325,7 @@ function my-sshkeyadd_agentoff (){
 # ssh_agent
 if [[ ! -v SSH_AGENT_PID ]] ; then
     echo -n "Starting ssh-agent... "
-    eval $(ssh-agent -t 24h)
-else
-    echo "ssh-agent is already started"
+    eval $(ssh-agent -t 72h)
 fi
 ssh-add -l 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
