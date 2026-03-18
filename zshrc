@@ -247,7 +247,7 @@ else
     alias dbi='devbox init'
     alias dba='devbox add'
     alias dbr='devbox run'
-    if [[ ! -e ~/.oh-my-zsh/completions/_devbox ]]; then
+    if [[ -d ~/.oh-my-zsh && ! -e ~/.oh-my-zsh/completions/_devbox ]]; then
         mkdir -p ~/.oh-my-zsh/completions
         devbox completion zsh > ~/.oh-my-zsh/completions/_devbox
     fi
