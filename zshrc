@@ -42,7 +42,6 @@ if $MAC; then
     if [[ $? -ne 0 ]]; then
         echo_info "Homebrew isn't installed."
     else
-        export PATH="/opt/homebrew/bin:$PATH"
         git lfs 2>/dev/null 1>&2
         if [[ $? -ne 0 ]]; then
             echo_notice "installing git lfs";
@@ -123,9 +122,6 @@ SCRIPT
     }
 fi
 
-
-export PATH=$HOME/.local/bin:$HOME/my/sbin:$HOME/my/bin:$PATH
-export PATH=$HOME/.local/share/flutter/bin:$PATH
 
 
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
@@ -503,10 +499,6 @@ else
     export GOPATH=${HOME}/go
     export PATH=${GOPATH}/bin:$PATH
 fi
-
-# flutter
-export PATH=$PATH:$HOME/development/flutter/bin
-export PATH=$PATH:$HOME/flutter/bin
 
 # Android
 if [[ -e $HOME/Library/Android/sdk ]] ; then
