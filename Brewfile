@@ -16,6 +16,7 @@ cask "slack"
 cask "tailscale-app"
 cask "visual-studio-code"
 cask "windows-app"
+cask "zoom"
 mas "Developer", id: 640199958
 mas "Disk Speed Test", id: 425264550
 mas "Kindle", id: 302584613
