@@ -38,6 +38,7 @@ if [ "$(uname)" = 'Darwin' ] ; then
     MAC_INSTALLER="brew install"
 fi
 if $MAC; then
+  echo $PATH;
     command -v brew 2>/dev/null 1>&2
     if [[ $? -ne 0 ]]; then
         echo_info "Homebrew isn't installed."
@@ -1336,7 +1337,6 @@ function 2ndapprove() {
     echo "✅ Successfully processed PR #${pr_number}"
 }
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
-export PATH=/Users/kesoji/.tiup/bin:$PATH
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc'; fi
