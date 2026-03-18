@@ -2,20 +2,20 @@
 
 # Function to create symlink only if it doesn't exist or points to different target
 safe_ln() {
-    local source="$1"
-    local target="$2"
-    
-    # If target doesn't exist or is not a symlink, create it
-    if [ ! -L "$target" ]; then
-        ln -sf "$source" "$target"
-        return
-    fi
-    
-    # If target exists and is a symlink, check if it points to the correct source
-    local current_target=$(readlink "$target")
-    if [ "$current_target" != "$source" ]; then
-        ln -sf "$source" "$target"
-    fi
+  local source="$1"
+  local target="$2"
+
+  # If target doesn't exist or is not a symlink, create it
+  if [ ! -L "$target" ]; then
+    ln -sf "$source" "$target"
+    return
+  fi
+
+  # If target exists and is a symlink, check if it points to the correct source
+  local current_target=$(readlink "$target")
+  if [ "$current_target" != "$source" ]; then
+    ln -sf "$source" "$target"
+  fi
 }
 
 # vim
@@ -39,6 +39,7 @@ safe_ln ~/dotfiles/nvim ~/.config/nvim
 safe_ln ~/dotfiles/tmux.conf ~/.tmux.conf
 safe_ln ~/dotfiles/gitconfig ~/.gitconfig
 safe_ln ~/dotfiles/gitignore_global ~/.gitignore_global
+safe_ln ~/dotfiles/zprofile ~/.zprofile
 safe_ln ~/dotfiles/zshrc ~/.zshrc
 safe_ln ~/dotfiles/zshenv ~/.zshenv
 safe_ln ~/dotfiles/npmrc ~/.npmrc
@@ -59,13 +60,13 @@ safe_ln ~/dotfiles/lazygit/config.yml ~/.config/lazygit/config.yml
 mkdir -p ~/.claude
 safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
 if [ -d ~/dotfiles/claude/commands ]; then
-    mkdir -p ~/.claude/commands
-    for cmd_file in ~/dotfiles/claude/commands/*; do
-        if [ -f "$cmd_file" ]; then
-            cmd_name=$(basename "$cmd_file")
-            safe_ln "$cmd_file" ~/.claude/commands/"$cmd_name"
-        fi
-    done
+  mkdir -p ~/.claude/commands
+  for cmd_file in ~/dotfiles/claude/commands/*; do
+    if [ -f "$cmd_file" ]; then
+      cmd_name=$(basename "$cmd_file")
+      safe_ln "$cmd_file" ~/.claude/commands/"$cmd_name"
+    fi
+  done
 fi
 
 # devbox global
