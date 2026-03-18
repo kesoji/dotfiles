@@ -42,6 +42,7 @@ if $MAC; then
     if [[ $? -ne 0 ]]; then
         echo_info "Homebrew isn't installed."
     else
+        export PATH="/opt/homebrew/bin:$PATH"
         git lfs 2>/dev/null 1>&2
         if [[ $? -ne 0 ]]; then
             echo_notice "installing git lfs";
@@ -1221,8 +1222,6 @@ bindkey '^s^s' complete-ssh-host-fzf
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C terraform terraform
 
-export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"
-
 # tabtab source for packages
 # uninstall by removing these lines
 [[ -f ~/.config/tabtab/__tabtab.zsh ]] && . ~/.config/tabtab/__tabtab.zsh || true
@@ -1240,13 +1239,6 @@ if [[ -e /usr/libexec/java_home ]]; then
         export PATH=$JAVA_HOME/bin:$PATH
     fi
 fi
-
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-#export SDKMAN_DIR="$HOME/.sdkman"
-#[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
-export PATH="/opt/homebrew/lib/ruby/gems/3.2.0/bin:$PATH"
-
 
 function 2ndapprove() {
     if [ -z "$1" ]; then
