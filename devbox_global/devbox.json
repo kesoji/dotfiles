@@ -30,7 +30,8 @@
     "awscli2@latest",
     "gnupg@latest",
     "tmux@latest",
-    "zoxide@latest"
+    "zoxide@latest",
+    "starship@latest"
   ],
   "shell": {
     "init_hook": [
