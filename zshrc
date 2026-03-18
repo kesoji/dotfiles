@@ -76,7 +76,7 @@ fi
 
 
 # oh-my-zshからstarshipに
-command -v starship &> /dev/null && eval "$(starship init zsh)"i
+command -v starship &> /dev/null && eval "$(starship init zsh)"
 
 if [ -e /snap ]; then
     export PATH="/snap/bin:$PATH"
