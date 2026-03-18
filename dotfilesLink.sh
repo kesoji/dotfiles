@@ -41,18 +41,10 @@ safe_ln ~/dotfiles/gitconfig ~/.gitconfig
 safe_ln ~/dotfiles/gitignore_global ~/.gitignore_global
 safe_ln ~/dotfiles/zshrc ~/.zshrc
 safe_ln ~/dotfiles/zshenv ~/.zshenv
-safe_ln ~/dotfiles/sshrc ~/.sshrc
-safe_ln ~/dotfiles/tigrc ~/.tigrc
-safe_ln ~/dotfiles/inputrc ~/.inputrc
-safe_ln ~/dotfiles/globalrc ~/.globalrc
-safe_ln ~/dotfiles/irbrc ~/.irbrc
-safe_ln ~/dotfiles/sshrc.d ~/.sshrc.d
 safe_ln ~/dotfiles/npmrc ~/.npmrc
 
 # .config
 mkdir -p ~/.config
-safe_ln ~/dotfiles/dotconfig/rsync ~/.config/rsync
-safe_ln ~/dotfiles/dotconfig/wezterm ~/.config/wezterm
 safe_ln ~/dotfiles/dotconfig/pnpm ~/.config/pnpm
 mkdir -p ~/.config/alacritty
 safe_ln ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
@@ -80,9 +72,3 @@ fi
 mkdir -p ~/.local/share/devbox/global/default
 safe_ln ~/dotfiles/devbox_global/devbox.json ~/.local/share/devbox/global/default/devbox.json
 safe_ln ~/dotfiles/devbox_global/devbox.lock ~/.local/share/devbox/global/default/devbox.lock
-
-# vim-plug
-if [ ! -s ~/.vim/autoload/plug.vim ]; then
-  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
-    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-fi
