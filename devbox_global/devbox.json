@@ -15,6 +15,7 @@
     "lua54Packages.lua@latest",
     "lua54Packages.luarocks@latest",
     "go@latest",
+    "golangci-lint@latest",
     "cargo@latest",
     "rust-analyzer@latest",
     "stack@latest",
@@ -31,7 +32,8 @@
     "gnupg@latest",
     "tmux@latest",
     "zoxide@latest",
-    "starship@latest"
+    "starship@latest",
+    "sox@latest"
   ],
   "shell": {
     "init_hook": [
