@@ -665,6 +665,54 @@
         }
       }
     },
+    "golangci-lint@latest": {
+      "last_modified": "2026-03-11T04:01:32Z",
+      "resolved": "github:NixOS/nixpkgs/b6067cc0127d4db9c26c79e4de0513e58d0c40c9#golangci-lint",
+      "source": "devbox-search",
+      "version": "2.11.3",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/zalxgqwyng4jdbv5cpsmm9xbmim9hjjj-golangci-lint-2.11.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/zalxgqwyng4jdbv5cpsmm9xbmim9hjjj-golangci-lint-2.11.3"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/mbra9idrmw8f8a4sqv2d0bf6vw8gcmfp-golangci-lint-2.11.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/mbra9idrmw8f8a4sqv2d0bf6vw8gcmfp-golangci-lint-2.11.3"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ph64c01zwvbr9xvxydxa8ijvbdfax8fy-golangci-lint-2.11.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ph64c01zwvbr9xvxydxa8ijvbdfax8fy-golangci-lint-2.11.3"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/i1xcg5f24w70llk4v6lzi0vi4jf3ma5k-golangci-lint-2.11.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/i1xcg5f24w70llk4v6lzi0vi4jf3ma5k-golangci-lint-2.11.3"
+        }
+      }
+    },
     "haskell-language-server@latest": {
       "last_modified": "2026-03-02T11:03:52Z",
       "resolved": "github:NixOS/nixpkgs/dc7513872406b53d2ff417a003895d6daffdff2f#haskell-language-server",
@@ -1216,6 +1264,106 @@
             }
           ],
           "store_path": "/nix/store/ljwbyp5yhh6pxwnff3mlsqqf77xkk64v-rust-analyzer-2026-03-09"
+        }
+      }
+    },
+    "sox@latest": {
+      "last_modified": "2026-03-11T12:14:37Z",
+      "resolved": "github:NixOS/nixpkgs/75690239f08f885ca9b0267580101f60d10fbe62#sox",
+      "source": "devbox-search",
+      "version": "2021-05-09",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/xy1pp8sfa3y1pfmy2rwnbbpxfs5nrmsx-sox-unstable-2021-05-09",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/9fjimipj581k895768zrxqizyayi4q3m-sox-unstable-2021-05-09-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/9s4m74mw51jjkkhs0yj5aj1y60c9p0dl-sox-unstable-2021-05-09-dev"
+            },
+            {
+              "name": "lib",
+              "path": "/nix/store/xr8b94zwr3phlqs6k8ralxz202vnf8j9-sox-unstable-2021-05-09-lib"
+            }
+          ],
+          "store_path": "/nix/store/xy1pp8sfa3y1pfmy2rwnbbpxfs5nrmsx-sox-unstable-2021-05-09"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/4y80nh0drq9s8lal2sf95a7yvspxsb1z-sox-unstable-2021-05-09",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/nx1f85gsh4386s22ss25bf8yc0n2gw8y-sox-unstable-2021-05-09-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/aminv0ql4s0366rwrqfhs9js40k4wksm-sox-unstable-2021-05-09-dev"
+            },
+            {
+              "name": "lib",
+              "path": "/nix/store/2y64pnn227q5w2fn0dhb09pc7y5nshy4-sox-unstable-2021-05-09-lib"
+            }
+          ],
+          "store_path": "/nix/store/4y80nh0drq9s8lal2sf95a7yvspxsb1z-sox-unstable-2021-05-09"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/fjwd4c1566mswzd90ip11v38xi18gxrf-sox-unstable-2021-05-09",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/4slyswkqzwaylqzyv0d0ns69nahx2790-sox-unstable-2021-05-09-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/xqmwm3jw4m2fl327shy9cdi53zdmpp2r-sox-unstable-2021-05-09-dev"
+            },
+            {
+              "name": "lib",
+              "path": "/nix/store/il3mr7dwpv52idihn4rgrc91byixpkjp-sox-unstable-2021-05-09-lib"
+            }
+          ],
+          "store_path": "/nix/store/fjwd4c1566mswzd90ip11v38xi18gxrf-sox-unstable-2021-05-09"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/isd23zzwr3b3r6gc7icc788h68c2ya9h-sox-unstable-2021-05-09",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/pskm3bbg99hh567xab4z7qvrmpdcq0vc-sox-unstable-2021-05-09-man",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/wik7hpgqr4w68bzvld9c3yn2512hyr4k-sox-unstable-2021-05-09-dev"
+            },
+            {
+              "name": "lib",
+              "path": "/nix/store/4lb7nb505n02j95y58cyiqmxrrw0qnwn-sox-unstable-2021-05-09-lib"
+            }
+          ],
+          "store_path": "/nix/store/isd23zzwr3b3r6gc7icc788h68c2ya9h-sox-unstable-2021-05-09"
         }
       }
     },

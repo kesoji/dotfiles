@@ -19,6 +19,10 @@
       "Bash(git add -A:*)"
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/myscripts/statusline.py"
+  },
   "enabledPlugins": {
     "example-skills@anthropic-agent-skills": true,
     "document-skills@anthropic-agent-skills": true,
