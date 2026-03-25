@@ -1,4 +1,4 @@
-auto-update-channel = tip
+#auto-update-channel = tip
 macos-option-as-alt = true
 
 font-feature = -calt
