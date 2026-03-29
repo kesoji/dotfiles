@@ -1,7 +1,8 @@
 #auto-update-channel = tip
 macos-option-as-alt = true
 
-font-family = MoralerspaceArgonHW
+# ghostty +list-fonts
+font-family = Moralerspace Argon HW
 font-feature = -calt
 font-feature = -dlig
 theme = Dracula
