@@ -52,7 +52,7 @@ safe_ln ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 mkdir -p ~/.config/goneovim
 safe_ln ~/dotfiles/goneovim_settings.toml ~/.config/goneovim/settings.toml
 mkdir -p ~/.config/ghostty
-safe_ln ~/dotfiles/ghostty ~/.config/ghostty/config
+safe_ln ~/dotfiles/config.ghostty ~/.config/ghostty/config.ghostty
 mkdir -p ~/.config/lazygit
 safe_ln ~/dotfiles/lazygit/config.yml ~/.config/lazygit/config.yml
 safe_ln ~/dotfiles/starship.toml ~/.config/starship.toml
