@@ -60,6 +60,7 @@ safe_ln ~/dotfiles/starship.toml ~/.config/starship.toml
 # claude
 mkdir -p ~/.claude
 safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
+safe_ln ~/dotfiles/claude/myscripts ~/.claude/myscripts
 if [ -d ~/dotfiles/claude/commands ]; then
   mkdir -p ~/.claude/commands
   for cmd_file in ~/dotfiles/claude/commands/*; do
