@@ -132,7 +132,7 @@ function my-neoviminstall() {
 
 ###### SSH Setting ######
 function my-sshkeyadd (){
-  WORK_KEY="~/.ssh/id_ed25519_work"
+  WORK_KEY="$HOME/.ssh/id_ed25519_work"
   if [ -e $WORK_KEY ]; then
     if $MAC; then
         ssh-add --apple-use-keychain $WORK_KEY
@@ -146,11 +146,26 @@ function my-sshkeyadd_agentoff (){
 }
 
 #export SSH_AUTH_SOCK=~/Library/Group\ Containers/2BUA8C4S2C.com.1password/t/agent.sock
-# ssh_agent
-if [[ ! -v SSH_AGENT_PID ]] ; then
-    echo -n "Starting ssh-agent... "
-    eval $(ssh-agent -t 72h)
+# ssh_agent - persist agent info across shells to avoid spawning duplicates
+_ssh_agent_env="$HOME/.ssh/agent.env"
+_ssh_agent_alive=0
+# Try existing agent (from env or saved file)
+if [[ -S "${SSH_AUTH_SOCK:-}" ]] && ssh-add -l &>/dev/null; then
+    _ssh_agent_alive=1
+elif [[ -f "$_ssh_agent_env" ]]; then
+    source "$_ssh_agent_env" &>/dev/null
+    if [[ -S "${SSH_AUTH_SOCK:-}" ]] && ssh-add -l &>/dev/null; then
+        _ssh_agent_alive=1
+    fi
 fi
+if [[ $_ssh_agent_alive -eq 0 ]]; then
+    echo -n "Starting ssh-agent... "
+    eval $(ssh-agent -t 72h) > /dev/null
+    echo "export SSH_AUTH_SOCK=$SSH_AUTH_SOCK" > "$_ssh_agent_env"
+    echo "export SSH_AGENT_PID=$SSH_AGENT_PID" >> "$_ssh_agent_env"
+    chmod 600 "$_ssh_agent_env"
+fi
+unset _ssh_agent_env _ssh_agent_alive
 ssh-add -l 2>/dev/null 1>&2
 if [[ $? -ne 0 ]] ; then
     #echo
