@@ -1065,5 +1065,10 @@ autoload -Uz compinit
 compinit
 # End of Docker CLI completions
 
+# curl with timing breakdown
+curltime() {
+  curl -o /dev/null -s -w "dns: %{time_namelookup}s\nconnect: %{time_connect}s\ntls: %{time_appconnect}s\nttfb: %{time_starttransfer}s\ntotal: %{time_total}s\nhttp_code: %{http_code}\n" "$@"
+}
+
 # Kiro CLI post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
