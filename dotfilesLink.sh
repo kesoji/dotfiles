@@ -5,16 +5,24 @@ safe_ln() {
   local source="$1"
   local target="$2"
 
+  # If target exists as a real directory (not a symlink), bail out loudly.
+  # Otherwise `ln -sf` would create the link *inside* that directory
+  # (e.g. target/basename(source)) instead of replacing it.
+  if [ ! -L "$target" ] && [ -d "$target" ]; then
+    echo "safe_ln: '$target' is an existing directory; refusing to overwrite. Remove it manually and re-run." >&2
+    return 1
+  fi
+
   # If target doesn't exist or is not a symlink, create it
   if [ ! -L "$target" ]; then
-    ln -sf "$source" "$target"
+    ln -sfn "$source" "$target"
     return
   fi
 
   # If target exists and is a symlink, check if it points to the correct source
   local current_target=$(readlink "$target")
   if [ "$current_target" != "$source" ]; then
-    ln -sf "$source" "$target"
+    ln -sfn "$source" "$target"
   fi
 }
 
