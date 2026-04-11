@@ -61,15 +61,7 @@ safe_ln ~/dotfiles/starship.toml ~/.config/starship.toml
 mkdir -p ~/.claude
 safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
 safe_ln ~/dotfiles/claude/myscripts ~/.claude/myscripts
-if [ -d ~/dotfiles/claude/commands ]; then
-  mkdir -p ~/.claude/commands
-  for cmd_file in ~/dotfiles/claude/commands/*; do
-    if [ -f "$cmd_file" ]; then
-      cmd_name=$(basename "$cmd_file")
-      safe_ln "$cmd_file" ~/.claude/commands/"$cmd_name"
-    fi
-  done
-fi
+safe_ln ~/dotfiles/claude/skills ~/.claude/skills
 
 # devbox global
 mkdir -p ~/.local/share/devbox/global/default
