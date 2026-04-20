@@ -113,6 +113,54 @@
         }
       }
     },
+    "bandwhich@latest": {
+      "last_modified": "2026-03-21T07:29:51Z",
+      "resolved": "github:NixOS/nixpkgs/09061f748ee21f68a089cd5d91ec1859cd93d0be#bandwhich",
+      "source": "devbox-search",
+      "version": "0.23.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/93xkk6s6cggm2pwxacbymz88k9qb8v3m-bandwhich-0.23.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/93xkk6s6cggm2pwxacbymz88k9qb8v3m-bandwhich-0.23.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/20s19barrhaq9f8myhlxqhyhhjrymbys-bandwhich-0.23.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/20s19barrhaq9f8myhlxqhyhhjrymbys-bandwhich-0.23.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/v3xg15abcj133mlc4bbfr9i40nfqxlpk-bandwhich-0.23.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/v3xg15abcj133mlc4bbfr9i40nfqxlpk-bandwhich-0.23.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/xwbcgp9k3sx9f873mm68qlk38h4vv59m-bandwhich-0.23.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/xwbcgp9k3sx9f873mm68qlk38h4vv59m-bandwhich-0.23.1"
+        }
+      }
+    },
     "bat@latest": {
       "last_modified": "2026-02-23T15:40:43Z",
       "resolved": "github:NixOS/nixpkgs/80d901ec0377e19ac3f7bb8c035201e2e098cc97#bat",
@@ -1264,6 +1312,54 @@
             }
           ],
           "store_path": "/nix/store/ljwbyp5yhh6pxwnff3mlsqqf77xkk64v-rust-analyzer-2026-03-09"
+        }
+      }
+    },
+    "sniffnet@latest": {
+      "last_modified": "2026-03-21T07:29:51Z",
+      "resolved": "github:NixOS/nixpkgs/09061f748ee21f68a089cd5d91ec1859cd93d0be#sniffnet",
+      "source": "devbox-search",
+      "version": "1.4.2",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/10jpqrz2mc7a031gbad258p0g0x5hrql-sniffnet-1.4.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/10jpqrz2mc7a031gbad258p0g0x5hrql-sniffnet-1.4.2"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/5kz9r6lkv919zn0ysdb21sxc6aj59983-sniffnet-1.4.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/5kz9r6lkv919zn0ysdb21sxc6aj59983-sniffnet-1.4.2"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/6i0xfmd06727965rzhaj0in43wlq4yfp-sniffnet-1.4.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/6i0xfmd06727965rzhaj0in43wlq4yfp-sniffnet-1.4.2"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/yl3syd0zddjgrk0kbm4fvir3s4qk1h6l-sniffnet-1.4.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/yl3syd0zddjgrk0kbm4fvir3s4qk1h6l-sniffnet-1.4.2"
         }
       }
     },

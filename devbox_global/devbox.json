@@ -33,7 +33,9 @@
     "tmux@latest",
     "zoxide@latest",
     "starship@latest",
-    "sox@latest"
+    "sox@latest",
+    "bandwhich@latest",
+    "sniffnet@latest"
   ],
   "shell": {
     "init_hook": [
