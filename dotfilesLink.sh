@@ -75,3 +75,7 @@ safe_ln ~/dotfiles/claude/skills ~/.claude/skills
 mkdir -p ~/.local/share/devbox/global/default
 safe_ln ~/dotfiles/devbox_global/devbox.json ~/.local/share/devbox/global/default/devbox.json
 safe_ln ~/dotfiles/devbox_global/devbox.lock ~/.local/share/devbox/global/default/devbox.lock
+
+# shell plugins
+mkdir -p ~/.local/share/shell
+safe_ln ~/dotfiles/shell/fzf-git.sh ~/.local/share/shell/fzf-git.sh

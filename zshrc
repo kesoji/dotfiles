@@ -590,6 +590,16 @@ if command -v fzf &>/dev/null; then
         export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND"
         export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
     fi
+
+    if [ -f ~/.local/share/shell/fzf-git.sh ]; then
+        source ~/.local/share/shell/fzf-git.sh
+
+        wt() {
+            local dir
+            dir="$(_fzf_git_worktrees --no-multi)" || return
+            [ -n "$dir" ] && cd "$dir"
+        }
+    fi
 fi
 
 # disable STOP (Ctrl+S)
@@ -679,7 +689,7 @@ if command -v ghq &>/dev/null; then
       return $ret
     }
     zle     -N   fzf-ghq-widget
-    bindkey '^G' fzf-ghq-widget
+    bindkey '^G^G' fzf-ghq-widget
 
     alias ghq-status='for i in `ghq list`; do echo "======== $i ========"; cd $(ghq root)/$i; git status -s; popd; done'
 fi
