@@ -1082,3 +1082,5 @@ curltime() {
 
 # Kiro CLI post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
+# CF CLI completions
+[[ -f "/Users/kesoji/.config/cf/completions/_cf.zsh" ]] && source "/Users/kesoji/.config/cf/completions/_cf.zsh"

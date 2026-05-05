@@ -40,6 +40,7 @@
     }
   },
   "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
   }
