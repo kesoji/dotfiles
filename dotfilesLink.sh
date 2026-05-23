@@ -55,6 +55,7 @@ safe_ln ~/dotfiles/npmrc ~/.npmrc
 # .config
 mkdir -p ~/.config
 safe_ln ~/dotfiles/dotconfig/pnpm ~/.config/pnpm
+safe_ln ~/dotfiles/dotconfig/ncu ~/.config/ncu
 mkdir -p ~/.config/alacritty
 safe_ln ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
 mkdir -p ~/.config/goneovim
