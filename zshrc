@@ -409,7 +409,7 @@ fi
 alias serena="uvx --from git+https://github.com/oraios/serena serena start-mcp-server"
 alias marp="npx @marp-team/marp-cli@latest"
 alias wrangler="npx wrangler@latest"
-alias ncu="npx npm-check-updates"
+alias ncu='npx npm-check-updates --configFilePath "${XDG_CONFIG_HOME:-$HOME/.config}/ncu"'
 alias ezsh="$EDITOR ~/.zshrc"
 alias reload='exec $SHELL'
 alias :q='exit'
