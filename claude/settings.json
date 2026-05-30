@@ -17,7 +17,8 @@
     "deny": [
       "Bash(git add .:*)",
       "Bash(git add -A:*)"
-    ]
+    ],
+    "defaultMode": "auto"
   },
   "statusLine": {
     "type": "command",
@@ -44,5 +45,6 @@
   "agentPushNotifEnabled": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
-  }
+  },
+  "skipAutoPermissionPrompt": true
 }
