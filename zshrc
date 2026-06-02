@@ -1079,6 +1079,22 @@ compinit
 curltime() {
   curl -o /dev/null -s -w "dns: %{time_namelookup}s\nconnect: %{time_connect}s\ntls: %{time_appconnect}s\nttfb: %{time_starttransfer}s\ntotal: %{time_total}s\nhttp_code: %{http_code}\n" "$@"
 }
+# open xxx.csv で Excel が文字化けしないよう UTF-8 BOM を付けた一時コピーを開く
+# (元ファイルは変更しない。BOM 既存ファイルや .csv 以外はそのまま open に渡す)
+open() {
+  local -a args
+  local f tmp
+  for f in "$@"; do
+    if [[ "$f" == *.csv && -f "$f" ]] && ! head -c 3 "$f" | grep -q $'\xef\xbb\xbf'; then
+      tmp="${TMPDIR:-/tmp}/${f:t:r}-bom.csv"
+      { printf '\xef\xbb\xbf'; cat "$f"; } > "$tmp"
+      args+=("$tmp")
+    else
+      args+=("$f")
+    fi
+  done
+  command open "${args[@]}"
+}
 
 # Kiro CLI post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
