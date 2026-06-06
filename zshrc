@@ -1,5 +1,7 @@
+
 # Kiro CLI pre block. Keep at the top of this file.
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh"
+
 # Q pre block. Keep at the top of this file.
 # Disabled for faster startup - zcompile happens automatically by zsh
 # Removing this check eliminates ~7% startup time overhead
@@ -1096,7 +1098,9 @@ open() {
   command open "${args[@]}"
 }
 
-# Kiro CLI post block. Keep at the bottom of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
 # CF CLI completions
 [[ -f "/Users/kesoji/.config/cf/completions/_cf.zsh" ]] && source "/Users/kesoji/.config/cf/completions/_cf.zsh"
+
+
+# Kiro CLI post block. Keep at the bottom of this file.
+[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
