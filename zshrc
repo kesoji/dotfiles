@@ -1102,5 +1102,54 @@ open() {
 [[ -f "/Users/kesoji/.config/cf/completions/_cf.zsh" ]] && source "/Users/kesoji/.config/cf/completions/_cf.zsh"
 
 
+# ecsx: ECS Exec ヘルパー
+#   現在の AWS_PROFILE で cluster→service→task→container を選んで execute-command。
+#   候補が1個なら自動選択、複数なら fzf（無ければ番号選択）。
+#   使い方:  ecsx            # /bin/sh で入る
+#            ecsx /bin/bash  # 入るコマンドを指定
+#   ※ session-manager-plugin と、対象 profile の ssmmessages 権限が必要。
+_ecsx_pick() {
+  emulate -L zsh
+  local label=$1
+  local -a items
+  items=("${(@f)$(cat)}")
+  items=(${items:#})  # 空要素を除去
+  (( ${#items} == 0 )) && { print -u2 "✗ no ${label} found"; return 1; }
+  if (( ${#items} == 1 )); then
+    print -u2 "• ${label}: ${items[1]}"
+    print -r -- "${items[1]}"
+    return 0
+  fi
+  if command -v fzf >/dev/null 2>&1; then
+    printf '%s\n' "${items[@]}" | fzf --prompt="${label}> " --height=40% --reverse
+  else
+    local i sel
+    for i in {1..${#items}}; do printf '%2d) %s\n' $i "${items[i]}" >&2; done
+    printf '%s #? ' "$label" >&2; read sel
+    print -r -- "${items[$sel]}"
+  fi
+}
+
+ecsx() {
+  emulate -L zsh
+  local cmd="${1:-/bin/sh}"
+  local cluster service task container
+
+  cluster=$(aws ecs list-clusters --query 'clusterArns[]' --output text \
+            | tr '\t' '\n' | sed 's#.*/##' | _ecsx_pick cluster) || return 1
+  service=$(aws ecs list-services --cluster "$cluster" --query 'serviceArns[]' --output text \
+            | tr '\t' '\n' | sed 's#.*/##' | _ecsx_pick service) || return 1
+  task=$(aws ecs list-tasks --cluster "$cluster" --service-name "$service" --query 'taskArns[]' --output text \
+            | tr '\t' '\n' | sed 's#.*/##' | _ecsx_pick task) || return 1
+  container=$(aws ecs describe-tasks --cluster "$cluster" --tasks "$task" \
+              --query 'tasks[0].containers[].name' --output text \
+            | tr '\t' '\n' | _ecsx_pick container) || return 1
+
+  print -u2 "▶ execute-command  cluster=${cluster}  service=${service}"
+  print -u2 "                   task=${task}  container=${container}  cmd=${cmd}  profile=${AWS_PROFILE:-default}"
+  aws ecs execute-command --cluster "$cluster" --task "$task" --container "$container" \
+      --interactive --command "$cmd"
+}
+
 # Kiro CLI post block. Keep at the bottom of this file.
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
