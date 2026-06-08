@@ -1521,6 +1521,14 @@
       "source": "devbox-search",
       "version": "3.9.3",
       "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/yz7njy2w7ydsa0lk7bs7lp645a4p4g89-stack-3.9.3",
+              "default": true
+            }
+          ]
+        },
         "aarch64-linux": {
           "outputs": [
             {
