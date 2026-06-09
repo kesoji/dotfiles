@@ -694,6 +694,19 @@ if command -v ghq &>/dev/null; then
     bindkey '^G^G' fzf-ghq-widget
 
     alias ghq-status='for i in `ghq list`; do echo "======== $i ========"; cd $(ghq root)/$i; git status -s; popd; done'
+
+    # new-repo <owner/repo> [gh-repo-create-options...]
+    # Create a private GitHub repo, clone it via ghq, then cd into it.
+    new-repo() {
+        local repo="$1"; shift
+        if [[ -z "$repo" ]]; then
+            echo_error "Usage: new-repo <owner/repo> [gh repo create options...]"
+            return 1
+        fi
+        comexec "gh repo create --private '$repo' $*" || return 1
+        comexec "ghq get '$repo'" || return 1
+        cd "$(ghq root)/github.com/$repo"
+    }
 fi
 
 # fd-find
