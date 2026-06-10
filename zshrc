@@ -1,8 +1,4 @@
 
-# Kiro CLI pre block. Keep at the top of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh"
-
-# Q pre block. Keep at the top of this file.
 # Disabled for faster startup - zcompile happens automatically by zsh
 # Removing this check eliminates ~7% startup time overhead
 # Downside: Negligible - automatic compilation still works via other mechanisms
@@ -1074,7 +1070,6 @@ function 2ndapprove() {
 
     echo "✅ Successfully processed PR #${pr_number}"
 }
-[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/kesoji/.local/share/google-cloud-sdk/path.zsh.inc'; fi
@@ -1163,6 +1158,3 @@ ecsx() {
   aws ecs execute-command --cluster "$cluster" --task "$task" --container "$container" \
       --interactive --command "$cmd"
 }
-
-# Kiro CLI post block. Keep at the bottom of this file.
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
