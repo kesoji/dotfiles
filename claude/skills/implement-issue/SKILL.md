@@ -37,6 +37,23 @@ WORKTREE_PATH="${REPO_ROOT}/../${REPO_NAME}-issue-{NUMBER}"
 git worktree add "$WORKTREE_PATH" -b "$BRANCH"
 ```
 
+**Copy gitignored env files into the worktree.** A fresh worktree only contains tracked files, so `.env` (which is gitignored) is missing — tools like Prisma, dotenv, and local DB connections will silently fall back to `.env.example` or fail. Copy every `.env*` real file (excluding `*.example` / `*.sample`) from the original repo root into the same relative path in the worktree:
+
+```bash
+cd "$REPO_ROOT"
+# Find tracked-dir .env files that git ignores (the real local ones), excluding examples/samples
+find . -type d -name node_modules -prune -o -type f -name ".env*" \
+  ! -name "*.example" ! -name "*.sample" -print | while read -r f; do
+    git check-ignore -q "$f" || continue           # only copy files git actually ignores
+    mkdir -p "$WORKTREE_PATH/$(dirname "$f")"
+    cp "$f" "$WORKTREE_PATH/$f"
+    echo "copied $f"
+done
+cd "$WORKTREE_PATH"
+```
+
+If the user prefers the worktree to track edits to env back to the main checkout, symlink instead of copy (`ln -s "$REPO_ROOT/$f" "$WORKTREE_PATH/$f"`); default to copy to keep the worktree isolated. If no `.env` is found but a `.env.example` exists, warn the user that local config may be missing.
+
 Install dependencies per the project (e.g. `pnpm install`, `npm install`, `bundle install`, `go mod download`).
 
 ### 3. Detect Project Conventions
