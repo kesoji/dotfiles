@@ -35,7 +35,8 @@
     "starship@latest",
     "sox@latest",
     "bandwhich@latest",
-    "sniffnet@latest"
+    "sniffnet@latest",
+    "lnav@latest"
   ],
   "shell": {
     "init_hook": [

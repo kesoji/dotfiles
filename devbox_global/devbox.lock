@@ -1005,6 +1005,82 @@
         }
       }
     },
+    "lnav@latest": {
+      "last_modified": "2026-05-21T08:15:18Z",
+      "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#lnav",
+      "source": "devbox-search",
+      "version": "0.14.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2v1ykdl9a591g40ha6i1rjyp7pb82ilq-lnav-0.14.0",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/h27vdygwh562bphrmzv5y0jiyfya89nb-lnav-0.14.0-man",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2v1ykdl9a591g40ha6i1rjyp7pb82ilq-lnav-0.14.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/m5r81a7vgv5wljam9x8wnk06a2i2b0j0-lnav-0.14.0",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/j393m14mnb24v2wbb34lwxgpmlrg68dx-lnav-0.14.0-man",
+              "default": true
+            },
+            {
+              "name": "debug",
+              "path": "/nix/store/xhsh49s2vnnw56q78s7fm3m4wwy1xr7y-lnav-0.14.0-debug"
+            }
+          ],
+          "store_path": "/nix/store/m5r81a7vgv5wljam9x8wnk06a2i2b0j0-lnav-0.14.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/14z68c9hdqi9d6fji4rgnscj8481jy7g-lnav-0.14.0",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/l3yakg3my15fdfkkg8srrzm7jwfxyfvc-lnav-0.14.0-man",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/14z68c9hdqi9d6fji4rgnscj8481jy7g-lnav-0.14.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/hamlj01s7qij5i9xn25xsd9npjvma28h-lnav-0.14.0",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/na690w0zw3zaak96bsh0ix6kj5micj4a-lnav-0.14.0-man",
+              "default": true
+            },
+            {
+              "name": "debug",
+              "path": "/nix/store/xxkdmz2krbdlxsvfh8mjm29wz3011lh2-lnav-0.14.0-debug"
+            }
+          ],
+          "store_path": "/nix/store/hamlj01s7qij5i9xn25xsd9npjvma28h-lnav-0.14.0"
+        }
+      }
+    },
     "lua54Packages.lua@latest": {
       "last_modified": "2026-05-21T08:15:18Z",
       "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#lua54Packages.lua",
