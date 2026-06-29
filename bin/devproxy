@@ -136,7 +136,7 @@ EOF
 		echo "Vite 検出: vite.config の server に allowedHosts:['.$DOMAIN'] を追加してください。"
 	fi
 	( cd "$REPO" && cmd_register )
-	echo "done. 'pnpm dev'（または devproxy register）で https://$DOMAIN。"
+	echo "done. 'pnpm dev'（または devproxy register）で https://${DOMAIN}。"
 }
 
 # ---------- register ----------（未 bootstrap でも dev を止めないよう常に exit 0）
