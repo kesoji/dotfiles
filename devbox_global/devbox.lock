@@ -209,6 +209,55 @@
         }
       }
     },
+    "caddy@latest": {
+      "last_modified": "2026-06-05T19:07:58Z",
+      "plugin_version": "0.0.3",
+      "resolved": "github:NixOS/nixpkgs/891eaa77f0eed53352194677991bd30978f9b0ad#caddy",
+      "source": "devbox-search",
+      "version": "2.11.4",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/pr4ma2j72lyz57y4y8rch7dpp5ajply8-caddy-2.11.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/pr4ma2j72lyz57y4y8rch7dpp5ajply8-caddy-2.11.4"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2fys1mrqn61bn75dvz25mh1kpxk3jg62-caddy-2.11.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2fys1mrqn61bn75dvz25mh1kpxk3jg62-caddy-2.11.4"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/27a390sigypszh9dy8l2g8v020x3vswv-caddy-2.11.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/27a390sigypszh9dy8l2g8v020x3vswv-caddy-2.11.4"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/syc8jyhvj8jk0r58fwwhkfzilxjr715l-caddy-2.11.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/syc8jyhvj8jk0r58fwwhkfzilxjr715l-caddy-2.11.4"
+        }
+      }
+    },
     "cargo@latest": {
       "last_modified": "2026-05-21T08:15:18Z",
       "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#cargo",
@@ -350,6 +399,54 @@
             }
           ],
           "store_path": "/nix/store/7i5ac4459q4jvr49bi7rbr41k8kx6b29-direnv-2.37.1"
+        }
+      }
+    },
+    "dnsmasq@latest": {
+      "last_modified": "2026-06-14T16:21:05Z",
+      "resolved": "github:NixOS/nixpkgs/9eac87a12312b8f60dd52e1c6e1a265f6fc7f5fc#dnsmasq",
+      "source": "devbox-search",
+      "version": "2.93",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ib2siwnsfpdxar5m6ibwjzqwayqq7pww-dnsmasq-2.93",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ib2siwnsfpdxar5m6ibwjzqwayqq7pww-dnsmasq-2.93"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/vkkvl8759kpv7kbfi5my91qx875mhi7j-dnsmasq-2.93",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/vkkvl8759kpv7kbfi5my91qx875mhi7j-dnsmasq-2.93"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ha3mwifdzln6q6kdqbmdz7v2ad38r4xq-dnsmasq-2.93",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ha3mwifdzln6q6kdqbmdz7v2ad38r4xq-dnsmasq-2.93"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/axv9vmfnd3kfcksyjygay3fjdylv0a6n-dnsmasq-2.93",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/axv9vmfnd3kfcksyjygay3fjdylv0a6n-dnsmasq-2.93"
         }
       }
     },
@@ -1243,7 +1340,7 @@
     },
     "nodejs@22": {
       "last_modified": "2026-05-21T08:15:18Z",
-      "plugin_version": "0.0.2",
+      "plugin_version": "0.0.4",
       "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#nodejs_22",
       "source": "devbox-search",
       "version": "22.22.3",
@@ -1292,7 +1389,7 @@
     },
     "python@latest": {
       "last_modified": "2026-05-21T08:15:18Z",
-      "plugin_version": "0.0.4",
+      "plugin_version": "0.0.5",
       "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#python314",
       "source": "devbox-search",
       "version": "3.14.4",

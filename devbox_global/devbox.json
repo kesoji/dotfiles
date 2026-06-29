@@ -36,7 +36,9 @@
     "sox@latest",
     "bandwhich@latest",
     "sniffnet@latest",
-    "lnav@latest"
+    "lnav@latest",
+    "caddy@latest",
+    "dnsmasq@latest"
   ],
   "shell": {
     "init_hook": [

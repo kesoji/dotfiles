@@ -25,13 +25,20 @@
     "gopls-lsp@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
     "obsidian@obsidian-skills": true,
-    "frontend-design@claude-plugins-official": true
+    "frontend-design@claude-plugins-official": true,
+    "crit@crit": true
   },
   "extraKnownMarketplaces": {
     "obsidian-skills": {
       "source": {
         "source": "github",
         "repo": "kepano/obsidian-skills"
+      }
+    },
+    "crit": {
+      "source": {
+        "source": "github",
+        "repo": "tomasz-tomczyk/crit"
       }
     }
   },
@@ -42,5 +49,6 @@
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
   },
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+}
 }
