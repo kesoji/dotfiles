@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# devproxy: ローカルの *.test を https で各 dev サーバへ振り分ける個人標準。
+#   devproxy bootstrap            … mac ごとに一度（共有基盤を作る）
+#   devproxy generate <dom> <port>… カレントリポを標準へ組み込む（site.caddy 生成＋predev 配線＋登録）
+#   devproxy register             … カレントリポを登録（pnpm dev の predev から呼ぶ）
+#   devproxy status               … 常駐と解決の状態を表示
+# 前提: caddy / dnsmasq は devbox(Nix) 導入。常駐は launchd。設定は ~/.config/devproxy。
+# 詳細: local-dev-domain スキル / memory: local-dev-domains-shared-caddy。
+set -uo pipefail
+
+DEVPROXY="$HOME/.config/devproxy"
+SITES="$DEVPROXY/sites"
+CADDYFILE="$DEVPROXY/Caddyfile"
+DNSMASQ_CONF="$DEVPROXY/dnsmasq.conf"
+CADDY_DATA="$DEVPROXY/caddy-data"
+DNS_PORT=5300   # 非特権ポート。5353 は mDNS(Bonjour)予約で mDNSResponder が転送しないため避ける
+DNSMASQ_PLIST="$HOME/Library/LaunchAgents/com.devproxy.dnsmasq.plist"
+CADDY_PLIST=/Library/LaunchDaemons/com.devproxy.caddy.plist
+
+# ---------- bootstrap ----------
+cmd_bootstrap() {
+	set -e
+	local CADDY_BIN DNSMASQ_BIN
+	CADDY_BIN="$(command -v caddy   || true)"
+	DNSMASQ_BIN="$(command -v dnsmasq || true)"
+	[ -n "$CADDY_BIN" ]   || { echo "caddy が PATH に無い。devbox global に caddy を入れて再読込。" >&2; exit 1; }
+	[ -n "$DNSMASQ_BIN" ] || { echo "dnsmasq が PATH に無い。devbox global に dnsmasq を入れて再読込。" >&2; exit 1; }
+
+	echo "==> 1/5 設定 ($DEVPROXY)"
+	mkdir -p "$SITES" "$CADDY_DATA" "$HOME/Library/LaunchAgents"
+	cat > "$DNSMASQ_CONF" <<EOF
+# devproxy: *.test だけを 127.0.0.1 に解決（/etc/resolver/test 経由でしか引かれない）
+# 非 root のユーザー LaunchAgent で動かすため非特権ポート $DNS_PORT を使う。
+listen-address=127.0.0.1
+port=$DNS_PORT
+bind-interfaces
+no-resolv
+address=/.test/127.0.0.1
+EOF
+	cat > "$CADDYFILE" <<EOF
+{
+	# 全サイトをローカル CA で発行する。.test は実在 TLD でなく公的 ACME が失敗するため必須
+	# （これが無いと caddy は証明書を出せず TLS internal error になる）。
+	local_certs
+	# CA/証明書を固定パスに（root 常駐と caddy trust で同じ CA を使う）
+	storage file_system {
+		root $CADDY_DATA
+	}
+}
+# 各リポが $SITES に site.caddy を symlink する（ドメイン宣言は各リポ側）
+import $SITES/*.caddy
+EOF
+
+	echo "==> 2/5 resolver: .test を 127.0.0.1:$DNS_PORT(dnsmasq) で解決"
+	sudo mkdir -p /etc/resolver
+	printf 'nameserver 127.0.0.1\nport %s\n' "$DNS_PORT" | sudo tee /etc/resolver/test >/dev/null
+	# 旧 negative cache を消して新リゾルバを即反映
+	sudo dscacheutil -flushcache 2>/dev/null || true
+	sudo killall -HUP mDNSResponder 2>/dev/null || true
+
+	echo "==> 3/5 常駐（dnsmasq:$DNS_PORT=ユーザー Agent / caddy:80,443=root Daemon）"
+	tee "$DNSMASQ_PLIST" >/dev/null <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.devproxy.dnsmasq</string>
+  <key>ProgramArguments</key><array>
+    <string>$DNSMASQ_BIN</string><string>--keep-in-foreground</string>
+    <string>--conf-file=$DNSMASQ_CONF</string>
+  </array>
+  <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
+</dict></plist>
+EOF
+	sudo tee "$CADDY_PLIST" >/dev/null <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.devproxy.caddy</string>
+  <key>ProgramArguments</key><array>
+    <string>$CADDY_BIN</string><string>run</string>
+    <string>--config</string><string>$CADDYFILE</string>
+    <string>--adapter</string><string>caddyfile</string>
+  </array>
+  <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
+</dict></plist>
+EOF
+	launchctl bootout "gui/$(id -u)/com.devproxy.dnsmasq" 2>/dev/null || true
+	launchctl bootstrap "gui/$(id -u)" "$DNSMASQ_PLIST"
+	launchctl kickstart -k "gui/$(id -u)/com.devproxy.dnsmasq" 2>/dev/null || true
+	sudo launchctl bootout system "$CADDY_PLIST" 2>/dev/null || true
+	sudo launchctl bootstrap system "$CADDY_PLIST"
+	sudo launchctl kickstart -k system/com.devproxy.caddy 2>/dev/null || true
+
+	echo "==> 4/5 ローカル CA を Keychain に信頼登録"
+	sleep 1
+	caddy trust --config "$CADDYFILE" --adapter caddyfile || \
+		echo "  失敗時は: caddy trust --config $CADDYFILE --adapter caddyfile" >&2
+
+	echo "==> 5/5 完了"
+	echo "確認: devproxy status / dig +short myapp.test @127.0.0.1 -p $DNS_PORT"
+	echo "各リポで 'devproxy generate <domain> <port>' → 'pnpm dev' で https://<domain>。"
+}
+
+# ---------- generate ----------
+cmd_generate() {
+	local REPO DOMAIN PORT
+	REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+	DOMAIN="${1:-}"; PORT="${2:-}"
+	if [ -z "$DOMAIN" ] || [ -z "$PORT" ]; then
+		local suggest
+		suggest="$(basename "$REPO" | sed -E 's/-(app|web|api|server|service)$//').test"
+		echo "usage: devproxy generate <domain> <port>" >&2
+		echo "  例:  devproxy generate $suggest <devport>" >&2
+		echo "  （候補ドメイン: $suggest / port は dev サーバの実ポート。推測しない＝指定必須）" >&2
+		return 1
+	fi
+	mkdir -p "$REPO/caddy"
+	cat > "$REPO/caddy/site.caddy" <<EOF
+# $(basename "$REPO") のローカル開発ドメイン宣言。
+# 共有 Caddy（devproxy bootstrap で常駐）が import ~/.config/devproxy/sites/*.caddy で読む。
+# 登録は \`devproxy register\`（pnpm dev の predev で自動）。
+# *.$DOMAIN も張るのはマルチテナントのサブドメイン検証用。https はローカル CA で自動発行。
+$DOMAIN, *.$DOMAIN {
+	reverse_proxy localhost:$PORT
+}
+EOF
+	echo "wrote $REPO/caddy/site.caddy ($DOMAIN -> localhost:$PORT)"
+
+	if [ -f "$REPO/package.json" ]; then
+		( cd "$REPO" && npm pkg set scripts.predev='devproxy register || true' >/dev/null )
+		echo "wired predev: \"devproxy register || true\""
+	else
+		echo "package.json 無し: dev フローに 'devproxy register' を手動で挟んでください。" >&2
+	fi
+	if ls "$REPO"/vite.config.* "$REPO"/apps/*/vite.config.* >/dev/null 2>&1; then
+		echo "Vite 検出: vite.config の server に allowedHosts:['.$DOMAIN'] を追加してください。"
+	fi
+	( cd "$REPO" && cmd_register )
+	echo "done. 'pnpm dev'（または devproxy register）で https://$DOMAIN。"
+}
+
+# ---------- register ----------（未 bootstrap でも dev を止めないよう常に exit 0）
+cmd_register() {
+	local REPO NAME SITE_SRC
+	REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+	NAME="$(basename "$REPO")"
+	SITE_SRC="$REPO/caddy/site.caddy"
+	[ -f "$SITE_SRC" ] || { echo "[devproxy] caddy/site.caddy が無い（devproxy generate で作成）。スキップ。" >&2; return 0; }
+	if [ ! -d "$SITES" ]; then
+		echo "[devproxy] 未セットアップのためスキップ（https://*.test は無効）。devproxy bootstrap を一度実行。" >&2
+		return 0
+	fi
+	ln -sf "$SITE_SRC" "$SITES/$NAME.caddy"
+	if command -v caddy >/dev/null 2>&1 && [ -f "$CADDYFILE" ]; then
+		if caddy reload --config "$CADDYFILE" --adapter caddyfile >/dev/null 2>&1; then
+			local DOMAIN
+			# コメント行を除外し、最初の非ワイルドカード .test ドメインを拾う
+			DOMAIN="$(grep -vE '^[[:space:]]*#' "$SITE_SRC" | grep -oE '[a-z0-9.-]+\.test' | head -1)"
+			[ -n "$DOMAIN" ] || DOMAIN="$NAME.test"
+			echo "[devproxy] 登録: https://$DOMAIN"
+		else
+			echo "[devproxy] caddy reload 失敗。共有 Caddy 未起動かも（devproxy status）。" >&2
+		fi
+	fi
+	return 0
+}
+
+# ---------- status ----------
+cmd_status() {
+	# sudo を使わず実体で判定（launchctl print は root 権限が要り偽陰性になるため）
+	local dnsmasq caddy
+	pgrep -qf 'dnsmasq.*devproxy' && dnsmasq=running || dnsmasq='-'
+	curl -s -o /dev/null --max-time 2 http://localhost:2019/config/ && caddy=running || caddy='-'
+	echo "dnsmasq(agent): $dnsmasq"
+	echo "caddy(daemon):  $caddy"
+	echo "sites: $(ls "$SITES" 2>/dev/null | tr '\n' ' ')"
+	echo "resolve(dnsmasq直): $(dig +short test.test @127.0.0.1 -p $DNS_PORT 2>/dev/null || echo '応答なし')"
+	echo "resolve(OS経路):   $(dscacheutil -q host -a name devproxy-check.test 2>/dev/null | awk '/ip_address/{print $2}' | head -1 || true)"
+}
+
+case "${1:-}" in
+	bootstrap) shift; cmd_bootstrap "$@" ;;
+	generate)  shift; cmd_generate "$@" ;;
+	register)  shift; cmd_register "$@" ;;
+	status)    shift; cmd_status "$@" ;;
+	*) echo "usage: devproxy {bootstrap|generate <domain> <port>|register|status}" >&2; exit 2 ;;
+esac

@@ -76,5 +76,8 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
+# dotfiles 同期のローカルコマンド（devproxy-bootstrap / devproxy-register / generate-dev-domain 等）
+export PATH="$HOME/dotfiles/bin:$PATH"
+
 # Added by Obsidian
 export PATH="$PATH:/Applications/Obsidian.app/Contents/MacOS"
