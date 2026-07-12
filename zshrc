@@ -6,24 +6,13 @@
 #    zcompile ~/.zshrc
 #fi
 
-function echo_error {
-    echo -e "\e[31m$@\e[m"
-}
-function echo_notice {
-    echo -e "\e[33;5;243m$@\e[m"
-}
-function echo_info {
-    echo -e "\e[38;5;243m$@\e[m"
-}
-function comexec() {
-    echo_info ">>> $1"; eval $1
-}
+# echo_error / echo_notice / echo_info / comexec / PACKAGE_MANAGER は zshenv で定義済み
+# (zprofile からも使うため、必ず先に読まれる zshenv に移動した)
 
 MAC=false
 if [ "$(uname)" = 'Darwin' ] ; then
     MAC=true
 fi
-PACKAGE_MANAGER="brew install"
 
 WSL=false
 if [[ "$(uname -a)" =~ "microsoft" ]]; then
