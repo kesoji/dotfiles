@@ -38,7 +38,8 @@
     "sniffnet@latest",
     "lnav@latest",
     "caddy@latest",
-    "dnsmasq@latest"
+    "dnsmasq@latest",
+    "herdr@latest"
   ],
   "shell": {
     "init_hook": [

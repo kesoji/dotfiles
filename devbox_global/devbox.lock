@@ -958,6 +958,54 @@
         }
       }
     },
+    "herdr@latest": {
+      "last_modified": "2026-07-03T16:41:56Z",
+      "resolved": "github:NixOS/nixpkgs/0c190cd98e1f30cdbeff0ca149b2b17564a4a30e#herdr",
+      "source": "devbox-search",
+      "version": "0.7.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/1v3hzvsnsgsff57kz00s6g05ydg7xwjf-herdr-0.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/1v3hzvsnsgsff57kz00s6g05ydg7xwjf-herdr-0.7.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2k5kgshp2nsg0y60dkm2kl2iskjivlwk-herdr-0.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2k5kgshp2nsg0y60dkm2kl2iskjivlwk-herdr-0.7.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2h199vy4r3f4bc996z4ay125qrz3hb48-herdr-0.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2h199vy4r3f4bc996z4ay125qrz3hb48-herdr-0.7.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/x0i2qrn1y0g43d9k70ps7zh49qlxf6vx-herdr-0.7.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/x0i2qrn1y0g43d9k70ps7zh49qlxf6vx-herdr-0.7.1"
+        }
+      }
+    },
     "hexyl@latest": {
       "last_modified": "2026-06-27T07:37:20Z",
       "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d#hexyl",
