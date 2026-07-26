@@ -41,7 +41,10 @@
     "herdr@latest",
     "nodejs@24",
     "pnpm@latest",
-    "watchman@latest"
+    "watchman@latest",
+    "colima@latest",
+    "docker@latest",
+    "docker-compose@latest"
   ],
   "shell": {
     "init_hook": [
