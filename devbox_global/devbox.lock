@@ -1467,6 +1467,44 @@
         }
       }
     },
+    "pnpm@latest": {
+      "last_modified": "2026-07-23T05:10:05Z",
+      "resolved": "github:NixOS/nixpkgs/7525d999cd850b9a488817abc89c75dc733acf17#pnpm",
+      "source": "devbox-search",
+      "version": "11.15.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/12ii9vsb0ygcp3n68ninik8hgkzcrwlx-pnpm-11.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/12ii9vsb0ygcp3n68ninik8hgkzcrwlx-pnpm-11.15.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/4slv81dnhycj59lg0xznc70djwr50hc0-pnpm-11.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/4slv81dnhycj59lg0xznc70djwr50hc0-pnpm-11.15.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/53xd3zys5pwjx55nq7c1v7lq3n1m2azi-pnpm-11.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/53xd3zys5pwjx55nq7c1v7lq3n1m2azi-pnpm-11.15.0"
+        }
+      }
+    },
     "python@latest": {
       "last_modified": "2026-06-27T07:37:20Z",
       "plugin_version": "0.0.5",
@@ -2023,6 +2061,54 @@
             }
           ],
           "store_path": "/nix/store/cgvijxnmydknslkl368k4j4j43akvl8b-uv-0.11.25"
+        }
+      }
+    },
+    "watchman@latest": {
+      "last_modified": "2026-07-23T05:10:05Z",
+      "resolved": "github:NixOS/nixpkgs/7525d999cd850b9a488817abc89c75dc733acf17#watchman",
+      "source": "devbox-search",
+      "version": "2026.01.19.00",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/c414rs9cjzqdqqngm3gz45x26jyj6vr7-watchman-2026.01.19.00",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/c414rs9cjzqdqqngm3gz45x26jyj6vr7-watchman-2026.01.19.00"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/7wl10ginfv7db542arn84rkvl40qdx6f-watchman-2026.01.19.00",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/7wl10ginfv7db542arn84rkvl40qdx6f-watchman-2026.01.19.00"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/zw8ss32qjp8g8ankkaqp757r3flwk64q-watchman-2026.01.19.00",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/zw8ss32qjp8g8ankkaqp757r3flwk64q-watchman-2026.01.19.00"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/vwskvbdwvbf4cxdh1cygcdfva5rxai7j-watchman-2026.01.19.00",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/vwskvbdwvbf4cxdh1cygcdfva5rxai7j-watchman-2026.01.19.00"
         }
       }
     },

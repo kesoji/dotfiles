@@ -39,7 +39,9 @@
     "caddy@latest",
     "dnsmasq@latest",
     "herdr@latest",
-    "nodejs@24"
+    "nodejs@24",
+    "pnpm@latest",
+    "watchman@latest"
   ],
   "shell": {
     "init_hook": [
