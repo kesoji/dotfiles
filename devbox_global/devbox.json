@@ -9,7 +9,6 @@
     "gh@latest",
     "delta@latest",
     "lazydocker@latest",
-    "nodejs@22",
     "fzf@latest",
     "python@latest",
     "lua54Packages.lua@latest",
@@ -39,7 +38,8 @@
     "lnav@latest",
     "caddy@latest",
     "dnsmasq@latest",
-    "herdr@latest"
+    "herdr@latest",
+    "nodejs@24"
   ],
   "shell": {
     "init_hook": [
