@@ -89,8 +89,9 @@
 	sb = show-branch
 	emptycommit = commit --allow-empty -m
 	delete-merged-branches = !git branch --merged | grep -v \\* | grep -Ev '(main|master|staging)' | xargs -I % git branch -d %
-[url "git@github.com:"]
-	insteadOf = https://github.com/
+# SSH強制はSSH鍵のあるマシンのみ ~/.gitconfig.local に書く:
+# [url "git@github.com:"]
+# 	insteadOf = https://github.com/
 [url "https://"]
 	insteadOf = git://
 [include]
