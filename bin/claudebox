@@ -1,0 +1,364 @@
+#!/usr/bin/env bash
+# claudebox: Claude Code のセッションを「このリポジトリ + このリポ専用の AWS 資格情報」だけに閉じる個人標準。
+#   claudebox init [opts]  … カレントリポに .claude/settings.local.json を生成（サンドボックス設定 + env）
+#   claudebox creds        … アクセスキーを貼り付けてこのリポ専用に配置する
+#   claudebox status       … 設定と資格情報の状態を表示
+#   claudebox rm           … このリポの資格情報と記録を削除
+#   claudebox bootstrap    … 共通の下敷き（~/.claude/settings.json）が入っているか確認
+#
+# 何が守られるか:
+#   - 書き込み … Claude Code のサンドボックス既定でカレントリポと $TMPDIR のみ（OS が強制する）
+#   - 読み取り … denyRead ~/ + allowRead で「このリポ + ツールチェーン」だけに絞る
+#   - 資格情報 … リポごとに ~/.config/claudebox/aws/<slug> に置き、AWS_SHARED_CREDENTIALS_FILE を
+#                 そこへ差し替える。allowRead も自分の slug だけなので、リポ A のセッションから
+#                 リポ B の鍵は読めない。共有の ~/.aws は置かない前提（あっても bootstrap の deny で塞ぐ）
+# 前提: jq / aws。サンドボックスは macOS Seatbelt・Linux は bubblewrap。
+# 注意:
+#   - init / creds はサンドボックスの外（ふつうの端末）で実行する。サンドボックス下の Bash は
+#     カレントリポと $TMPDIR にしか書けず、Claude Code の settings.json 群は全スコープが書き込み拒否。
+#     つまり「エージェントが自分の檻を広げられない」のが正しい状態で、書けないのは不具合ではない。
+#   - サンドボックスが効くのは Bash とその子プロセスだけ。Read/Edit ツールと MCP は permissions で塞ぐ
+#     （共通ぶんは ~/.claude/settings.json = dotfiles/claude/settings.json 側。bootstrap が点検する）。
+# bash 3.2（macOS 標準）で動くこと。配列と mapfile は使わない。
+# 全角文字の直前の変数は ${} で括る（bash 3.2 は多バイト文字を変数名の一部と見なして落ちる）。
+set -uo pipefail
+
+CB="${CLAUDEBOX_HOME:-$HOME/.config/claudebox}"
+CREDS_ROOT="$CB/aws"
+REPOS="$CB/repos"
+SANDBOX_HINT="Claude Code のサンドボックス内からは書けない。ふつうの端末で実行すること"
+
+die()  { echo "claudebox: $*" >&2; exit 1; }
+info() { echo "$*"; }
+need() { command -v "$1" >/dev/null 2>&1 || die "$1 が PATH に無い"; }
+
+repo_root() { git rev-parse --show-toplevel 2>/dev/null || pwd; }
+
+# リポの絶対パスから安定した slug を作る（同名リポの衝突を避けるためハッシュを足す）
+slug_of() {
+	printf '%s-%s' "$(basename "$1")" "$(printf '%s' "$1" | shasum | cut -c1-8)"
+}
+
+ask() { # プロンプトと既定値。空 Enter なら既定値
+	local ans
+	printf '%s [%s]: ' "$1" "$2" >&2
+	read -r ans || return 1
+	[ -n "$ans" ] && printf '%s' "$ans" || printf '%s' "$2"
+}
+
+# denyRead ~/ の下でも Bash とツールチェーンが動くために要る読み取り許可。
+# 本来は共通の下敷き（~/.claude/settings.json）に置くもので、そこに入っていればリポ側には書かない。
+# ~/.claude/shell-snapshots は Claude Code が各 Bash の初期化に読むので、外すとシェルが起動しない。
+TOOLCHAIN_READ='[
+	"~/.claude/shell-snapshots","~/.claude/plugins","~/.claude/skills","~/.claude/settings.json","~/dotfiles",
+	"~/.local","~/.nix-profile","~/.config/mise","~/.config/git","~/.config/pnpm","~/Library/pnpm","~/.cache",
+	"~/.gitconfig","~/.gitignore_global","~/.npmrc","~/.zshenv","~/.zshrc","~/.zprofile"
+]'
+TOOLCHAIN_WRITE='["~/Library/pnpm/store","~/.cache"]'
+
+# PATH 上のホーム配下ディレクトリを allowRead 用に列挙する。
+# Node の spawn（posix_spawnp）は PATH を順に探し、読めないディレクトリで ENOENT ではなく EPERM を
+# 受け取ると探索を中断する。つまり PATH に 1 つでも拒否されたディレクトリがあると
+# spawn("pnpm") のような PATH 解決が丸ごと落ちる。ここは実行ファイル置き場なので開けてよい。
+path_home_dirs_json() {
+	local IFS=':' p
+	for p in $PATH; do
+		case "$p" in
+			"$HOME"/*) [ -d "$p" ] && printf '~%s\n' "${p#"$HOME"}" ;;
+		esac
+	done | sort -u | jq -R . | jq -s 'map(select(length>0))'
+}
+
+# 共通の下敷きにツールチェーンの allowRead が入っているか
+global_has_toolchain() {
+	local s="$HOME/.claude/settings.json"
+	[ -f "$s" ] && jq -e '(.sandbox.filesystem.allowRead // []) | index("~/.claude/shell-snapshots")' "$s" >/dev/null 2>&1
+}
+
+# ---------- init ----------
+usage_init() {
+	cat <<'EOF'
+使い方: claudebox init [options]
+  --profile <name>    生成する資格情報のプロファイル名（既定: 記録 or "default"）
+  --region <region>   既定リージョン（既定: us-east-1）
+  --domains a,b,c     Bash から出せるドメインを追加（既定の npm/github/aws に足す）
+  --allow-read <p>    読み取りを追加で許可（繰り返し可）
+  --allow-write <p>   書き込みを追加で許可（繰り返し可）
+  --exclude-cmd <pat> このコマンドはサンドボックス外で走らせる（繰り返し可）
+                      例: --exclude-cmd 'pnpm test*'（Docker が要る統合テスト）
+  --no-aws            AWS 資格情報の差し替えをしない（AWS を使わないリポ用）
+  --no-toolchain      ツールチェーンの allowRead をリポ側に書かない
+                      （~/.claude/settings.json 側に入っていれば自動で省かれる）
+  --strict            サンドボックス外への逃げ道を塞ぐ（allowUnsandboxedCommands=false）
+  --reset             前回の記録を捨てて作り直す
+  --print             書き込まずに生成される JSON を表示
+オプションは ~/.config/claudebox/repos/<slug>.json に記録され、次回は引数無しで再生成できる。
+EOF
+}
+
+cmd_init() {
+	need jq
+	local root slug conf conf_json print_only
+	root="$(repo_root)"; slug="$(slug_of "$root")"; conf="$REPOS/$slug.json"
+	mkdir -p "$REPOS" "$CREDS_ROOT" 2>/dev/null; chmod 700 "$CB" "$CREDS_ROOT" 2>/dev/null
+
+	conf_json='{"profile":"default","region":"us-east-1","noAws":false,"strict":false,
+	            "domains":[],"allowRead":[],"allowWrite":[],"excludedCommands":[]}'
+	[ -f "$conf" ] && conf_json="$(jq -s '.[0] * .[1]' <(printf '%s' "$conf_json") "$conf")"
+	print_only=false
+
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--profile)      conf_json="$(jq --arg v "${2:?}" '.profile = $v' <<<"$conf_json")"; shift 2 ;;
+			--region)       conf_json="$(jq --arg v "${2:?}" '.region  = $v' <<<"$conf_json")"; shift 2 ;;
+			--domains)      conf_json="$(jq --arg v "${2:?}" '.domains          += ($v|split(",")) | .domains          |= unique' <<<"$conf_json")"; shift 2 ;;
+			--allow-read)   conf_json="$(jq --arg v "${2:?}" '.allowRead        += [$v] | .allowRead        |= unique' <<<"$conf_json")"; shift 2 ;;
+			--allow-write)  conf_json="$(jq --arg v "${2:?}" '.allowWrite       += [$v] | .allowWrite       |= unique' <<<"$conf_json")"; shift 2 ;;
+			--exclude-cmd)  conf_json="$(jq --arg v "${2:?}" '.excludedCommands += [$v] | .excludedCommands |= unique' <<<"$conf_json")"; shift 2 ;;
+			--no-aws)       conf_json="$(jq '.noAws       = true' <<<"$conf_json")"; shift ;;
+			--no-toolchain) conf_json="$(jq '.noToolchain = true' <<<"$conf_json")"; shift ;;
+			--strict)       conf_json="$(jq '.strict      = true' <<<"$conf_json")"; shift ;;
+			--reset)        conf_json='{"profile":"default","region":"us-east-1","noAws":false,"strict":false,
+			                            "domains":[],"allowRead":[],"allowWrite":[],"excludedCommands":[]}'; shift ;;
+			--print)        print_only=true; shift ;;
+			-h|--help)      usage_init; exit 0 ;;
+			*)              usage_init; die "不明なオプション: $1" ;;
+		esac
+	done
+
+	# 共通の下敷きに入っていれば重複させない。PATH 由来は毎回この端末の PATH から作り直す
+	local tc_read tc_write
+	tc_read="$(jq -s '.[0] + .[1]' <(printf '%s' "$TOOLCHAIN_READ") <(path_home_dirs_json))"
+	tc_write="$TOOLCHAIN_WRITE"
+	if global_has_toolchain || [ "$(jq -r '.noToolchain // false' <<<"$conf_json")" = true ]; then
+		tc_read='[]'; tc_write='[]'
+	fi
+
+	local creds_dir="$CREDS_ROOT/$slug" settings
+	# allowRead には ~ 形式で書く（ホームのパスはマシンごとに違うので絶対パスを焼き込まない）。
+	# env の値だけは展開されないので絶対パスのまま（settings.local.json は git 無視のマシン固有ファイル）。
+	# 自分の記録だけは読めるようにする（サンドボックス内から status を見るため。他リポの記録は見えない）
+	settings="$(build_settings "$conf_json" "$creds_dir" "$tc_read" "$tc_write" \
+		"~${conf#"$HOME"}" "~${creds_dir#"$HOME"}")" || die "設定の生成に失敗"
+
+	if [ "$print_only" = true ]; then printf '%s\n' "$settings"; return 0; fi
+
+	printf '%s\n' "$conf_json" | jq . > "$conf" || die "$conf に書けない。$SANDBOX_HINT"
+
+	local out="$root/.claude/settings.local.json" existing='{}'
+	mkdir -p "$root/.claude"
+	[ -f "$out" ] && existing="$(cat "$out")"
+	# 既存とディープマージする。配列（allowRead / allowedDomains など）は生成側で置き換わるので、
+	# 恒久的に足したいものは --allow-read / --domains / --exclude-cmd で記録すること。
+	jq -s '.[0] * .[1]' <(printf '%s' "$existing") <(printf '%s' "$settings") > "$out.tmp" \
+		|| die "既存の settings.local.json が壊れている: $out"
+	mv "$out.tmp" "$out" || { rm -f "$out.tmp"; die "$out に書けない。$SANDBOX_HINT"; }
+	info "==> 書いた: $out"
+
+	git -C "$root" check-ignore -q "$out" 2>/dev/null \
+		|| info "!! $out が git 無視されていない。.gitignore に .claude/settings.local.json を足すこと"
+
+	if [ "$(jq -r '.noAws' <<<"$conf_json")" != true ] && [ ! -f "$creds_dir/credentials" ]; then
+		if [ -t 0 ]; then
+			local yn
+			yn="$(ask "続けてアクセスキーを貼り付ける？ (y/n)" "y")"
+			case "$yn" in [yY]*) cmd_creds ;; *) info "あとで: claudebox creds" ;; esac
+		else
+			info "次: claudebox creds   （アクセスキーを貼り付けて配置する）"
+		fi
+	fi
+	info "設定はセッション開始時に読まれる。Claude Code を再起動し /sandbox の Config タブで確認する"
+}
+
+# 設定 JSON を組み立てる
+# 引数: 記録 JSON / 資格情報ディレクトリ(絶対) / ツールチェーン read / 同 write / 記録パス(~形式) / 資格情報(~形式)
+build_settings() {
+	jq -n --argjson conf "$1" --arg creds "$2" --argjson tcread "$3" --argjson tcwrite "$4" \
+		--arg rec "$5" --arg credsrel "$6" '
+		def base_domains: ["registry.npmjs.org","*.npmjs.org","github.com","*.github.com","objects.githubusercontent.com"];
+		def aws_domains:  ["*.amazonaws.com","cli.cdk.dev-tools.aws.dev"];
+		($conf.noAws // false) as $noaws
+		| {
+			sandbox: ({
+				enabled: true,
+				autoAllowBashIfSandboxed: true,
+				filesystem: {
+					denyRead: ["~/"],
+					allowRead: (["."] + [$rec] + (if $noaws then [] else [$credsrel] end) + $tcread + ($conf.allowRead // []) | unique),
+					allowWrite: ($tcwrite + ($conf.allowWrite // []) | unique)
+				},
+				network: {
+					allowedDomains: (base_domains + (if $noaws then [] else aws_domains end) + ($conf.domains // []) | unique)
+				}
+			}
+			# Docker ソケットが要る統合テストのように、サンドボックス内では原理的に通らないものを
+			# コマンド単位で外に出す（ソケット自体を開けると隔離が意味を失うため、こちらを使う）。
+			+ (if (($conf.excludedCommands // []) | length) > 0
+			   then {excludedCommands: ($conf.excludedCommands | unique)}
+			   else {} end)
+			+ (if ($conf.strict // false)
+			   then {allowUnsandboxedCommands: false, failIfUnavailable: true}
+			   else {} end))
+		}
+		+ (if $noaws then {} else {
+			env: {
+				AWS_CONFIG_FILE: ($creds + "/config"),
+				AWS_SHARED_CREDENTIALS_FILE: ($creds + "/credentials"),
+				AWS_PROFILE: ($conf.profile // "default"),
+				AWS_REGION: ($conf.region // "us-east-1")
+			}
+		} end)'
+}
+
+# ---------- creds ----------
+# アクセスキーを貼り付けて、このリポ専用のファイルに置く。値は標準出力に出さない。
+cmd_creds() {
+	need jq; need aws
+	case "${1:-}" in -h|--help) echo "使い方: claudebox creds   （対話でアクセスキーを貼り付ける）"; return 0 ;; esac
+
+	local root slug conf creds_dir profile region key secret
+	root="$(repo_root)"; slug="$(slug_of "$root")"; conf="$REPOS/$slug.json"; creds_dir="$CREDS_ROOT/$slug"
+	[ -f "$conf" ] || die "先に claudebox init を実行する（このリポの記録が無い）"
+	profile="$(jq -r '.profile // "default"'   "$conf")"
+	region="$( jq -r '.region  // "us-east-1"' "$conf")"
+
+	echo "このリポ専用に $creds_dir へ置く" >&2
+	printf 'AWS_ACCESS_KEY_ID: ' >&2;     read -r key    || die "中止した"
+	printf 'AWS_SECRET_ACCESS_KEY: ' >&2; read -rs secret || die "中止した"; printf '\n' >&2
+	[ -n "$key" ] && [ -n "$secret" ] || die "空だった"
+	profile="$(ask "プロファイル名" "$profile")"
+	region="$( ask "リージョン" "$region")"
+
+	umask 077
+	mkdir -p "$creds_dir" 2>/dev/null || die "$creds_dir を作れない。$SANDBOX_HINT"
+	write_creds "$creds_dir" "$profile" "$region" "$key" "$secret" \
+		|| die "$creds_dir に書けない。$SANDBOX_HINT"
+	jq -n --arg profile "$profile" --arg region "$region" '{profile:$profile, region:$region}' \
+		> "$creds_dir/meta.json"
+
+	info "==> 書いた: $creds_dir/credentials （プロファイル: default / ${profile}）"
+	local who
+	who="$(AWS_CONFIG_FILE="$creds_dir/config" AWS_SHARED_CREDENTIALS_FILE="$creds_dir/credentials" \
+		AWS_PROFILE="$profile" aws sts get-caller-identity --output json 2>&1)"
+	if jq -e .Arn >/dev/null 2>&1 <<<"$who"; then
+		info "    身元: $(jq -r '.Arn' <<<"$who")"
+	else
+		info "!! get-caller-identity が通らない: $(head -c 200 <<<"$who")"
+	fi
+}
+
+# 記録のプロファイル名と default の両方を書く。
+# 明示的に --profile を渡すコマンド（aws / cdk などの --profile <name>）と、
+# 何も付けない呼び出しの両方が通るようにするため。
+write_creds() {
+	local dir="$1" profile="$2" region="$3" key="$4" secret="$5"
+	umask 077
+	{
+		printf '# claudebox が生成。手で編集しない（claudebox creds で作り直す）\n'
+		printf '[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n' "$key" "$secret"
+		[ "$profile" != "default" ] &&
+			printf '\n[%s]\naws_access_key_id = %s\naws_secret_access_key = %s\n' "$profile" "$key" "$secret"
+	} > "$dir/credentials" || return 1
+	{
+		printf '[default]\nregion = %s\noutput = json\n' "$region"
+		[ "$profile" != "default" ] && printf '\n[profile %s]\nregion = %s\noutput = json\n' "$profile" "$region"
+	} > "$dir/config" || return 1
+	chmod 700 "$dir"; chmod 600 "$dir/credentials" "$dir/config"
+}
+
+# ---------- status ----------
+cmd_status() {
+	need jq
+	local check=false root slug conf creds_dir settings
+	[ "${1:-}" = "--check" ] && check=true
+	root="$(repo_root)"; slug="$(slug_of "$root")"; conf="$REPOS/$slug.json"; creds_dir="$CREDS_ROOT/$slug"
+	settings="$root/.claude/settings.local.json"
+
+	echo "リポ     : $root"
+	echo "slug     : $slug"
+	if [ -f "$conf" ]; then
+		echo "記録     : $conf"
+		jq -r '"  profile=\(.profile) region=\(.region) strict=\(.strict) noAws=\(.noAws)",
+		       "  domains+  : \(.domains|join(", "))",
+		       "  allowRead+: \(.allowRead|join(", "))",
+		       "  外で走らせる: \(.excludedCommands // []|join(", "))"' "$conf"
+	else
+		echo "記録     : 無し（claudebox init を実行する）"
+	fi
+
+	if [ -f "$settings" ]; then
+		echo "設定     : $settings"
+		# jq の // は false も «無い» 扱いにするため、strict の判定は == false で見る
+		jq -r '"  sandbox.enabled=\(.sandbox.enabled // false) strict=\(.sandbox.allowUnsandboxedCommands == false)",
+		       "  denyRead : \(.sandbox.filesystem.denyRead // [] | join(", "))",
+		       "  allowRead: \(.sandbox.filesystem.allowRead // [] | join(", "))",
+		       "  domains  : \(.sandbox.network.allowedDomains // [] | join(", "))",
+		       "  AWS_SHARED_CREDENTIALS_FILE=\(.env.AWS_SHARED_CREDENTIALS_FILE // "-")"' "$settings"
+	else
+		echo "設定     : 無し"
+	fi
+
+	if [ -f "$creds_dir/credentials" ]; then
+		echo "資格情報 : $creds_dir/credentials"
+		if [ "$check" = true ]; then
+			local who
+			who="$(AWS_CONFIG_FILE="$creds_dir/config" AWS_SHARED_CREDENTIALS_FILE="$creds_dir/credentials" \
+				AWS_PROFILE="$(jq -r '.profile // "default"' "$creds_dir/meta.json" 2>/dev/null)" \
+				aws sts get-caller-identity --output json 2>&1)"
+			if jq -e .Arn >/dev/null 2>&1 <<<"$who"; then echo "  身元: $(jq -r '.Arn' <<<"$who")"
+			else echo "  !! $(head -c 200 <<<"$who")"; fi
+		fi
+	else
+		echo "資格情報 : 無し（claudebox creds で貼り付ける）"
+	fi
+}
+
+# ---------- rm ----------
+cmd_rm() {
+	local root slug; root="$(repo_root)"; slug="$(slug_of "$root")"
+	rm -rf "${CREDS_ROOT:?}/$slug" "${REPOS:?}/$slug.json" || die "消せない。$SANDBOX_HINT"
+	echo "消した: $CREDS_ROOT/$slug と $REPOS/$slug.json"
+	echo "（$root/.claude/settings.local.json は残っている。不要なら手で消す）"
+}
+
+# ---------- bootstrap ----------
+# 共通の下敷き（~/.claude/settings.json ← dotfiles/claude/settings.json）が入っているかを点検する。
+cmd_bootstrap() {
+	need jq
+	local s="$HOME/.claude/settings.json" ok=true
+	# サンドボックス内だと denyRead ~/ で読めないだけのことがあるので、両方の可能性を出す
+	[ -r "$s" ] || die "$s を読めない（無いなら dotfilesLink.sh / サンドボックス内なら allowRead に ~/.claude/settings.json を足す）"
+	jq -e '(.sandbox.credentials.files // []) | map(.path) | index("~/.aws")' "$s" >/dev/null \
+		|| { echo "!! sandbox.credentials.files に ~/.aws の deny が無い"; ok=false; }
+	# ツールチェーンの allowRead は共通に置いても良いが、無ければ claudebox init がリポ側に書く。
+	# どちらでも動くので、ここは事実を伝えるだけにする。
+	jq -e '(.sandbox.filesystem.allowRead // []) | index("~/.claude/shell-snapshots")' "$s" >/dev/null \
+		&& echo "ツールチェーンの allowRead は共通側にある（リポ側には書かれない）" \
+		|| echo "ツールチェーンの allowRead は共通側に無い（claudebox init がリポ側に書く。正常）"
+	jq -e '((.permissions.deny // []) | map(select(test("\\.aws"))) | length) > 0' "$s" >/dev/null \
+		|| { echo "!! permissions.deny に ~/.aws の Read 拒否が無い（Read ツールはサンドボックス外）"; ok=false; }
+	[ "$ok" = true ] && echo "共通の下敷きは入っている: $s"
+	mkdir -p "$REPOS" "$CREDS_ROOT"; chmod 700 "$CB" "$CREDS_ROOT" 2>/dev/null
+	echo "状態ディレクトリ: $CB"
+}
+
+usage() {
+	cat <<'EOF'
+claudebox — Claude Code のセッションを「このリポ + 専用の AWS 資格情報」に閉じる
+  claudebox init [options]   カレントリポに .claude/settings.local.json を生成（--help で詳細）
+  claudebox creds            アクセスキーを貼り付けてこのリポ専用に配置
+  claudebox status [--check] 設定と資格情報の状態を表示（--check で身元も確認）
+  claudebox rm               このリポの資格情報と記録を削除
+  claudebox bootstrap        共通の下敷き（~/.claude/settings.json）を点検
+EOF
+}
+
+case "${1:-}" in
+	init)         shift; cmd_init "$@" ;;
+	creds)        shift; cmd_creds "$@" ;;
+	status)       shift; cmd_status "$@" ;;
+	rm)           shift; cmd_rm "$@" ;;
+	bootstrap)    shift; cmd_bootstrap "$@" ;;
+	-h|--help|"") usage ;;
+	*)            usage; die "不明なサブコマンド: $1" ;;
+esac

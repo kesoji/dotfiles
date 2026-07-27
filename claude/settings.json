@@ -11,8 +11,40 @@
       "Bash(gh issue:*)",
       "Bash(ffmpeg:*)"
     ],
-    "deny": [],
+    "deny": [
+      "Read(~/.aws/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.gnupg/**)",
+      "Edit(~/dotfiles/claude/settings.json)"
+    ],
     "defaultMode": "auto"
+  },
+  "sandbox": {
+    "excludedCommands": [
+      "gh *",
+      "docker *"
+    ],
+    "credentials": {
+      "files": [
+        {
+          "path": "~/.aws",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.ssh",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.config/gh",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.gnupg",
+          "mode": "deny"
+        }
+      ]
+    }
   },
   "model": "opus[1m]",
   "statusLine": {
