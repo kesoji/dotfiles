@@ -46,32 +46,45 @@
       ]
     }
   },
-  "model": "opus[1m]",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/kesoji/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "~/.claude/myscripts/statusline.py"
   },
   "enabledPlugins": {
-    "example-skills@anthropic-agent-skills": true,
-    "document-skills@anthropic-agent-skills": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
-    "obsidian@obsidian-skills": true,
+    "crit@crit": true,
+    "document-skills@anthropic-agent-skills": true,
+    "example-skills@anthropic-agent-skills": true,
     "frontend-design@claude-plugins-official": true,
-    "crit@crit": true
+    "gopls-lsp@claude-plugins-official": true,
+    "obsidian@obsidian-skills": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
-    "obsidian-skills": {
-      "source": {
-        "source": "github",
-        "repo": "kepano/obsidian-skills"
-      }
-    },
     "crit": {
       "source": {
         "source": "github",
         "repo": "tomasz-tomczyk/crit"
+      }
+    },
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "kepano/obsidian-skills"
       }
     }
   },
@@ -83,5 +96,6 @@
   "skipAutoPermissionPrompt": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
-  }
+  },
+  "model": "claude-fable-5[1m]"
 }
