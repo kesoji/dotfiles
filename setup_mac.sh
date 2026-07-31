@@ -105,4 +105,11 @@ confirm_and_execute \
     "killall Finder"
 
 
+# Claude Code の設定
+confirm_and_execute \
+    "Claude Code に Playwright MCP サーバーを登録 (user scope)" \
+    "claude mcp get playwright 2>&1 | head -n 1" \
+    "claude mcp add --scope user playwright -- npx @playwright/mcp@latest"
+
+
 echo -e "${GREEN}${BOLD}スクリプトの実行が完了しました！${NC}"
