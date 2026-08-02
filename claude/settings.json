@@ -20,32 +20,6 @@
     ],
     "defaultMode": "auto"
   },
-  "sandbox": {
-    "excludedCommands": [
-      "gh *",
-      "docker *"
-    ],
-    "credentials": {
-      "files": [
-        {
-          "path": "~/.aws",
-          "mode": "deny"
-        },
-        {
-          "path": "~/.ssh",
-          "mode": "deny"
-        },
-        {
-          "path": "~/.config/gh",
-          "mode": "deny"
-        },
-        {
-          "path": "~/.gnupg",
-          "mode": "deny"
-        }
-      ]
-    }
-  },
   "hooks": {
     "SessionStart": [
       {
@@ -88,6 +62,32 @@
       }
     }
   },
+  "sandbox": {
+    "credentials": {
+      "files": [
+        {
+          "path": "~/.aws",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.ssh",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.config/gh",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.gnupg",
+          "mode": "deny"
+        }
+      ]
+    },
+    "excludedCommands": [
+      "gh *",
+      "docker *"
+    ]
+  },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
@@ -96,6 +96,5 @@
   "skipAutoPermissionPrompt": true,
   "feedbackSurveyState": {
     "lastShownTime": 1754086760338
-  },
-  "model": "claude-fable-5[1m]"
+  }
 }
