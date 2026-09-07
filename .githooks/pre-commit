@@ -1,0 +1,21 @@
+#!/bin/sh
+# Block committing Claude Code auto-mode config.
+# `/auto-mode-setup` writes an `autoMode` block (gathered org/repo/infra
+# details) into ~/.claude/settings.json, which is symlinked into this public
+# repo. Never let it reach a commit.
+
+set -eu
+
+status=0
+for f in $(git diff --cached --name-only --diff-filter=ACMR -- 'claude/*.json'); do
+  # Inspect the staged blob, not the working tree.
+  if git show ":$f" | grep -q '"autoMode"'; then
+    echo "pre-commit: BLOCKED — '$f' contains an \"autoMode\" block (Claude Code auto-mode config)." >&2
+    echo "            It holds org/repo/infra details gathered by /auto-mode-setup and must not be committed." >&2
+    echo "            Remove the key before committing, e.g.:" >&2
+    echo "              jq 'del(.autoMode)' $f > $f.tmp && mv $f.tmp $f && git add $f" >&2
+    status=1
+  fi
+done
+
+exit $status

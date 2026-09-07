@@ -66,6 +66,9 @@ mkdir -p ~/.config/lazygit
 safe_ln ~/dotfiles/lazygit/config.yml ~/.config/lazygit/config.yml
 safe_ln ~/dotfiles/starship.toml ~/.config/starship.toml
 
+# dotfiles repo git hooks (blocks committing Claude auto-mode config)
+git -C ~/dotfiles config core.hooksPath .githooks
+
 # claude
 mkdir -p ~/.claude
 safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
