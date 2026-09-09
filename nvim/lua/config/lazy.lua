@@ -51,3 +51,6 @@ require("lazy").setup({
     },
   },
 })
+
+-- プラグイン更新の cool time (supply chain 対策)。以後 :Lazy update ではなく :LazySoak を使う
+require("config.lazy-soak")
