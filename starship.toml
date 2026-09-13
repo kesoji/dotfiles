@@ -1,5 +1,6 @@
 # プロンプト全体
 format = """
+$hostname\
 $directory\
 $git_branch\
 $git_status\
@@ -7,6 +8,13 @@ $character"""
 
 # 右プロンプト（実行時間・時刻）
 right_format = "$cmd_duration$time"
+
+# ホスト名（SSH 接続時だけ。手元では出さない）
+[hostname]
+ssh_only = true
+ssh_symbol = "🌐 "
+format = "[$ssh_symbol$hostname]($style) "
+style = "bold cyan"
 
 # ディレクトリ
 [directory]
