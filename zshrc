@@ -558,8 +558,11 @@ bindkey " " globalias
 
 ## SSH
 function cssh() {
-    ssh $*
-    tmux selectp -P 'fg=default,bg=default'
+    ssh "$@"
+    local rc=$?
+    # tmux の外で呼ぶと "error connecting to /tmp/tmux-*/default" が出るので中にいるときだけ
+    [[ -n "$TMUX" ]] && tmux selectp -P 'fg=default,bg=default'
+    return $rc
 }
 alias ssh='cssh '
 
