@@ -13,8 +13,8 @@ right_format = "$cmd_duration$time"
 [hostname]
 ssh_only = true
 ssh_symbol = "🌐 "
-format = "[$ssh_symbol$hostname]($style) "
-style = "bold cyan"
+format = "[$ssh_symbol$hostname]($style):"
+style = "bold blue"
 
 # ディレクトリ
 [directory]
