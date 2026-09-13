@@ -39,3 +39,7 @@ PACKAGE_MANAGER="brew install"
 if [[ "$SHLVL" -eq 1 && ! -o LOGIN && -s "${ZDOTDIR:-$HOME}/.zprofile" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprofile"
 fi
+
+# マシン固有の設定と秘密（このリポジトリは公開なのでトークン類は必ずこちらへ書く）。
+# 例: export EXPO_TOKEN='...'   ~/.gitconfig.local と同じ流儀。
+[[ -f "$HOME/.zshenv.local" ]] && source "$HOME/.zshenv.local"
