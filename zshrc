@@ -529,6 +529,11 @@ else
     alias drmia='docker images -aq | xargs docker rmi'
     alias dco='docker compose'
     alias dcolf='docker compose logs -f'
+    # colima (mac): context を読まないツール（testcontainers 等）向け
+    if [[ -S "$HOME/.config/colima/default/docker.sock" ]]; then
+        export DOCKER_HOST="unix://$HOME/.config/colima/default/docker.sock"
+        export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+    fi
 fi
 
 ## Git

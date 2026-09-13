@@ -454,6 +454,44 @@
         }
       }
     },
+    "docker-buildx@latest": {
+      "last_modified": "2026-08-27T07:16:00Z",
+      "resolved": "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#docker-buildx",
+      "source": "devbox-search",
+      "version": "0.35.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/zfrdlaqfy8mpm4fsdxsy07ad38fhlrnc-docker-buildx-0.35.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/zfrdlaqfy8mpm4fsdxsy07ad38fhlrnc-docker-buildx-0.35.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/w08yyq2jmvf6rjxncnlpk2ipddsvqhv5-docker-buildx-0.35.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/w08yyq2jmvf6rjxncnlpk2ipddsvqhv5-docker-buildx-0.35.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/kdfdkmaadd2abkpps1b6g72fcihhl1zd-docker-buildx-0.35.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/kdfdkmaadd2abkpps1b6g72fcihhl1zd-docker-buildx-0.35.0"
+        }
+      }
+    },
     "docker-compose@latest": {
       "last_modified": "2026-08-27T07:16:00Z",
       "resolved": "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#docker-compose",
@@ -489,6 +527,44 @@
             }
           ],
           "store_path": "/nix/store/7y5p62mchnv28mxsfshc84viid2p2y0j-docker-compose-5.4.0"
+        }
+      }
+    },
+    "docker-credential-helpers@latest": {
+      "last_modified": "2026-08-27T07:16:00Z",
+      "resolved": "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#docker-credential-helpers",
+      "source": "devbox-search",
+      "version": "0.9.9",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/67sd5a0w6q6jkqsmdixnh2li54n1krhv-docker-credential-helpers-0.9.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/67sd5a0w6q6jkqsmdixnh2li54n1krhv-docker-credential-helpers-0.9.9"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/f3g348sjxd7fblcp8mhg268r2m9yrkwz-docker-credential-helpers-0.9.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/f3g348sjxd7fblcp8mhg268r2m9yrkwz-docker-credential-helpers-0.9.9"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/4kdfjvpad1vxyrd69jgyq7a0h2wxhk2a-docker-credential-helpers-0.9.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/4kdfjvpad1vxyrd69jgyq7a0h2wxhk2a-docker-credential-helpers-0.9.9"
         }
       }
     },

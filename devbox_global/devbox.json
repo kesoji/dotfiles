@@ -45,7 +45,9 @@
     "colima@latest",
     "docker@latest",
     "docker-compose@latest",
-    "yt-dlp@latest"
+    "yt-dlp@latest",
+    "docker-buildx@latest",
+    "docker-credential-helpers@latest"
   ],
   "shell": {
     "init_hook": [
