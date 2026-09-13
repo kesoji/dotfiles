@@ -12,7 +12,7 @@ right_format = "$cmd_duration$time"
 # ホスト名（SSH 接続時だけ。手元では出さない）
 [hostname]
 ssh_only = true
-ssh_symbol = "🌐 "
+ssh_symbol = '\(SSH\)'  # 括弧は starship の条件グループ記法なのでエスケープ
 format = "[$ssh_symbol$hostname]($style):"
 style = "bold blue"
 
