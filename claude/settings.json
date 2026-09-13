@@ -9,7 +9,8 @@
       "Bash(mkdir:*)",
       "Bash(gh pr:*)",
       "Bash(gh issue:*)",
-      "Bash(ffmpeg:*)"
+      "Bash(ffmpeg:*)",
+      "mcp__zvec_grep__*"
     ],
     "deny": [
       "Read(~/.aws/**)",

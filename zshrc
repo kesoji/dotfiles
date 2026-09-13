@@ -1147,3 +1147,4 @@ ecsx() {
   aws ecs execute-command --cluster "$cluster" --task "$task" --container "$container" \
       --interactive --command "$cmd"
 }
+export PATH=$PATH:$HOME/.maestro/bin
