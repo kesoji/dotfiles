@@ -48,6 +48,7 @@ ssh -F ~/.config/cockpit-ssh/config banto-ts   # 外出先（Tailscale。m1pro-t
   - 登録は `launchctl bootstrap gui/$(id -u) <plist>`、止めるのは `launchctl bootout gui/$(id -u) <plist>`、手動実行は `launchctl kickstart gui/$(id -u)/<label>`。
 - リポのスクリプトを回すなら、**m1pro 側にもクローンが必要**。無ければ作る（場所は手元と同じ `~/go/src/github.com/<org>/<repo>`）。
 - エージェント（Claude Code 等）を立てる処理は、**m1pro にその CLI が入っているか先に確認**する（`zsh -lc 'command -v claude herdr'`）。
+- **GitHub を触るジョブは `banto-env -- <コマンド>` で包む。** 本人のアカウントではなく、専用の GitHub App の bot として clone・push・PR・Issue を行う（本人の認証は m1pro に置かない方針）。App の中身と対象範囲は非公開の台帳を見る。包まずに git/gh を叩くと認証が無くて失敗する。
 - 仕込んだら**一度 `kickstart` で手動実行して、ログで成功を確かめてから**完了とする。
 
 ## 4. 本人に確認すること（勝手にやらない）
