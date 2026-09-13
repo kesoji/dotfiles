@@ -39,7 +39,7 @@
     "caddy@latest",
     "dnsmasq@latest",
     "herdr@latest",
-    "nodejs@24",
+    "nodejs@26",
     "pnpm@latest",
     "watchman@latest",
     "colima@latest",

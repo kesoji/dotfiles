@@ -55,6 +55,10 @@ safe_ln ~/dotfiles/npmrc ~/.npmrc
 # .config
 mkdir -p ~/.config
 safe_ln ~/dotfiles/dotconfig/pnpm ~/.config/pnpm
+# pnpm on macOS reads ~/Library/Preferences/pnpm when XDG_CONFIG_HOME is unset (non-interactive shells)
+if [ "$(uname)" = "Darwin" ]; then
+  safe_ln ~/dotfiles/dotconfig/pnpm ~/Library/Preferences/pnpm
+fi
 safe_ln ~/dotfiles/dotconfig/ncu ~/.config/ncu
 mkdir -p ~/.config/alacritty
 safe_ln ~/dotfiles/alacritty.yml ~/.config/alacritty/alacritty.yml
