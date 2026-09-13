@@ -17,6 +17,32 @@ DNS_PORT=5300   # 非特権ポート。5353 は mDNS(Bonjour)予約で mDNSRespo
 DNSMASQ_PLIST="$HOME/Library/LaunchAgents/com.devproxy.dnsmasq.plist"
 CADDY_PLIST=/Library/LaunchDaemons/com.devproxy.caddy.plist
 
+# ---------- sites の整理 ----------
+# site.caddy の先頭の .test ドメイン（コメント除外・ワイルドカードの "*." は落とす）
+site_domain() {
+	grep -vE '^[[:space:]]*#' "$1" 2>/dev/null | grep -oE '[a-z0-9.-]+\.test' | sed 's/^\.*//' | head -1
+}
+# 削除済みリポ/worktree を指す壊れた symlink を消す。1本でも残ると import が失敗し caddy 全体が起動しない
+prune_sites() {
+	find "$SITES" -maxdepth 1 -type l ! -exec test -e {} \; -delete 2>/dev/null || true
+}
+# 登録名を「ドメイン名.caddy」に揃える。同じドメインを宣言する複数チェックアウト（本体と worktree 等）が
+# 別名で並ぶと caddy が重複サイト定義で起動しないため。worktree を先に処理し、本体が最後に勝つ。
+normalize_sites() {
+	local pass l target dom
+	prune_sites
+	for pass in worktree main; do
+		for l in "$SITES"/*.caddy; do
+			[ -L "$l" ] || continue
+			target="$(readlink "$l")"
+			case "$target" in */.claude/worktrees/*) [ $pass = worktree ] || continue ;; *) [ $pass = main ] || continue ;; esac
+			dom="$(site_domain "$l")"
+			[ -n "$dom" ] && [ "$l" != "$SITES/$dom.caddy" ] || continue
+			ln -sfn "$target" "$SITES/$dom.caddy" && rm -f "$l"
+		done
+	done
+}
+
 # ---------- bootstrap ----------
 cmd_bootstrap() {
 	set -e
@@ -28,6 +54,7 @@ cmd_bootstrap() {
 
 	echo "==> 1/5 設定 ($DEVPROXY)"
 	mkdir -p "$SITES" "$CADDY_DATA" "$HOME/Library/LaunchAgents"
+	normalize_sites
 	cat > "$DNSMASQ_CONF" <<EOF
 # devproxy: *.test だけを 127.0.0.1 に解決（/etc/resolver/test 経由でしか引かれない）
 # 非 root のユーザー LaunchAgent で動かすため非特権ポート $DNS_PORT を使う。
@@ -73,6 +100,7 @@ EOF
 EOF
 	# caddy 実体は /nix/store（別 APFS ボリューム）。root Daemon は起動時にそのマウントより先に走り、
 	# 実体が見えず exit 78 のまま止まる（KeepAlive でも復帰しない）。wait4path でマウントを待ってから exec。
+	# 起動前に壊れた symlink も掃除する（worktree 削除後の再起動で import 失敗しないように）。
 	sudo tee "$CADDY_PLIST" >/dev/null <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -80,15 +108,19 @@ EOF
   <key>Label</key><string>com.devproxy.caddy</string>
   <key>ProgramArguments</key><array>
     <string>/bin/sh</string><string>-c</string>
-    <string>/bin/wait4path /nix/store &amp;&amp; exec '$CADDY_BIN' run --config '$CADDYFILE' --adapter caddyfile</string>
+    <string>/bin/wait4path /nix/store; /usr/bin/find '$SITES' -maxdepth 1 -type l ! -exec test -e {} \; -delete; exec '$CADDY_BIN' run --config '$CADDYFILE' --adapter caddyfile</string>
   </array>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
 </dict></plist>
 EOF
+	# bootout は非同期。解除し切る前に bootstrap すると "Bootstrap failed: 5: Input/output error" になるので待つ
+	wait_unloaded() { local i; for i in $(seq 1 50); do $1 launchctl print "$2" >/dev/null 2>&1 || return 0; sleep 0.1; done; }
 	launchctl bootout "gui/$(id -u)/com.devproxy.dnsmasq" 2>/dev/null || true
+	wait_unloaded "" "gui/$(id -u)/com.devproxy.dnsmasq"
 	launchctl bootstrap "gui/$(id -u)" "$DNSMASQ_PLIST"
 	launchctl kickstart -k "gui/$(id -u)/com.devproxy.dnsmasq" 2>/dev/null || true
 	sudo launchctl bootout system "$CADDY_PLIST" 2>/dev/null || true
+	wait_unloaded sudo system/com.devproxy.caddy
 	sudo launchctl bootstrap system "$CADDY_PLIST"
 	sudo launchctl kickstart -k system/com.devproxy.caddy 2>/dev/null || true
 
@@ -142,23 +174,22 @@ EOF
 
 # ---------- register ----------（未 bootstrap でも dev を止めないよう常に exit 0）
 cmd_register() {
-	local REPO NAME SITE_SRC
+	local REPO NAME SITE_SRC DOMAIN
 	REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-	NAME="$(basename "$REPO")"
 	SITE_SRC="$REPO/caddy/site.caddy"
 	[ -f "$SITE_SRC" ] || { echo "[devproxy] caddy/site.caddy が無い（devproxy generate で作成）。スキップ。" >&2; return 0; }
 	if [ ! -d "$SITES" ]; then
 		echo "[devproxy] 未セットアップのためスキップ（https://*.test は無効）。devproxy bootstrap を一度実行。" >&2
 		return 0
 	fi
-	ln -sf "$SITE_SRC" "$SITES/$NAME.caddy"
+	DOMAIN="$(site_domain "$SITE_SRC")"
+	# 登録名はドメイン名。本体と worktree は同名を上書きし合う＝最後に dev を起動したチェックアウトが勝つ
+	NAME="${DOMAIN:-$(basename "$REPO")}"
+	normalize_sites
+	ln -sfn "$SITE_SRC" "$SITES/$NAME.caddy"
 	if command -v caddy >/dev/null 2>&1 && [ -f "$CADDYFILE" ]; then
 		if caddy reload --config "$CADDYFILE" --adapter caddyfile >/dev/null 2>&1; then
-			local DOMAIN
-			# コメント行を除外し、最初の非ワイルドカード .test ドメインを拾う
-			DOMAIN="$(grep -vE '^[[:space:]]*#' "$SITE_SRC" | grep -oE '[a-z0-9.-]+\.test' | head -1)"
-			[ -n "$DOMAIN" ] || DOMAIN="$NAME.test"
-			echo "[devproxy] 登録: https://$DOMAIN"
+			echo "[devproxy] 登録: https://${DOMAIN:-$NAME.test} → $REPO"
 		else
 			echo "[devproxy] caddy reload 失敗。共有 Caddy 未起動かも（devproxy status）。" >&2
 		fi
