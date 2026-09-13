@@ -71,15 +71,16 @@ EOF
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
 </dict></plist>
 EOF
+	# caddy 実体は /nix/store（別 APFS ボリューム）。root Daemon は起動時にそのマウントより先に走り、
+	# 実体が見えず exit 78 のまま止まる（KeepAlive でも復帰しない）。wait4path でマウントを待ってから exec。
 	sudo tee "$CADDY_PLIST" >/dev/null <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>com.devproxy.caddy</string>
   <key>ProgramArguments</key><array>
-    <string>$CADDY_BIN</string><string>run</string>
-    <string>--config</string><string>$CADDYFILE</string>
-    <string>--adapter</string><string>caddyfile</string>
+    <string>/bin/sh</string><string>-c</string>
+    <string>/bin/wait4path /nix/store &amp;&amp; exec '$CADDY_BIN' run --config '$CADDYFILE' --adapter caddyfile</string>
   </array>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
 </dict></plist>

@@ -56,6 +56,7 @@ devproxy status                                          # 常駐と解決の確
 - https にならない/警告: `caddy trust --config ~/.config/devproxy/Caddyfile --adapter caddyfile` をやり直し、`sudo launchctl print system/com.devproxy.caddy`。
 - 反映されない: `caddy reload --config ~/.config/devproxy/Caddyfile --adapter caddyfile`、`ls ~/.config/devproxy/sites`。
 - 常駐の再起動: caddy=`sudo launchctl kickstart -k system/com.devproxy.caddy` / dnsmasq=`launchctl kickstart -k gui/$(id -u)/com.devproxy.dnsmasq`。
+- 再起動後に caddy だけ止まる（`launchctl print system/com.devproxy.caddy` が `last exit code = 78: EX_CONFIG`・`spawn scheduled`）: root Daemon が `/nix`（別 APFS ボリューム）のマウント前に走り実体が見えなかった。plist を `/bin/wait4path /nix/store && exec caddy …` 形にする＝2026-09-13 以降の `devproxy bootstrap` を再実行。
 - devbox 更新でバイナリパスが変わり起動しない: `devproxy bootstrap` を再実行（plist のパスを貼り直す）。
 - Vite が Host を弾く（Blocked request）: `allowedHosts` 追加漏れ。
 
