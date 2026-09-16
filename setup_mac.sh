@@ -72,7 +72,7 @@ confirm_and_execute \
 confirm_and_execute \
     "キーボードのリピート開始設定" \
     "defaults read NSGlobalDomain InitialKeyRepeat" \
-    "defaults write NSGlobalDomain InitialKeyRepeat -int 15" \
+    "defaults write NSGlobalDomain InitialKeyRepeat -int 11"
 confirm_and_execute \
     "キーボードのリピート設定" \
     "defaults read NSGlobalDomain KeyRepeat" \
