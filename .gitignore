@@ -1,0 +1,3 @@
+# Claude Code が claude.ai アカウントから自動同期するスキル（Anthropic 配布物）
+# ~/.claude/skills -> dotfiles/claude/skills のシンボリックリンク経由で生えてくる
+claude/skills/synced/
