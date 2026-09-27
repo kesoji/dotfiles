@@ -1,6 +1,7 @@
 ---
 name: html-diagram
-description: Direct-invocation specialist for self-contained HTML diagrams whose layout, notation, and interaction clarify relationships, sequence, topology, state, hierarchy, or quantitative structure. Use when the user explicitly invokes html-diagram or the broad html skill routes a diagram request here. Do not activate independently from a general request.
+description: Self-contained HTML diagrams whose layout, notation, and interaction clarify relationships, sequence, topology, state, hierarchy, or quantitative structure. Invoked explicitly by the user.
+disable-model-invocation: true
 ---
 
 # HTML Diagram
@@ -33,11 +34,6 @@ Use HTML and CSS, SVG, Canvas, or WebGL according to the information and scale. 
 - Use legends only when notation is not self-explanatory.
 
 Add sequencing, filtering, path tracing, pan and zoom, or animation only when it helps answer the stated question. Keep overlays dismissible, controls keyboard-accessible, and motion compatible with `prefers-reduced-motion`.
-
-When [`design-artifact`](../design-artifact/SKILL.md) is available, read it for
-the diagram's surrounding composition and visual register. Keep the chosen
-diagram grammar, label legibility, and relationships authoritative over
-decorative treatment.
 
 ## Build and verify
 

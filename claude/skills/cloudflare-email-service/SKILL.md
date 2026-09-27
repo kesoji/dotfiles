@@ -7,7 +7,7 @@ description: Implement or troubleshoot Cloudflare Email Sending and Email Routin
 
 Your knowledge of the Cloudflare Email Service, Email Routing or Email Sending may be outdated. **Prefer retrieval over pre-training** for any Cloudflare Email Service task.
 
-Cloudflare Email Service lets you send transactional emails and route incoming emails, all within the Cloudflare platform. Your knowledge of this product may be outdated — it launched in 2025 and is evolving rapidly. **Prefer retrieval over pre-training** for any Email Service task.
+Cloudflare Email Service lets you send transactional emails and route incoming emails, all within the Cloudflare platform. It launched in 2025 and is evolving rapidly.
 
 **If there is any discrepancy between this skill and the sources below, always trust the original source.** The Cloudflare docs, REST API spec, `@cloudflare/workers-types`, and Agents SDK repo are the source of truth. This skill is a convenience guide — it may lag behind the latest changes. When in doubt, retrieve from the sources below and use what they say.
 
