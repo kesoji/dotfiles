@@ -1,0 +1,10 @@
+# pnpm 専用の設定。npm はこのファイルを読まないので、npm が知らないキーを
+# ~/.npmrc に置いて毎回警告される、という状態を避けるためここに置く。
+
+# 公開から一定時間経っていないバージョンは入れない（サプライチェーン対策）。
+# 単位は「分」。pnpm 内部は Date.now() - minimumReleaseAge * 60 * 1000 で判定する。
+# 2880 = 2日。
+#
+# 注意: キー名は minimum-release-age。min-release-age ではない
+# （誤ったキーは pnpm も npm も知らない設定として黙って無視される）。
+minimum-release-age=2880
