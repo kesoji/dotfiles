@@ -1,1 +1,13 @@
 prefix=~/.local
+
+# 公開から一定時間経っていないバージョンは入れない（サプライチェーン対策）。
+# npm のキーは min-release-age、単位は「日」。npm 11.19.0 に実在し、
+# `npm config ls -l` に min-release-age / min-release-age-exclude として出る。
+#
+# 注意: pnpm のキーは minimum-release-age（単位＝分）で別物。混同して
+# こちらを消すと npm 側だけ無防備になる（2026-09-29 にそうなっていた）。
+# pnpm 用は ~/.config/pnpm/rc（dotconfig/pnpm/rc）にある。
+#
+# その場だけ外したいときは `npm i <pkg> --min-release-age=0`。
+# ただし依存全部の柵が外れるので、同時に触る依存はバージョンを固定しておく。
+min-release-age=2
