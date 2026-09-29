@@ -22,8 +22,11 @@ v3（2026-09-29）。`cf` は 2026/04/13 発表の wrangler 後継で、**2026-0
     （`npm config ls -l` に `min-release-age` と `min-release-age-exclude` が出る）。
   - **pnpm のキーは `minimum-release-age`（単位＝分）**。別物なので混同しない。
     pnpm 側は `~/.config/pnpm/rc` に `minimum-release-age=2880`（＝2日）で有効。
-  - **`~/.npmrc`（= `dotfiles/npmrc`）からは `min-release-age=2` が外れており、
-    npm 側の柵は今オフ**（`npm view cf@1.0.0-beta.5` が通る）。**入れ直すかは本人の判断**。
+  - pnpm 用の設定を分離したときに **npmrc の `min-release-age` が一緒に消され、npm 側だけ
+    柵が外れていた**（2026-09-29 に発見し、同日 `min-release-age=2` を戻した）。
+  - **柵の有無は `npm view` では確かめられない**（view は柵を通らず、publish 直後の版も表示する）。
+    `npm config get min-release-age` か、`npm i --dry-run <pkg>@<新しい版>` が
+    `notarget ... with a date before <2日前>` で落ちるかで見る。
 - 柵が有効なときに新しいバージョンを入れるなら **その場だけ `--min-release-age=0`**:
   `npm i -g cf@<ver> --min-release-age=0`（tarball 直指定でも通る）。
   `npm config set min-release-age 0` は**柵ごと外すのでやらない**。
