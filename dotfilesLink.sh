@@ -77,7 +77,25 @@ git -C ~/dotfiles config core.hooksPath .githooks
 mkdir -p ~/.claude
 safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
 safe_ln ~/dotfiles/claude/myscripts ~/.claude/myscripts
-safe_ln ~/dotfiles/claude/skills ~/.claude/skills
+
+# agent skills: ~/.agents が正本（`npx skills` もここに入れる）。
+# ~/.claude/skills は実ディレクトリにして各スキルを個別にリンクする
+# （claude.ai から同期される ~/.claude/skills/synced は Claude 側に置いたまま）。
+safe_ln ~/dotfiles/agents ~/.agents
+if [ -L ~/.claude/skills ]; then
+  rm ~/.claude/skills  # 旧構成（~/.claude/skills -> dotfiles/claude/skills）からの移行
+fi
+mkdir -p ~/.claude/skills
+for skill in ~/.agents/skills/*/; do
+  name=$(basename "$skill")
+  safe_ln "../../.agents/skills/$name" ~/.claude/skills/"$name"
+done
+# 消したスキルのリンク切れを掃除
+for link in ~/.claude/skills/*; do
+  if [ -L "$link" ] && [ ! -e "$link" ]; then
+    rm "$link"
+  fi
+done
 
 # devbox global
 mkdir -p ~/.local/share/devbox/global/default

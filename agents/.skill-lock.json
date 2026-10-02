@@ -1,0 +1,32 @@
+{
+  "version": 3,
+  "skills": {
+    "yomiyasu": {
+      "source": "nanaism/yomiyasu",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/nanaism/yomiyasu.git",
+      "skillPath": "SKILL.md",
+      "skillFolderHash": "f03aecd9c4c4a69e229f3848ecba66c3871f734c",
+      "installedAt": "2026-10-02T03:18:56.786Z",
+      "updatedAt": "2026-10-02T03:18:56.786Z"
+    }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "cline",
+    "codex",
+    "cursor",
+    "droid",
+    "gemini-cli",
+    "github-copilot",
+    "kilo",
+    "kimi-code-cli",
+    "opencode",
+    "warp",
+    "zed",
+    "claude-code"
+  ]
+}

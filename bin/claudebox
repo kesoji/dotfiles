@@ -50,7 +50,7 @@ ask() { # プロンプトと既定値。空 Enter なら既定値
 # 本来は共通の下敷き（~/.claude/settings.json）に置くもので、そこに入っていればリポ側には書かない。
 # ~/.claude/shell-snapshots は Claude Code が各 Bash の初期化に読むので、外すとシェルが起動しない。
 TOOLCHAIN_READ='[
-	"~/.claude/shell-snapshots","~/.claude/plugins","~/.claude/skills","~/.claude/settings.json","~/dotfiles",
+	"~/.claude/shell-snapshots","~/.claude/plugins","~/.claude/skills","~/.agents","~/.claude/settings.json","~/dotfiles",
 	"~/.local","~/.nix-profile","~/.config/mise","~/.config/git","~/.config/pnpm","~/Library/pnpm","~/.cache",
 	"~/.gitconfig","~/.gitignore_global","~/.npmrc","~/.zshenv","~/.zshrc","~/.zprofile"
 ]'
