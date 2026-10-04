@@ -11,9 +11,9 @@ v3（2026-09-29）。`cf` は 2026/04/13 発表の wrangler 後継で、**2026-0
 
 ## 番頭（m1pro）の導入状態
 
-- `cf` はグローバル導入済み＝`~/.local/bin/cf`、**v1.0.0-beta.5**（2026-09-29 時点）。
+- `cf` はグローバル導入済み＝`~/.local/bin/cf`、**v1.0.0-beta.11**（2026-10-04 時点）。ベータは数日で何版も進むので、着手時に `cf --version` を見る。
 - **`npm i -g cf` だと 0.15.0 が入る**。1.x は prerelease 扱いなので、
-  入れる／上げるときは **バージョン明示**（例 `npm i -g cf@1.0.0-beta.5`）。
+  入れる／上げるときは **バージョン明示**（例 `npm i -g cf@1.0.0-beta.11`）。
 - 依存の `workerd` の postinstall は allowScripts 方針で走っていない。
   **`cf dev` / `--local`（ローカル実行）は未検証**。必要になったら
   `npm i -g --allow-scripts=workerd cf@<ver>` を本人に確認してから。
@@ -24,6 +24,8 @@ v3（2026-09-29）。`cf` は 2026/04/13 発表の wrangler 後継で、**2026-0
     pnpm 側は `~/.config/pnpm/rc` に `minimum-release-age=2880`（＝2日）で有効。
   - pnpm 用の設定を分離したときに **npmrc の `min-release-age` が一緒に消され、npm 側だけ
     柵が外れていた**（2026-09-29 に発見し、同日 `min-release-age=2` を戻した）。
+  - **上げるときは柵を満たす最新を選ぶ**のが既定（2026-10-04 は beta.12 が publish 1日で
+    弾かれたので beta.11 にした）。柵を外してまで最新を追わない。
   - **柵の有無は `npm view` では確かめられない**（view は柵を通らず、publish 直後の版も表示する）。
     `npm config get min-release-age` か、`npm i --dry-run <pkg>@<新しい版>` が
     `notarget ... with a date before <2日前>` で落ちるかで見る。
