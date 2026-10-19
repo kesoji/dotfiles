@@ -455,11 +455,27 @@ function aws-list-ec2() {
     aws ec2 describe-instances --query 'Reservations[].Instances[] | [][{Name: Tags[?Key==`Name`].Value, Id: InstanceId}]' --output json | jq -r '.[] | .[] | "\(.Name):\(.Id)"' | sort
 }
 
+# .git は基本除外する。含めたいときは `zipp -g DIR`
 function zipp() {
-    DIR="$1"
-    DIR="${DIR%/}"
+    local include_git=0
+    if [[ "$1" == "-g" ]]; then
+        include_git=1
+        shift
+    fi
+    local DIR="${1%/}"
+    local -a excludes=("*.DS_Store")
+    local -a gits=()
+    if (( ! include_git )); then
+        excludes+=("*/.git" "*/.git/*")
+        gits=("${(@f)$(command find "$DIR" -name .git -prune -print 2>/dev/null)}")
+        gits=(${gits:#})
+    fi
     command rm -f "${DIR}.zip"
-    command zip -r "${DIR}.zip" "$DIR" -x "*.DS_Store"
+    command zip -r "${DIR}.zip" "$DIR" -x "${excludes[@]}"
+    if (( ${#gits} )); then
+        echo "[除外した .git] (含めるなら zipp -g)"
+        printf '  %s\n' "${gits[@]}"
+    fi
 }
 function ppap() {
     PASSWORD=`openssl rand -base64 9`
