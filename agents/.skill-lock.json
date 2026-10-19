@@ -9,6 +9,25 @@
       "skillFolderHash": "f03aecd9c4c4a69e229f3848ecba66c3871f734c",
       "installedAt": "2026-10-02T03:18:56.786Z",
       "updatedAt": "2026-10-02T03:18:56.786Z"
+    },
+    "html-diagram": {
+      "source": "plannotator/effective-html",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/plannotator/effective-html.git",
+      "skillPath": "skills/html-diagram/SKILL.md",
+      "skillFolderHash": "9d773f19558970f4074244f1dd6aa0e499209045",
+      "pluginName": "plannotator-effective-html",
+      "installedAt": "2026-09-13T01:16:58.443Z",
+      "updatedAt": "2026-09-13T01:16:58.443Z"
+    },
+    "security-audit": {
+      "source": "cloudflare/security-audit-skill",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/cloudflare/security-audit-skill.git",
+      "skillPath": "skills/security-audit/SKILL.md",
+      "skillFolderHash": "ccbc33ed119b28c3ef7b44a7e2081ab191ad63af",
+      "installedAt": "2026-10-19T14:47:10.809Z",
+      "updatedAt": "2026-10-19T14:47:10.809Z"
     }
   },
   "dismissed": {
