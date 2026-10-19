@@ -159,6 +159,12 @@ cf auth whoami          # → {"authenticated":true,"accounts":[{"id":"...","nam
 wrangler の OAuth トークン（`~/.config/.wrangler/config/default.toml`）は scope が固定で
 Workers Builds API などに届かないので、wrangler 側で用途が広いタスクをやるときはトークン方式に切り替える。
 
+**cf のプロファイルは wrangler に効かない（2026-10-17 追記）**。wrangler には別のプロファイル機構
+（`wrangler auth create/activate/list`・`~/.config/.wrangler/profiles/directory-bindings.json`）があり、紐付けが無ければ
+`default.toml`（マシン全体の既定）を使う。cf に委譲されて wrangler が動く場面（Vite なしの Worker の deploy 等）も含め、
+**wrangler が絡むなら `npx wrangler whoami` も別に確かめる**。`whoami` の権限一覧に無いもの（例: r2）でも使えることがあるので、
+「権限が無い」は実際に読み取りのコマンドを打って確かめてから言う。
+
 ## 変更履歴
 
 - v2（2026-09-29）: cf が 1.0 ベータ系列に。対応領域を実測で全面差し替え、番頭の導入状態・

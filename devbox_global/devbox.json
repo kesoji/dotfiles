@@ -47,7 +47,8 @@
     "docker-compose@latest",
     "yt-dlp@latest",
     "docker-buildx@latest",
-    "docker-credential-helpers@latest"
+    "docker-credential-helpers@latest",
+    "git@latest"
   ],
   "shell": {
     "init_hook": [

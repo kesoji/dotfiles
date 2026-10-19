@@ -22,6 +22,16 @@ Y と答えて、ログイン中の**別アカウント側に draft Worker が�
 
 ## ルール（外向き Cloudflare 操作の前に必ず）
 
+0. **cf と wrangler は認証の仕組みが別（2026-10-17 追記・取り違えて誤報告した）**。
+   `cf auth activate` の紐付けは **wrangler には効かない**。wrangler には wrangler 自身のプロファイル
+   （`wrangler auth create/activate/list`・実験的・紐付けは `~/.config/.wrangler/profiles/directory-bindings.json`）があり、
+   紐付けが無いディレクトリでは `~/.config/.wrangler/config/default.toml`＝**マシン全体の既定**を使う。
+   ＝**使う CLI ごとに、その CLI の whoami を打つ**（cf を使うなら `cf auth whoami`、wrangler を使うなら `npx wrangler whoami`）。
+   片方の結果でもう片方を推測しない。どちらも**リポジトリのディレクトリの中で**打つ（紐付けはディレクトリで決まる）。
+   - `wrangler whoami` の「Token Permissions」に出ない権限でも使えることがある（例: r2 は一覧に無いのに `wrangler r2 bucket list` が通る）。
+     **権限が無いと報告する前に、読み取り専用のコマンドを1回打って確かめる。**
+   - memory の「このマシンの wrangler はどのアカウントか」は古くなる（既定は `wrangler login` のたびに変わる）。毎回実測する。
+
 1. **アカウント検証を先に実行**。`cf auth whoami` を使う（2026-09-29 更新）:
    ```bash
    cf auth whoami
@@ -58,6 +68,9 @@ Y と答えて、ログイン中の**別アカウント側に draft Worker が�
    ```
    ディレクトリ単位でアカウントが決まるので「マシンの既定認証が別アカウント」問題が
    構造的に消える。**紐付けの無い場所では `Not logged in` で止まる**のも柵として効く。
+   **ただし cf だけの話**。wrangler も同じ柵にしたいときは wrangler 側でも
+   `wrangler auth create <name>`（ブラウザで OAuth）→ `wrangler auth activate <name> <dir>` を別にやる
+   （wrangler は紐付けの外では Not logged in にならず、既定の default に落ちる＝柵としては cf より弱い）。
 
 ### 優先順位（番頭で実測・2026-09-29）
 
