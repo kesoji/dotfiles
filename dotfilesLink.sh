@@ -77,6 +77,8 @@ git -C ~/dotfiles config core.hooksPath .githooks
 mkdir -p ~/.claude
 safe_ln ~/dotfiles/claude/settings.json ~/.claude/settings.json
 safe_ln ~/dotfiles/claude/myscripts ~/.claude/myscripts
+# ユーザーレベルのサブエージェント(Claude 専用なので ~/.agents ではなくこちら)
+safe_ln ~/dotfiles/claude/agents ~/.claude/agents
 
 # agent skills: ~/.agents が正本（`npx skills` もここに入れる）。
 # ~/.claude/skills は実ディレクトリにして各スキルを個別にリンクする
