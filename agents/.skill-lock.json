@@ -55,6 +55,96 @@
       "skillFolderHash": "f2a3441d4cf14df060ee363e155502a4818b5f8d",
       "installedAt": "2026-11-01T00:42:38.000Z",
       "updatedAt": "2026-11-01T00:42:38.000Z"
+    },
+    "animate": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/animate/SKILL.md",
+      "skillFolderHash": "a92e36f28d741aee4ff77d1a001300d7e86e07fe",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "animation-performance": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/animation-performance/SKILL.md",
+      "skillFolderHash": "59c4651915a493803d1696d4278d2f9f980e47c8",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "animation-vocabulary": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/animation-vocabulary/SKILL.md",
+      "skillFolderHash": "d49565744427887a1f719de1ceee04d941d4e681",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "apple-design": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/apple-design/SKILL.md",
+      "skillFolderHash": "cd509ae729c86487d352e17a26651217a4c25711",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "find-animation-opportunities": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/find-animation-opportunities/SKILL.md",
+      "skillFolderHash": "e6443880f38e33cf78e5d678471eed35e8566763",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "improve-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/improve-animations/SKILL.md",
+      "skillFolderHash": "cf1f7aabac34c08f2cf833f039fa99af2f415183",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "pick-ui-library": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/pick-ui-library/SKILL.md",
+      "skillFolderHash": "370e19776f0aa2403a2edeed78266bd6a5d78036",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "prototype": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/prototype/SKILL.md",
+      "skillFolderHash": "34cd3a303aef0a975fcce3ac906d6b293e600399",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "remove-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/remove-animations/SKILL.md",
+      "skillFolderHash": "e1d06083891b6445c7fb5dae31f06b1e8b81f0dc",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
+    },
+    "review-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/emilkowalski/skills.git",
+      "skillPath": "skills/review-animations/SKILL.md",
+      "skillFolderHash": "0e0d3cb3e07ca307fe946ccaf57f6c82eb75124a",
+      "installedAt": "2026-11-01T00:43:54.000Z",
+      "updatedAt": "2026-11-01T00:43:54.000Z"
     }
   },
   "dismissed": {
