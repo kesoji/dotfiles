@@ -29,6 +29,7 @@
 // 設定は CoS が動いている作業ツリーの `.claude/cos.json`（無くてもよい）。項目は SKILL.md を参照。
 import { execFileSync } from 'node:child_process';
 import {
+  cpSync,
   appendFileSync,
   copyFileSync,
   existsSync,
@@ -1041,7 +1042,8 @@ function cmdClose(argv) {
   const archive = join(ctx.dir, 'archive', `${s}-${now().replace(/[:.]/g, '').slice(0, 15)}`);
   mkdirSync(archive, { recursive: true });
   const mbox = dirname(w.report);
-  if (existsSync(mbox)) for (const f of readdirSync(mbox)) copyFileSync(join(mbox, f), join(archive, f));
+  // 作業セッションが受け箱の下にフォルダ（スクリーンショット等）を作ることがある＝丸ごと写す。
+  if (existsSync(mbox)) cpSync(mbox, archive, { recursive: true });
 
   stopAgent(w);
   if (w.where === 'worktree') {
