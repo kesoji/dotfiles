@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# chief of staff の作業セッション管理（herdr）。本体は agents/skills/chief-of-staff/scripts/cos.mjs。
+exec node "$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs" "$@"
