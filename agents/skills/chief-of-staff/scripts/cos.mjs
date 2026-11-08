@@ -150,6 +150,15 @@ export function shq(s) {
   return `'${String(s).replace(/'/g, `'\\''`)}'`;
 }
 
+// 作業セッションの herdr 上の置き場所。worktree の依頼も、作業ツリーを分けない依頼（where: shared）も
+// 1本につき1つのワークスペース（サイドバーに出る）。where: tab は古い形（CoS のワークスペースの中のタブ）で、
+// 台帳に残っている分を片付けられるように読むだけ。
+export function herdrPlace(w) {
+  if (w.where === 'worktree' || w.where === 'shared') return { kind: 'workspace', id: w.workspace };
+  if (w.where === 'tab') return { kind: 'tab', id: w.tab };
+  throw new Error(`台帳の where が分かりません: ${w.where}`);
+}
+
 // ── 週1回の振り返り ──
 
 // ローカル時刻の日付（YYYY-MM-DD）。「同じ日に二度知らせない」の判定に使う。
@@ -632,12 +641,14 @@ function cmdSpawn(argv) {
   requireHerdr();
   const ctx = repoCtx();
   const kind = opt.kind ?? 'claude';
-  const where = opt['no-worktree'] ? 'tab' : 'worktree';
+  // --no-worktree は「git の worktree を作らない（本体の作業ツリーを共有する）」だけの意味。herdr のワークスペースは
+  // どちらでも1本につき1つ作る（タブだと CoS のワークスペースに埋もれて気づかれない）。
+  const where = opt['no-worktree'] ? 'shared' : 'worktree';
   const s = slug(id);
   const agent = agentName(ctx.cfg.agentPrefix, s);
   const title = opt.title ?? id;
-  // サイドバーに出るのはワークスペース（調査ならタブ）の名前＝ID ではなく中身が分かる短い名前にする。
-  // ID はタブの名前（worktree のとき）と台帳・エージェント名に残る。
+  // サイドバーに出るのはワークスペースの名前＝ID ではなく中身が分かる短い名前にする。
+  // ID はワークスペースの中のタブの名前と台帳・エージェント名に残る。
   if (!opt.label) throw new UsageError(`--label <サイドバーに出す短い名前（幅 ${ctx.cfg.labelWidth} まで・全角は2）> が要ります。中身が分かる名前に（例: 通知の既読・CSV出力）`);
   const fitted = fitLabel(opt.label, ctx.cfg.labelWidth);
   const label = fitted.label;
@@ -673,12 +684,12 @@ function cmdSpawn(argv) {
     }
   } else {
     cwd = ctx.top;
-    r = herdr(['tab', 'create', '--workspace', process.env.HERDR_WORKSPACE_ID, '--cwd', cwd, '--label', label, '--no-focus']).result;
+    r = herdr(['workspace', 'create', '--cwd', cwd, '--label', label, '--no-focus']).result;
   }
   const pane = r.root_pane.pane_id;
   const workspace = r.root_pane.workspace_id ?? r.tab.workspace_id;
   const tab = r.tab.tab_id;
-  if (where === 'worktree') herdr(['tab', 'rename', tab, id]); // ワークスペースの中のタブには ID を出す
+  herdr(['tab', 'rename', tab, id]); // ワークスペースの中のタブには ID を出す
 
   const mbox = join(cwd, '.cos', s);
   mkdirSync(mbox, { recursive: true });
@@ -739,9 +750,9 @@ function cmdSpawn(argv) {
 
   sendFirst(ctx, { ...entry, state: 'starting' });
 
-  console.log(`立てました: ${id} → エージェント ${agent}（${where === 'worktree' ? 'ワークスペース' : 'タブ'}「${label}」${fitted.cut ? `＝幅 ${ctx.cfg.labelWidth} に切りました（cos rename で付け直せます）` : ''}・ワークスペース ${workspace}・タブ ${tab}・ペイン ${pane}）`);
+  console.log(`立てました: ${id} → エージェント ${agent}（ワークスペース「${label}」${fitted.cut ? `＝幅 ${ctx.cfg.labelWidth} に切りました（cos rename で付け直せます）` : ''}・ワークスペース ${workspace}・タブ ${tab}・ペイン ${pane}）`);
   if (where === 'worktree') console.log(`  作業ツリー: ${cwd}（ブランチ ${branch}・base ${base.slice(0, 10)}）`);
-  else console.log(`  作業ツリー: ${cwd}（本体と共有・タブ「${id}」）`);
+  else console.log(`  作業ツリー: ${cwd}（本体と共有・worktree なし）`);
   console.log(`  依頼書: ${briefFile}\n  報告書: ${reportFile}`);
   console.log('見張りがまだなら cos watch を裏で走らせてください。');
 }
@@ -918,7 +929,8 @@ function cmdStatus(argv) {
     if (r.where === 'worktree' && r.commits !== undefined) {
       console.log(`      ${r.branch}  コミット ${r.commits}${r.commits ? (r.merged ? '（マージ済み）' : '（未マージ）') : ''}・未コミット ${r.dirty}  ワークスペース ${r.workspace}・ペイン ${r.pane}`);
     } else if (r.state !== 'closed') {
-      console.log(`      ${r.where === 'tab' ? '本体のツリーのタブ' : r.cwd}  ワークスペース ${r.workspace}・ペイン ${r.pane}`);
+      const place = r.where === 'tab' ? '本体の作業ツリー（共有）・CoS のワークスペースのタブ' : r.where === 'shared' ? '本体の作業ツリー（共有）' : r.cwd;
+      console.log(`      ${place}  ワークスペース ${r.workspace}・ペイン ${r.pane}`);
     }
   }
   console.log(retroLine(ctx));
@@ -933,8 +945,8 @@ function cmdRename(argv) {
   const ctx = repoCtx();
   const w = getWorker(ctx, id);
   const { label, cut } = fitLabel(want, ctx.cfg.labelWidth);
-  if (w.where === 'worktree') herdr(['workspace', 'rename', w.workspace, label]);
-  else herdr(['tab', 'rename', w.tab, label]);
+  const place = herdrPlace(w);
+  herdr([place.kind, 'rename', place.id, label]);
   setWorker(ctx, id, { label });
   console.log(`${id} の名前を「${label}」にしました${cut ? `（幅 ${ctx.cfg.labelWidth} に切りました）` : ''}`);
 }
@@ -997,6 +1009,15 @@ function workspaceExists(id) {
   }
 }
 
+function tabExists(id) {
+  try {
+    herdr(['tab', 'get', id]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function cmdClose(argv) {
   const { pos, opt } = parseArgs(argv, ['force', 'keep-branch']);
   const id = checkId(pos[0]);
@@ -1034,15 +1055,13 @@ function cmdClose(argv) {
       git(['branch', merged ? '-d' : '-D', w.branch], ctx.top);
     }
   } else {
-    try {
-      herdr(['tab', 'get', w.tab]);
-      herdr(['tab', 'close', w.tab]);
-    } catch {
-      // タブはユーザーが閉じ済み
-    }
+    // 作業ツリーを分けない依頼: そのワークスペース（古い形はタブ）を閉じ、受け箱を消す（控えは取ってある）。
+    const place = herdrPlace(w);
+    const exists = place.kind === 'workspace' ? workspaceExists(place.id) : tabExists(place.id);
+    if (exists) herdr([place.kind, 'close', place.id]); // 無ければユーザーが閉じ済み
     rmSync(mbox, { recursive: true, force: true });
   }
-  // 片付け方も残す（振り返りの材料）。merged は worktree のときだけ意味がある（調査のタブは null）。
+  // 片付け方も残す（振り返りの材料）。merged は worktree のときだけ意味がある（作業ツリーを分けない依頼は null）。
   setWorker(ctx, id, {
     state: 'closed', closedAt: now(), archive,
     forced: Boolean(opt.force), merged: w.where === 'worktree' ? merged : null,
@@ -1422,6 +1441,12 @@ function selfTest() {
     missing = true;
   }
   assert(missing, 'テンプレートの変数不足は止める');
+  // herdr の置き場所: 作業ツリーを分けない依頼もワークスペース・古い形のタブも閉じられる
+  assert(herdrPlace({ where: 'worktree', workspace: 'wA', tab: 'wA:t1' }).kind === 'workspace', 'worktree はワークスペース');
+  const sp = herdrPlace({ where: 'shared', workspace: 'wB', tab: 'wB:t1' });
+  assert(sp.kind === 'workspace' && sp.id === 'wB', '共有の依頼もワークスペース');
+  const tp = herdrPlace({ where: 'tab', workspace: 'w4', tab: 'w4:t3' });
+  assert(tp.kind === 'tab' && tp.id === 'w4:t3', '古い形はタブ（CoS のワークスペースは閉じない）');
 
   // 振り返りの期限（ローカル時刻で組む＝タイムゾーンに依らない）
   const day = (d, h, m = 0) => new Date(2026, 10, d, h, m).getTime();

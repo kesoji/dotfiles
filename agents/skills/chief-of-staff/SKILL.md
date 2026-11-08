@@ -1,7 +1,7 @@
 ---
 name: chief-of-staff
 description: >
-  Claude Code を「chief of staff（CoS）＝ユーザーの右腕」として動かし、herdr のワークスペース／タブに
+  Claude Code を「chief of staff（CoS）＝ユーザーの右腕」として動かし、herdr のワークスペースに
   別の Claude Code（作業セッション）を立てて依頼書を渡し、見張り、取り込み、片付けるための個人標準。
   ユーザーが「CoS として動いて」「chief of staff」「秘書モード」「作業セッションに頼んで」
   「エージェントを立てて依頼して」「別のセッションにやらせて」と言ったとき、または /chief-of-staff で使う。
@@ -64,9 +64,10 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
    cos spawn <ID> --brief <依頼書> --label <サイドバーの名前> --title "<題>" [--model sonnet] [--no-worktree]
    ```
    - ID はリポジトリのタスク ID があればそれ。無ければ短い英小文字（例 `review-pr-42`）。
-   - **`--label` はユーザーが herdr のサイドバーで見分ける名前**。サイドバーは幅10くらい（半角1・全角2＝日本語なら5文字）しか見えないので、**中身が一目で分かる短い名詞**にする（例: `通知の既読`・`検索の速さ`・`CSV出力`）。ID や「対応」「修正」のような情報の無い語は使わない。幅（cos.json の `labelWidth`）を超えると切られる。付け直しは `cos rename <ID> <名前>`。ID は worktree のワークスペースの中のタブ名に出る。
-   - 実装・コードを変える依頼 → 既定（専用の git worktree とブランチ・herdr のワークスペースが1つ増える）。
-   - 調査・レビューなどファイルを変えない依頼 → `--no-worktree`（CoS のワークスペースにタブが増える）。
+   - **`--label` はユーザーが herdr のサイドバーで見分ける名前**。サイドバーは幅10くらい（半角1・全角2＝日本語なら5文字）しか見えないので、**中身が一目で分かる短い名詞**にする（例: `通知の既読`・`検索の速さ`・`CSV出力`）。ID や「対応」「修正」のような情報の無い語は使わない。幅（cos.json の `labelWidth`）を超えると切られる。付け直しは `cos rename <ID> <名前>`。ID はワークスペースの中のタブ名に出る。
+   - どちらでも herdr のワークスペースが1本につき1つ増え、サイドバーに `--label` の名前で出る。
+   - 実装・コードを変える依頼 → 既定（専用の git worktree とブランチを作る）。
+   - 調査・レビューなどファイルを変えない依頼 → `--no-worktree`（git の worktree を作らず、本体の作業ツリーを共有する＝CoS と同じ場所で動く）。
    - 機械的で大きい作業は `--model sonnet` などで軽いモデルに。
    - 準備（setup）に時間がかかるリポジトリでは spawn 自体を run_in_background で走らせてよい。
 4. **ユーザーに一言で伝える。**「<ID> を <エージェント名> に頼みました（サイドバーの <ID>）」。
@@ -138,7 +139,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数） |
 | `cos report <ID>` | 報告書を出す（片付け済みなら控えから） |
 | `cos read <ID> [--lines N]` | 作業セッションの画面を読む（止まった理由を見るときだけ） |
-| `cos close <ID> [--force] [--keep-branch]` | 控えを取り、エージェントを終わらせ、worktree・ワークスペース（またはタブ）・ブランチを片付ける |
+| `cos close <ID> [--force] [--keep-branch]` | 控えを取り、エージェントを終わらせ、ワークスペース・worktree・ブランチを片付ける（`--no-worktree` の依頼はワークスペースだけ。前の版で CoS のワークスペースのタブに立てた依頼はそのタブを閉じる） |
 | `cos retro status` | 振り返りの期限・前回・書きかけの記録 |
 | `cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]` | 期間の材料を集めて記録の下書きを作る。`--session` で CoS の会話を足せる（記録の前のセッションなど） |
 | `cos retro done [--file F]` | 振り返りを締めて期限を進める |
@@ -171,4 +172,4 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 
 作業セッションのシェルには次の環境変数が入る。リポジトリのフックはこれを見て「作業セッションには禁止」を実装できる（例: タスク台帳を CoS だけが書く・外向きのコマンドを拒否する・定期作業の指示を出さない）。
 
-- `COS_WORKER_ID`（依頼の ID）・`COS_WORKER_REPORT`（報告書の絶対パス）・`COS_WORKER_MODE`（`worktree` / `tab`）
+- `COS_WORKER_ID`（依頼の ID）・`COS_WORKER_REPORT`（報告書の絶対パス）・`COS_WORKER_MODE`（`worktree` / `shared`＝`--no-worktree`。前の版の `--no-worktree` は `tab`）
