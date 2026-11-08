@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs\" reorient"
+          }
+        ]
+      }
+    ]
+  }
+}

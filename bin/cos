@@ -1,3 +1,9 @@
 #!/usr/bin/env bash
-# chief of staff の作業セッション管理（herdr）。本体は agents/skills/chief-of-staff/scripts/cos.mjs。
+# chief of staff の作業セッション管理（herdr）。本体は agents/skills/chief-of-staff/scripts/。
+#   cos chief   … CoS のセッションをいまのペインで起動する（scripts/chief.sh）
+#   cos <その他> … 作業セッションの管理（scripts/cos.mjs）
+if [ "${1:-}" = chief ]; then
+  shift
+  exec bash "$HOME/.agents/skills/chief-of-staff/scripts/chief.sh" "$@"
+fi
 exec node "$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs" "$@"

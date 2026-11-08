@@ -11,7 +11,9 @@
 //   cos report <ID>
 //   cos read <ID> [--lines N]
 //   cos close <ID> [--force] [--keep-branch]
+//   cos reorient            （フック用）要約・/clear のあとに CoS の立て直しの手順を文脈に戻す
 //   cos self-test
+//   cos chief               CoS のセッションを起動する（bin/cos が scripts/chief.sh へ渡す）
 //
 // 状態の正本（git 管理外・worktree をまたいで1つ）:
 //   <git-common-dir>/cos/ledger.json    作業セッションの台帳
@@ -794,6 +796,38 @@ function cmdClose(argv) {
   console.log(`片付けました: ${id}（控え ${archive}）`);
 }
 
+// SessionStart（compact|clear）のフック。`cos chief` で起動した CoS のセッションだけで動く（chief-settings.json）。
+// 会話が要約・消去されると、CoS であること・リポジトリの決まり・見張りのことが抜けうる＝手順と今の一覧を戻す。
+// フックの出力は JSON 1個だけ。一覧が取れなくても手順は戻す（取れなかったことも書く）。
+function cmdReorient() {
+  let status;
+  try {
+    status = execFileSync(process.execPath, [fileURLToPath(import.meta.url), 'status'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  } catch (e) {
+    status = `（cos status が失敗しました: ${String(e.stderr || e.message).trim()}）`;
+  }
+  let rules = '';
+  try {
+    const ctx = repoCtx();
+    if (ctx.cfg.chiefRules) rules = join(ctx.top, ctx.cfg.chiefRules);
+  } catch {
+    // git の外など。手順だけ戻す
+  }
+  const text = [
+    '[chief of staff] このセッションは CoS（chief of staff）です（`cos chief` で起動）。会話が要約または消去されたので、続ける前に次を行ってください。',
+    '1. chief-of-staff スキル（~/.claude/skills/chief-of-staff/SKILL.md）を読み直す。',
+    rules ? `2. このリポジトリの CoS の決まり（${rules}）を読み直す。` : '2. リポジトリに .claude/cos.json の chiefRules があれば読み直す。',
+    '3. 下の一覧で依頼中の作業セッションを確かめ、`cos watch` が裏で動いていなければ run_in_background で張り直す（作業セッションが0本なら不要）。',
+    '4. ユーザーとの決定は ROADMAP などの耐久層に残っているので、要約に無いことは推測せずそこから引く。',
+    '',
+    status,
+  ].join('\n');
+  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: text } }));
+}
+
 function selfTest() {
   const assert = (c, m) => {
     if (!c) throw new Error(`self-test 失敗: ${m}`);
@@ -866,6 +900,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos report <ID>
   cos read <ID> [--lines N]
   cos close <ID> [--force] [--keep-branch]
+  cos chief [claude への引数]                CoS のセッションをいまのペインで起動する（60% で自動要約）
   cos self-test`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -873,7 +908,7 @@ if (isMain) {
   const [cmd, ...rest] = process.argv.slice(2);
   const table = {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, status: cmdStatus, ls: cmdStatus,
-    report: cmdReport, read: cmdRead, close: cmdClose, rename: cmdRename, 'self-test': selfTest,
+    report: cmdReport, read: cmdRead, close: cmdClose, rename: cmdRename, reorient: cmdReorient, 'self-test': selfTest,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
     console.log(HELP);

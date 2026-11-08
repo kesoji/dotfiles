@@ -23,6 +23,19 @@ CoS の価値は2つ。
 - コマンドは `cos`（`node ~/.claude/skills/chief-of-staff/scripts/cos.mjs` と同じ）。`cos help` で一覧。
 - リポジトリに `.claude/cos.json` があれば設定として読まれる（下の「リポジトリ側の設定」）。`chiefRules` が指すファイルがあれば、**CoS として動く前に必ず読む**（そのリポジトリでのタスクの選び方・取り込み方・台帳の書き方）。
 
+## 起動のしかた
+
+herdr で、リポジトリの本体の作業ツリーにいるペインから:
+
+```bash
+cos chief            # claude を CoS として起動する（/chief-of-staff を読み込んだ状態で始まる）
+```
+
+- 長く聞き続ける前提なので、コンテキストが **60% で自動要約**（auto compact）する（`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`。`COS_AUTOCOMPACT_PCT=70 cos chief` のように変えられる）。
+- 要約や /clear のあとは、フック（`chief-settings.json` → `cos reorient`）が「CoS であること・読み直すもの・いまの作業セッションの一覧」を文脈に戻す。
+- `claude` に渡したい引数はそのまま続けて書ける（例 `cos chief --model opus`）。
+- すでに走っている claude を CoS にするなら、`/chief-of-staff` と打つか「CoS として動いて」と言う（この場合は自動要約のしきい値と要約後のフックは付かない）。
+
 ## 始めるとき・再開するとき（/clear やコンパクト化のあとも同じ）
 
 1. `cos status` で依頼中の作業セッションを見る（台帳はファイルなので会話が消えても残る）。
