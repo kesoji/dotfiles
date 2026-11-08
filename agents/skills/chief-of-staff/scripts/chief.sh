@@ -6,7 +6,8 @@
 # - リポジトリの本体の作業ツリーで動かす（worktree の中なら注意を出す）。
 # - 長く聞き続ける前提なので、コンテキストが 60% で自動要約（auto compact）する
 #   （CLAUDE_AUTOCOMPACT_PCT_OVERRIDE。COS_AUTOCOMPACT_PCT で変えられる）。
-# - 要約や /clear のあとに、CoS であることと立て直す手順を文脈に戻すフックを足す（chief-settings.json）。
+# - 起動時に振り返りの期限を、要約や /clear のあとに CoS であることと立て直す手順を文脈に戻すフックを足す
+#   （chief-settings.json）。同じフックがこのセッションを CoS として記録する（振り返りで会話ログを読むため）。
 # - 起動したら chief-of-staff スキルを読み込む。
 set -euo pipefail
 

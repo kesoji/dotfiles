@@ -2,11 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "compact|clear",
+        "matcher": "startup|resume|compact|clear",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs\" reorient"
+            "command": "node \"$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs\" reorient --hook"
           }
         ]
       }
