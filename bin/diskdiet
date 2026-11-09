@@ -1,0 +1,595 @@
+#!/usr/bin/env python3
+# diskdiet: mac のストレージ削減候補を測って一覧にし、選んだものだけ実行する。
+#   diskdiet                 … 候補を測って容量順に一覧（scan と同じ）
+#   diskdiet scan [--fast]   … --fast は重い計測（nix の不要パス・古いプロジェクトの依存）を飛ばす
+#   diskdiet show <id>       … 候補の中身（対象パス・実行コマンド・注意）を表示
+#   diskdiet run <id>...     … 確認のうえ実行し、空いた容量を表示（-y で確認なし）
+#   diskdiet top [dir]       … 候補に無い大物を探す（直下のディレクトリを容量順に）
+#   diskdiet history         … 実行のたびに記録した空き容量の推移
+# 環境変数:
+#   DISKDIET_ROOTS  プロジェクトを探す場所（: 区切り。既定 ~/go/src:~/src:~/dev:~/projects:~/work）
+#   DISKDIET_DAYS   「しばらく触っていない」とみなす日数（既定 60）
+# 危険度: 安全=勝手に再生成されるキャッシュ / 再取得=次に使うとき再ダウンロード・再インストール /
+#         要確認=ロールバック先やデータが消えうる。中身を show で見てから run する。
+# Python 3.9 互換（mac 標準の python3 で動かすため）。
+import concurrent.futures as cf
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime
+
+HOME = os.path.expanduser("~")
+STATE = os.path.join(HOME, ".local/state/diskdiet")
+LAST = os.path.join(STATE, "last.json")
+HISTORY = os.path.join(STATE, "history.tsv")
+DAYS = int(os.environ.get("DISKDIET_DAYS", "60"))
+ROOTS = [os.path.expanduser(p) for p in os.environ.get(
+    "DISKDIET_ROOTS", "~/go/src:~/src:~/dev:~/projects:~/work").split(":") if p]
+
+TTY = sys.stdout.isatty()
+
+
+def c(code, s):
+    return "\033[%sm%s\033[0m" % (code, s) if TTY else s
+
+
+RISK_COLOR = {"安全": "32", "再取得": "33", "要確認": "31"}
+
+
+# ---------- 小道具 ----------
+def sh(cmd, timeout=600):
+    """コマンドの stdout を返す。失敗・未導入なら空文字。"""
+    try:
+        r = subprocess.run(cmd, shell=isinstance(cmd, str), capture_output=True, text=True, timeout=timeout)
+        return r.stdout
+    except Exception:
+        return ""
+
+
+def has(cmd):
+    return shutil.which(cmd) is not None
+
+
+def du_kb(paths):
+    paths = [p for p in paths if os.path.lexists(p)]
+    if not paths:
+        return 0
+    total = 0
+    # 引数が多すぎないよう分けて測る（ハードリンクの重複排除はバッチ内のみ。目安として十分）
+    for i in range(0, len(paths), 200):
+        out = sh(["du", "-sk", "-c"] + paths[i:i + 200])
+        m = re.search(r"^(\d+)\s+total$", out, re.M)
+        if m:
+            total += int(m.group(1))
+    return total * 1024
+
+
+def human(n):
+    n = float(n)
+    for u in ["B", "K", "M", "G", "T"]:
+        if abs(n) < 1024 or u == "T":
+            return ("%.1f%s" % (n, u)) if u in ("G", "T") else ("%d%s" % (n, u))
+        n /= 1024
+
+
+def parse_size(s):
+    m = re.match(r"^\s*([\d.]+)\s*([KMGT]?)i?B?\s*$", s, re.I)
+    if not m:
+        raise SystemExit("サイズが読めない: %s" % s)
+    return int(float(m.group(1)) * 1024 ** "BKMGT".index((m.group(2) or "B").upper()))
+
+
+def expand(patterns):
+    out = []
+    for p in patterns:
+        out += sorted(glob.glob(os.path.expanduser(p)))
+    return out
+
+
+def avail_bytes():
+    st = os.statvfs(HOME)
+    return st.f_bavail * st.f_frsize
+
+
+def app_running(app):
+    """app は /Applications/<app>.app の名前。"""
+    return bool(sh(["pgrep", "-f", "%s.app/Contents/MacOS/" % app]).strip())
+
+
+def age_days(path):
+    try:
+        return (time.time() - os.path.getmtime(path)) / 86400
+    except OSError:
+        return 0
+
+
+def repo_last_activity(d):
+    """d を含む git リポジトリ（worktree 含む）で最後に操作した時刻からの日数。git 外なら d の mtime。"""
+    cur = d
+    while cur != "/" and cur.startswith(HOME):
+        g = os.path.join(cur, ".git")
+        if os.path.isdir(g):
+            return age_days(os.path.join(g, "logs/HEAD")) if os.path.exists(os.path.join(g, "logs/HEAD")) else age_days(g)
+        if os.path.isfile(g):  # worktree: gitdir を辿る
+            try:
+                gitdir = open(g).read().split("gitdir:")[1].strip()
+                return age_days(os.path.join(gitdir, "logs/HEAD"))
+            except Exception:
+                return age_days(cur)
+        cur = os.path.dirname(cur)
+    return age_days(d)
+
+
+# ---------- 候補 ----------
+class Cand:
+    def __init__(self, id, title, risk, paths=(), action=None, note="", quit_app=None, needs=None):
+        self.id, self.title, self.risk = id, title, risk
+        self.paths = list(paths)      # 計測対象（glob 展開後）
+        self.action = action          # str: シェル / callable: Python / None: 手作業
+        self.note = note
+        self.quit_app = quit_app      # 実行前に終了しているべきアプリ
+        self.needs = needs            # 必要なコマンド
+        self.size = 0
+        self.detail = []              # show で出す内訳 [(size, label)]
+
+    def available(self):
+        return self.needs is None or has(self.needs)
+
+    def measure(self):
+        self.size = du_kb(self.paths)
+        return self
+
+    def action_text(self):
+        if self.action is None:
+            return "（手作業。note を参照）"
+        if isinstance(self.action, str):
+            return self.action
+        return "（diskdiet 内の処理）" + (self.action.__doc__ or "").strip()
+
+
+def rm_paths_action(c_):
+    def act():
+        """detail に列挙したパスを削除する。"""
+        for p in c_.paths:
+            print("  rm -rf", p)
+            shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
+    return act
+
+
+def rm_contents(dirs):
+    """ディレクトリ自体は残して中身を消すシェル。"""
+    qs = " ".join("'%s'" % d.replace("'", "'\\''") for d in dirs)
+    return "for d in %s; do [ -d \"$d\" ] && find \"$d\" -mindepth 1 -maxdepth 1 -exec rm -rf {} +; done" % qs
+
+
+def static_candidates():
+    L = "~/Library"
+    cs = []
+
+    def add(id, title, risk, pats, action, **kw):
+        paths = expand(pats)
+        if paths:
+            cs.append(Cand(id, title, risk, paths, action, **kw))
+
+    add("trash", "ゴミ箱", "要確認", ["~/.Trash"],
+        "osascript -e 'tell application \"Finder\" to empty trash'", note="Finder のゴミ箱を空にする")
+    if has("brew"):
+        add("brew", "Homebrew のダウンロードキャッシュ・古い版", "安全", [sh("brew --cache").strip() or L + "/Caches/Homebrew"],
+            "brew cleanup --prune=all -s", needs="brew")
+    if has("go"):
+        add("go-build", "Go のビルドキャッシュ", "安全", [sh("go env GOCACHE").strip()], "go clean -cache", needs="go")
+        add("go-mod", "Go のモジュールキャッシュ", "再取得", [sh("go env GOMODCACHE").strip()], "go clean -modcache",
+            needs="go", note="次の go build / go mod download で取り直す")
+    add("npm", "npm キャッシュ", "安全", ["~/.npm/_cacache"], "npm cache clean --force", needs="npm")
+    add("pnpm", "pnpm ストア（どこからも参照されていない分）", "安全", [L + "/pnpm/store", "~/.local/share/pnpm/store"],
+        "pnpm store prune", needs="pnpm", note="計測値はストア全体。prune で消えるのは未参照分だけ")
+    add("pnpm-cache", "pnpm メタデータキャッシュ", "安全", [L + "/Caches/pnpm"], rm_contents(expand([L + "/Caches/pnpm"])))
+    add("yarn", "yarn キャッシュ", "安全", [L + "/Caches/Yarn", "~/.yarn/berry/cache"], "yarn cache clean", needs="yarn")
+    add("uv", "uv キャッシュ", "安全", ["~/.cache/uv"], "uv cache prune", needs="uv")
+    add("pip", "pip キャッシュ", "安全", [L + "/Caches/pip"], rm_contents(expand([L + "/Caches/pip"])))
+    add("node-gyp", "node-gyp のヘッダキャッシュ", "安全", [L + "/Caches/node-gyp"], rm_contents(expand([L + "/Caches/node-gyp"])))
+    add("composer", "Composer キャッシュ", "安全", ["~/.composer/cache", "~/.cache/composer", L + "/Caches/composer"],
+        rm_contents(expand(["~/.composer/cache", "~/.cache/composer", L + "/Caches/composer"])))
+    add("updaters", "アプリ自動更新のダウンロード残骸（ShipIt / *-updater）", "安全",
+        [L + "/Caches/*.ShipIt", L + "/Caches/*-updater"], rm_contents(expand([L + "/Caches/*.ShipIt", L + "/Caches/*-updater"])))
+    add("logs", "ユーザーのログ", "安全", [L + "/Logs"], rm_contents(expand([L + "/Logs"])))
+    add("jetbrains-cache", "JetBrains IDE のキャッシュ", "安全", [L + "/Caches/JetBrains"],
+        rm_contents(expand([L + "/Caches/JetBrains"])), note="IDE を閉じてから。次回起動時にインデックスを作り直す")
+
+    # ブラウザ（キャッシュ置き場は丸ごと消してよい。アプリ終了が条件）
+    for app, pats in [("Arc", [L + "/Caches/Arc", L + "/Caches/company.thebrowser.Browser"]),
+                      ("Google Chrome", [L + "/Caches/Google/Chrome"]),
+                      ("Safari", [L + "/Caches/com.apple.Safari"])]:
+        add("browser-" + app.split()[-1].lower(), "%s のキャッシュ" % app, "安全", pats,
+            rm_contents(expand(pats)), quit_app=app)
+
+    # Electron 系アプリ・Chromium プロファイルの再生成できるキャッシュ（IndexedDB 等の保存データは対象外）
+    sub = ["Cache", "Code Cache", "GPUCache", "Service Worker/CacheStorage", "Service Worker/ScriptCache", "DawnCache"]
+    electron = [("Claude", "Claude", "Claude"), ("Slack", "Slack", "Slack"), ("Notion", "Notion", "Notion"),
+                ("Code", "Visual Studio Code", "vscode"), ("Cursor", "Cursor", "cursor"), ("discord", "Discord", "discord"),
+                ("obsidian", "Obsidian", "obsidian"), ("zoom.us", "zoom.us", "zoom"),
+                ("Arc/User Data", "Arc", "arc-profile"), ("Google/Chrome", "Google Chrome", "chrome-profile")]
+    for folder, app, key in electron:
+        base = L + "/Application Support/" + folder
+        pats = []
+        for depth in ["", "/*", "/Partitions/*"]:
+            pats += [base + depth + "/" + s for s in sub]
+        add("app-" + key, "%s のアプリ内キャッシュ" % app, "安全", pats, None, quit_app=app)
+        if cs and cs[-1].id == "app-" + key:
+            cs[-1].action = rm_contents(cs[-1].paths)
+
+    add("claude-vm", "Claude デスクトップの VM イメージ", "再取得", [L + "/Application Support/Claude/vm_bundles"],
+        rm_contents(expand([L + "/Application Support/Claude/vm_bundles"])), quit_app="Claude",
+        note="Claude アプリの VM 機能を次に使うとき再ダウンロードされる")
+
+    # Xcode
+    add("xcode-derived", "Xcode DerivedData", "安全", [L + "/Developer/Xcode/DerivedData"],
+        rm_contents(expand([L + "/Developer/Xcode/DerivedData"])), quit_app="Xcode")
+    add("xcode-devicesupport", "Xcode iOS DeviceSupport", "再取得", [L + "/Developer/Xcode/*DeviceSupport"],
+        rm_contents(expand([L + "/Developer/Xcode/*DeviceSupport"])), note="実機を繋ぐと取り直す")
+    add("simulators", "使えなくなった iOS シミュレータ", "安全", [L + "/Developer/CoreSimulator/Devices"],
+        "xcrun simctl delete unavailable", needs="xcrun", note="計測値は全シミュレータ。消えるのは unavailable のみ")
+    return cs
+
+
+# ---------- 動的な候補 ----------
+def cand_playwright():
+    """Playwright のブラウザのうち、同じ種類で最新でない版。"""
+    old = []
+    for root in expand(["~/Library/Caches/ms-playwright", "~/Library/Caches/ms-playwright-mcp"]):
+        fam = {}
+        for d in glob.glob(root + "/*-[0-9]*"):
+            m = re.match(r"^(.*)-(\d+)$", os.path.basename(d))
+            if m:
+                fam.setdefault(m.group(1), []).append((int(m.group(2)), d))
+        for vs in fam.values():
+            old += [d for _, d in sorted(vs)[:-1]]
+    if not old:
+        return None
+    c_ = Cand("playwright-old", "Playwright の古い版のブラウザ", "安全", old)
+    c_.action = rm_paths_action(c_)
+    c_.note = "同じ種類のうち最新版は残す。古い版を要求するプロジェクトがあればそこで再取得される"
+    return c_
+
+
+def cand_nix():
+    if not has("nix-store"):
+        return None
+    c_ = Cand("nix-gc", "Nix ストアの参照されていないパス（devbox の古い版の残骸）", "再取得", [])
+    c_.action = "nix-store --gc"
+    c_.note = ("devbox は install / update / add で古い版を /nix/store に残すが、自分では GC しない。"
+               "今のプロファイル・各プロジェクトの .devbox が参照しているものは消えない。"
+               "古い devbox.lock に戻したときは再ダウンロードになる。"
+               "古い世代（ロールバック先）も消すなら代わりに `nix-collect-garbage -d`")
+    dead = sh("nix-store --gc --print-dead", timeout=1200).split()
+    size = 0
+    for i in range(0, len(dead), 500):
+        out = sh(["nix-store", "-q", "--size"] + dead[i:i + 500])
+        size += sum(int(x) for x in out.split() if x.isdigit())
+    gens = []
+    for prof in expand(["~/.local/state/nix/profiles/*", "/nix/var/nix/profiles/per-user/%s/*" % os.environ.get("USER", ""),
+                        "~/.local/share/devbox/global/*/.devbox/nix/profile/default"]):
+        if os.path.islink(prof) and re.search(r"-\d+-link$", prof) is None:
+            n = len(glob.glob(prof + "-*-link"))
+            if n > 1:
+                gens.append((0, "%s: 世代 %d 個" % (prof, n)))
+    c_.size = size
+    c_.detail = [(size, "今すぐ回収できる不要パス %d 個" % len(dead))] + gens
+    c_.measured = True
+    return c_
+
+
+def cand_colima():
+    disks = expand(["~/.colima/_lima/_disks/*/datadisk", "~/.config/colima/_lima/_disks/*/datadisk"])
+    if not disks:
+        return None
+    c_ = Cand("docker", "Docker（colima）VM ディスク（容量は VM の実使用量）", "要確認", disks)
+    running = has("docker") and sh("docker info --format '{{.ServerVersion}}'", timeout=10).strip() != ""
+    c_.action = ("docker image prune -a -f && docker builder prune -a -f && docker container prune -f"
+                 " && colima ssh -- sudo fstrim -av")
+    c_.note = ("ボリューム（DB のデータ等）は消さない。fstrim で VM の空き領域を mac に返す。"
+               "計測値は VM ディスクの実使用量で、消える量ではない。")
+    if running:
+        df = sh("docker system df", timeout=60)
+        c_.detail = [(0, line) for line in df.strip().splitlines()]
+    else:
+        c_.note += " colima が停止中: `colima start` してから run する（消える量も start 後の show で見られる）"
+    return c_
+
+
+def cand_stale_deps():
+    """しばらく触っていないプロジェクトの依存ディレクトリ（node_modules / vendor / .venv / target 等）。"""
+    names = {"node_modules": None, "vendor": "composer.json", ".venv": None, "venv": "pyvenv.cfg",
+             "target": "Cargo.toml", ".next": None, ".nuxt": None, ".turbo": None}
+    hits = []
+    for root in ROOTS:
+        if not os.path.isdir(root):
+            continue
+        for dirpath, dirnames, _ in os.walk(root):
+            if dirpath.count(os.sep) - root.count(os.sep) > 6:
+                dirnames[:] = []
+                continue
+            keep = []
+            for d in dirnames:
+                if d in names:
+                    marker = names[d]
+                    full = os.path.join(dirpath, d)
+                    ok = (marker is None or os.path.exists(os.path.join(dirpath, marker))
+                          or (marker == "pyvenv.cfg" and os.path.exists(os.path.join(full, marker))))
+                    if ok:
+                        hits.append(full)
+                    continue  # 依存の中には潜らない
+                if d in (".git",) or d.startswith(".cache"):
+                    continue
+                keep.append(d)
+            dirnames[:] = keep
+    stale = [(repo_last_activity(os.path.dirname(h)), h) for h in hits]
+    stale = [(a, h) for a, h in stale if a >= DAYS]
+    if not stale:
+        return None
+    c_ = Cand("stale-deps", "%d 日以上触っていないプロジェクトの依存（node_modules 等）" % DAYS, "再取得",
+              [h for _, h in stale])
+    c_.action = rm_paths_action(c_)
+    c_.note = "次に触るとき npm ci / composer install 等で入れ直す。--days で日数を変えられる"
+    with cf.ThreadPoolExecutor(8) as ex:
+        sizes = list(ex.map(lambda h: du_kb([h]), c_.paths))
+    c_.detail = sorted([(s, "%s（%d日前）" % (h.replace(HOME, "~"), a)) for (a, h), s in zip(stale, sizes)], reverse=True)
+    c_.size = sum(sizes)
+    c_.measured = True
+    return c_
+
+
+def cand_worktrees():
+    """.claude/worktrees 等の git worktree のうち、未コミットの変更が無く、HEAD がリモートにあるもの。"""
+    wts = []
+    for root in ROOTS:
+        if os.path.isdir(root):
+            for dirpath, dirnames, _ in os.walk(root):
+                if dirpath.count(os.sep) - root.count(os.sep) > 7:
+                    dirnames[:] = []
+                    continue
+                if os.path.basename(dirpath) == "worktrees" and os.path.basename(os.path.dirname(dirpath)) == ".claude":
+                    wts += [os.path.join(dirpath, d) for d in dirnames]
+                    dirnames[:] = []
+                    continue
+                dirnames[:] = [d for d in dirnames if d not in ("node_modules", "vendor", ".git")]
+    safe, kept = [], []
+    for w in wts:
+        if not os.path.exists(os.path.join(w, ".git")):
+            continue
+        dirty = sh(["git", "-C", w, "status", "--porcelain"], timeout=60).strip()
+        pushed = sh(["git", "-C", w, "branch", "-r", "--contains", "HEAD"], timeout=60).strip()
+        recent = repo_last_activity(w) < 7  # 作業中のセッションが使っているかもしれない
+        (safe if (not dirty and pushed and not recent) else kept).append(w)
+    if not safe and not kept:
+        return None
+    c_ = Cand("worktrees", "片付け忘れの git worktree（変更なし・push 済みのものだけ消す）", "要確認", safe)
+    with cf.ThreadPoolExecutor(8) as ex:
+        sizes = list(ex.map(lambda h: du_kb([h]), safe))
+        ksizes = list(ex.map(lambda h: du_kb([h]), kept))
+    c_.detail = sorted([(s, "消す: %s（%d日前）" % (w.replace(HOME, "~"), repo_last_activity(w))) for w, s in zip(safe, sizes)],
+                       reverse=True)
+    c_.detail += sorted([(s, "残す（未コミット・未push・7日以内のどれか）: %s" % w.replace(HOME, "~")) for w, s in zip(kept, ksizes)],
+                        reverse=True)
+    c_.size = sum(sizes)
+    c_.measured = True
+
+    def act():
+        """変更なし・push 済みの worktree を git worktree remove する。"""
+        for w in c_.paths:
+            print("  git worktree remove", w)
+            r = subprocess.run(["git", "-C", w, "worktree", "remove", w])
+            if r.returncode != 0:
+                print(c("31", "  失敗（手で確認）: %s" % w))
+    c_.action = act
+    c_.note = "未コミットの変更がある / HEAD がどのリモートブランチにも無い / 7日以内に触った worktree は対象外（show に「残す」として出す）"
+    return c_
+
+
+def cand_downloads():
+    d = os.path.join(HOME, "Downloads")
+    if not os.path.isdir(d):
+        return None
+    old = [os.path.join(d, f) for f in os.listdir(d) if not f.startswith(".") and age_days(os.path.join(d, f)) >= 30]
+    if not old:
+        return None
+    c_ = Cand("downloads", "ダウンロードの 30 日以上前のもの（ゴミ箱へ移動）", "要確認", old)
+    with cf.ThreadPoolExecutor(8) as ex:
+        sizes = list(ex.map(lambda p: du_kb([p]), old))
+    c_.detail = sorted([(s, p.replace(HOME, "~")) for p, s in zip(old, sizes)], reverse=True)
+    c_.size = sum(sizes)
+    c_.measured = True
+
+    def act():
+        """ゴミ箱（~/.Trash）へ移動する。消えるのはゴミ箱を空にしたとき。"""
+        for p in c_.paths:
+            dst = os.path.join(HOME, ".Trash", os.path.basename(p))
+            if os.path.exists(dst):
+                dst += ".%d" % time.time()
+            shutil.move(p, dst)
+        print("  %d 件をゴミ箱へ移動。空にするまで容量は戻らない（diskdiet run trash）" % len(c_.paths))
+    c_.action = act
+    return c_
+
+
+def cand_tm_snapshots():
+    out = sh("tmutil listlocalsnapshots /", timeout=30)
+    snaps = [l for l in out.splitlines() if l.startswith("com.apple")]
+    if not snaps:
+        return None
+    c_ = Cand("tm-snapshots", "Time Machine のローカルスナップショット %d 個" % len(snaps), "要確認", [])
+    c_.action = "for s in $(tmutil listlocalsnapshotdates / | grep -E '^[0-9]'); do sudo tmutil deletelocalsnapshots \"$s\"; done"
+    c_.note = "容量は測れない（OS が必要に応じて自動で消す）。急ぎで空けたいときだけ"
+    c_.detail = [(0, s) for s in snaps]
+    c_.measured = True
+    return c_
+
+
+DYNAMIC = [cand_playwright, cand_colima, cand_downloads, cand_tm_snapshots]
+SLOW = [cand_nix, cand_stale_deps, cand_worktrees]
+
+
+def collect(fast=False):
+    cands = [x for x in static_candidates() if x.available()]
+    fns = DYNAMIC + ([] if fast else SLOW)
+    with cf.ThreadPoolExecutor(8) as ex:
+        futs = [ex.submit(f) for f in fns]
+        measures = [ex.submit(x.measure) for x in cands]
+        cf.wait(measures)
+        for f in futs:
+            try:
+                r = f.result()
+            except Exception as e:  # 1つ壊れても一覧は出す
+                print(c("31", "計測失敗: %s" % e), file=sys.stderr)
+                r = None
+            if r is not None:
+                if not getattr(r, "measured", False):
+                    r.measure()
+                cands.append(r)
+    return cands
+
+
+def find(cands, id_):
+    for x in cands:
+        if x.id == id_:
+            return x
+    raise SystemExit("候補 '%s' は無い（diskdiet scan で一覧）" % id_)
+
+
+# ---------- コマンド ----------
+def cmd_scan(args):
+    fast = "--fast" in args
+    minsize = parse_size(args[args.index("--min") + 1]) if "--min" in args else 50 * 1024 ** 2
+    t0 = time.time()
+    print(c("2", "計測中…（--fast で重い計測を省略）"), file=sys.stderr)
+    cands = sorted(collect(fast), key=lambda x: -x.size)
+    shown = [x for x in cands if x.size >= minsize or x.id in ("tm-snapshots",)]
+    print("%-22s %8s  %s %s" % ("ID", "  容量", "危険度", "内容"))
+    for x in shown:
+        mark = ""
+        if x.quit_app and app_running(x.quit_app):
+            mark = c("2", "  ※%s 起動中" % x.quit_app)
+        print("%-22s %8s  %s %s%s" % (x.id, human(x.size), c(RISK_COLOR[x.risk], x.risk + " " * (6 - 2 * len(x.risk))), x.title, mark))
+    by = {}
+    for x in shown:
+        by[x.risk] = by.get(x.risk, 0) + x.size
+    av = avail_bytes()
+    print()
+    print("空き %s / 合計（目安・重複あり）: 安全 %s ・ 再取得 %s ・ 要確認 %s   (%.0f秒)" % (
+        human(av), human(by.get("安全", 0)), human(by.get("再取得", 0)), human(by.get("要確認", 0)), time.time() - t0))
+    print(c("2", "次: diskdiet show <ID> で中身を見る → diskdiet run <ID> [<ID>...] で実行。大物探しは diskdiet top"))
+    os.makedirs(STATE, exist_ok=True)
+    json.dump({"at": datetime.now().isoformat(timespec="seconds"),
+               "cands": [{"id": x.id, "size": x.size} for x in cands]}, open(LAST, "w"), ensure_ascii=False)
+    with open(HISTORY, "a") as f:
+        f.write("%s\tscan\t%d\t%d\n" % (datetime.now().isoformat(timespec="seconds"), av, sum(x.size for x in shown)))
+
+
+def cmd_show(args):
+    if not args:
+        raise SystemExit("usage: diskdiet show <ID>")
+    x = find(collect(fast=args[0] not in ("nix-gc", "stale-deps", "worktrees")), args[0])
+    print(c("1", "%s  %s" % (x.id, x.title)))
+    print("容量: %s   危険度: %s" % (human(x.size), c(RISK_COLOR[x.risk], x.risk)))
+    if x.quit_app:
+        print("条件: %s を終了してから（%s）" % (x.quit_app, "起動中" if app_running(x.quit_app) else "終了済み"))
+    print("実行: %s" % x.action_text())
+    if x.note:
+        print("注意: %s" % x.note)
+    rows = x.detail or sorted([(du_kb([p]), p.replace(HOME, "~")) for p in x.paths], reverse=True)
+    if rows:
+        print("内訳:")
+        for s, label in rows[:40]:
+            print("  %8s  %s" % (human(s) if s else "", label))
+        if len(rows) > 40:
+            print("  … ほか %d 件" % (len(rows) - 40))
+
+
+def cmd_run(args):
+    yes = "-y" in args
+    ids = [a for a in args if not a.startswith("-")]
+    if not ids:
+        raise SystemExit("usage: diskdiet run [-y] <ID>...")
+    slow = any(i in ("nix-gc", "stale-deps", "worktrees") for i in ids)
+    cands = collect(fast=not slow)
+    targets = [find(cands, i) for i in ids]
+    before = avail_bytes()
+    for x in targets:
+        print(c("1", "\n▶ %s  %s（%s / %s）" % (x.id, x.title, human(x.size), x.risk)))
+        if x.action is None:
+            print("  自動実行は無い: %s" % x.note)
+            continue
+        if x.quit_app and app_running(x.quit_app):
+            print(c("31", "  %s が起動中なので飛ばす。終了してから再実行" % x.quit_app))
+            continue
+        print("  実行: %s" % x.action_text())
+        if x.note:
+            print("  注意: %s" % x.note)
+        if not yes:
+            try:
+                if input("  実行する? [y/N] ").strip().lower() != "y":
+                    print("  飛ばした")
+                    continue
+            except EOFError:
+                print("  確認できないので飛ばした（-y で確認なし）")
+                continue
+        t = avail_bytes()
+        if isinstance(x.action, str):
+            subprocess.run(x.action, shell=True)
+        else:
+            x.action()
+        print(c("32", "  空いた容量: %s" % human(avail_bytes() - t)))
+    after = avail_bytes()
+    print("\n合計で空いた容量: %s（空き %s）" % (human(after - before), human(after)))
+    os.makedirs(STATE, exist_ok=True)
+    with open(HISTORY, "a") as f:
+        f.write("%s\trun:%s\t%d\t%d\n" % (datetime.now().isoformat(timespec="seconds"), ",".join(ids), after, after - before))
+
+
+def cmd_top(args):
+    d = os.path.expanduser(args[0]) if args else HOME
+    n = int(args[1]) if len(args) > 1 else 20
+    print(c("2", "計測中: %s" % d), file=sys.stderr)
+    entries = [os.path.join(d, e) for e in os.listdir(d)]
+    with cf.ThreadPoolExecutor(8) as ex:
+        sizes = list(ex.map(lambda p: du_kb([p]), entries))
+    for s, p in sorted(zip(sizes, entries), reverse=True)[:n]:
+        print("%8s  %s%s" % (human(s), p.replace(HOME, "~"), "/" if os.path.isdir(p) else ""))
+    print(c("2", "掘るなら: diskdiet top <dir>。対話的に見るなら gdu %s" % d.replace(HOME, "~")))
+
+
+def cmd_history(args):
+    if not os.path.exists(HISTORY):
+        raise SystemExit("まだ記録が無い（diskdiet scan / run で記録される）")
+    for line in open(HISTORY).read().splitlines()[-30:]:
+        at, kind, av, n = line.split("\t")
+        extra = ("候補 %s" % human(int(n))) if kind == "scan" else ("空いた %s" % human(int(n)))
+        print("%s  %-28s 空き %8s  %s" % (at, kind, human(int(av)), extra))
+
+
+def main():
+    global DAYS
+    a = sys.argv[1:]
+    if "--days" in a:
+        i = a.index("--days")
+        DAYS = int(a[i + 1])
+        del a[i:i + 2]
+    cmd = a[0] if a and not a[0].startswith("-") else "scan"
+    rest = a[1:] if a and not a[0].startswith("-") else a
+    fn = {"scan": cmd_scan, "show": cmd_show, "run": cmd_run, "top": cmd_top, "history": cmd_history}.get(cmd)
+    if fn is None or cmd in ("-h", "--help", "help"):
+        print(open(__file__).read().split("import ")[0].replace("# ", "").replace("#!/usr/bin/env python3\n", ""))
+        return
+    fn(rest)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(130)
