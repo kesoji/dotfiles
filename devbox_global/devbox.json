@@ -48,7 +48,8 @@
     "yt-dlp@latest",
     "docker-buildx@latest",
     "docker-credential-helpers@latest",
-    "git@latest"
+    "git@latest",
+    "google-cloud-sdk@latest"
   ],
   "shell": {
     "init_hook": [
