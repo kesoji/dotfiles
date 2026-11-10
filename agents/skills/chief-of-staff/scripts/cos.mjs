@@ -13,6 +13,7 @@
 //   cos close <ID> [--force] [--keep-branch]
 //   cos retro status | collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force] | done [--file F]
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
+//   cos reorient --hook --known-only   （ユーザー全体の設定のフック用）chief.json にあるセッションを `cos chief` 無しで再開したときだけ戻す
 //   cos self-test
 //   cos chief               CoS のセッションを起動する（bin/cos が scripts/chief.sh へ渡す）
 //
@@ -67,6 +68,20 @@ const DEFAULT_CFG = {
 const DAY_MS = 86_400_000;
 
 // ───────── 純関数（self-test の対象） ─────────
+
+// `cos reorient --known-only` で文脈を戻すか。ユーザー全体の設定のフックから全セッションで呼ばれるので、
+// chief.json に CoS として記録済みのセッションを `cos chief` を通らずに開いたときだけ 'emit' にする。
+// - 作業セッション（COS_WORKER_ID）: 戻さない。
+// - `cos chief` で起動（COS_CHIEF=1）: chief-settings.json のフックが同じ文脈を戻すので、二重に出さない。
+//   2つのフックは並んで走るので、印のファイルでは前後が決まらない。環境変数なら必ず判定できる。
+// - 記録に無いセッション: 戻さず、登録もしない（普通のセッションを CoS にしない）。
+export function knownOnlyDecision({ env = {}, sid, sessions }) {
+  if (env.COS_WORKER_ID) return 'worker';
+  if (env.COS_CHIEF === '1') return 'chief';
+  if (!sid) return 'no-session';
+  if (!sessions || !Object.hasOwn(sessions, sid)) return 'unknown';
+  return 'emit';
+}
 
 export function slug(id) {
   return id.toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
@@ -1118,8 +1133,13 @@ function cmdClose(argv) {
 // - compact / clear（と手で打ったとき）: 会話が要約・消去されると、CoS であること・リポジトリの決まり・
 //   見張りのことが抜けうる＝手順と今の一覧（振り返りの期限を含む）を戻す。
 // フックの出力は JSON 1個だけ。一覧が取れなくても手順は戻す（取れなかったことも書く）。
+//
+// --known-only: ユーザー全体の設定（matcher resume|compact|clear）から全セッションで呼ばれる。
+// `claude --resume` で `cos chief` を通らずに開くと chief-settings.json のフックも自動要約の設定も効かないので、
+// chief.json に記録済みのセッションだけ、上の compact / clear と同じ文脈と「`cos chief --resume` で開き直す」注意を戻す。
+// それ以外（判定は knownOnlyDecision）・git の外・chief.json が無い／読めないときは、何も出さず何も書かずに終わる。
 function cmdReorient(argv = []) {
-  const { opt } = parseArgs(argv, ['hook']);
+  const { opt } = parseArgs(argv, ['hook', 'known-only']);
   let input = {};
   let inputErr = null;
   if (opt.hook) {
@@ -1130,6 +1150,7 @@ function cmdReorient(argv = []) {
       inputErr = e.message;
     }
   }
+  if (opt['known-only']) return reorientKnownOnly(input);
   const source = input.source ?? 'manual';
   const inRepo = gitOk(['rev-parse', '--git-dir'], process.cwd());
   let ctx = null;
@@ -1137,20 +1158,35 @@ function cmdReorient(argv = []) {
     ctx = repoCtx();
     if (input.session_id) noteChiefSession(ctx, input.session_id, `hook:${source}`, input.transcript_path ?? null);
   }
-  let retro;
-  let retroIsDue = false;
-  try {
-    retro = ctx ? retroLine(ctx) : '振り返り: （git リポジトリの外なので分かりません）';
-    retroIsDue = ctx ? retroDue(peekRetro(ctx), ctx.cfg.retroIntervalDays, Date.now()).due : false;
-  } catch (e) {
-    retro = `振り返り: （期限の記録が読めません: ${e.message}）`;
-  }
-  const emit = (text) =>
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: text } }));
+  const { retro, retroIsDue } = retroInfo(ctx);
   if (source === 'startup' || source === 'resume') {
-    emit([`[chief of staff] ${retro}`, inputErr ? `（フックの入力が読めませんでした: ${inputErr}）` : ''].filter(Boolean).join('\n'));
+    emitHookContext([`[chief of staff] ${retro}`, inputErr ? `（フックの入力が読めませんでした: ${inputErr}）` : ''].filter(Boolean).join('\n'));
     return;
   }
+  emitHookContext(reorientText(ctx, {
+    header: '[chief of staff] このセッションは CoS（chief of staff）です（`cos chief` で起動）。会話が要約または消去されたので、続ける前に次を行ってください。',
+    retroIsDue,
+    inputErr,
+  }));
+}
+
+function emitHookContext(text) {
+  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: text } }));
+}
+
+function retroInfo(ctx) {
+  try {
+    return {
+      retro: ctx ? retroLine(ctx) : '振り返り: （git リポジトリの外なので分かりません）',
+      retroIsDue: ctx ? retroDue(peekRetro(ctx), ctx.cfg.retroIntervalDays, Date.now()).due : false,
+    };
+  } catch (e) {
+    return { retro: `振り返り: （期限の記録が読めません: ${e.message}）`, retroIsDue: false };
+  }
+}
+
+// CoS を立て直す手順と今の一覧（振り返りの期限を含む）。
+function reorientText(ctx, { header, notes = [], retroIsDue, inputErr }) {
   let status;
   try {
     status = execFileSync(process.execPath, [fileURLToPath(import.meta.url), 'status'], {
@@ -1162,8 +1198,9 @@ function cmdReorient(argv = []) {
   }
   // git の外なら決まりの場所は分からない（手順だけ戻す）。
   const rules = ctx?.cfg.chiefRules ? join(ctx.top, ctx.cfg.chiefRules) : '';
-  const text = [
-    '[chief of staff] このセッションは CoS（chief of staff）です（`cos chief` で起動）。会話が要約または消去されたので、続ける前に次を行ってください。',
+  return [
+    header,
+    ...notes,
     '1. chief-of-staff スキル（~/.claude/skills/chief-of-staff/SKILL.md）を読み直す。',
     rules ? `2. このリポジトリの CoS の決まり（${rules}）を読み直す。` : '2. リポジトリに .claude/cos.json の chiefRules があれば読み直す。',
     '3. 下の一覧で依頼中の作業セッションを確かめ、`cos watch` が裏で動いていなければ run_in_background で張り直す（作業セッションが0本でも張る＝振り返りの期限も見張っている）。',
@@ -1173,7 +1210,38 @@ function cmdReorient(argv = []) {
     '',
     status,
   ].join('\n');
-  emit(text);
+}
+
+function reorientKnownOnly(input) {
+  const sid = input.session_id;
+  const env = process.env;
+  let sessions = null;
+  try {
+    if (gitOk(['rev-parse', '--git-dir'], process.cwd())) {
+      const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], process.cwd());
+      const chiefFile = join(env.COS_DIR ? resolve(env.COS_DIR) : join(common, 'cos'), 'chief.json');
+      if (existsSync(chiefFile)) sessions = JSON.parse(readFileSync(chiefFile, 'utf8')).sessions;
+    }
+  } catch {
+    // 読めなければ CoS かどうか分からない＝記録に無いのと同じく何もしない
+  }
+  if (knownOnlyDecision({ env, sid, sessions }) !== 'emit') return;
+  // ここから先は CoS のセッション（.claude/cos.json が壊れていれば、通常の reorient と同じく止めて知らせる）。
+  const ctx = repoCtx();
+  const source = input.source ?? 'resume';
+  noteChiefSession(ctx, sid, `known:${source}`, input.transcript_path ?? null);
+  const { retroIsDue } = retroInfo(ctx);
+  const what = source === 'resume' ? '再開された' : '会話が要約または消去された';
+  const missing = env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE
+    ? '起動の設定（chief-settings.json のフック）'
+    : '起動の設定（chief-settings.json のフック）と自動要約（CLAUDE_AUTOCOMPACT_PCT_OVERRIDE）';
+  emitHookContext(reorientText(ctx, {
+    header: `[chief of staff] このセッションは CoS（chief of staff）です（chief.json に記録あり）。${what}ので、続ける前に次を行ってください。`,
+    notes: [
+      `注意: \`cos chief\` を通らずに開いているので、${missing}が入っていません。ユーザーとの話の区切りで「このペインの claude を終了して \`cos chief --resume ${sid}\` で立ち上げ直すと入る」と伝える。`,
+    ],
+    retroIsDue,
+  }));
 }
 
 // ───────── 週1回の振り返り ─────────
@@ -1560,6 +1628,16 @@ function selfTest() {
   assert(ck.ok && ck.tally.採用 === 1 && ck.tally.却下 === 1 && ck.tally.保留 === 1, 'コメントの中の [未定] は数えない・採否を数える');
   assert(checkRecord(rec('良かった', '- なし')).ok, '案が無くても締められる');
   assert(pastProposals(rec('x', '- [採用] a\n  - 差分\n- [却下] b — 理由')).join('|') === '- [採用] a|- [却下] b — 理由', 'pastProposals');
+  // --known-only の判定（ユーザー全体の設定のフック）
+  const ss = { 'cos-1': { via: ['hook:startup'] } };
+  assert(knownOnlyDecision({ env: {}, sid: 'cos-1', sessions: ss }) === 'emit', 'known-only 記録あり');
+  assert(knownOnlyDecision({ env: {}, sid: 'other', sessions: ss }) === 'unknown', 'known-only 記録に無い');
+  assert(knownOnlyDecision({ env: {}, sid: 'toString', sessions: ss }) === 'unknown', 'known-only 継承したキーは無いとみなす');
+  assert(knownOnlyDecision({ env: {}, sid: 'cos-1', sessions: undefined }) === 'unknown', 'known-only chief.json の形が違う');
+  assert(knownOnlyDecision({ env: {}, sid: undefined, sessions: ss }) === 'no-session', 'known-only session_id 無し');
+  assert(knownOnlyDecision({ env: { COS_WORKER_ID: 'x' }, sid: 'cos-1', sessions: ss }) === 'worker', 'known-only 作業セッション');
+  assert(knownOnlyDecision({ env: { COS_CHIEF: '1' }, sid: 'cos-1', sessions: ss }) === 'chief', 'known-only cos chief で起動＝二重に出さない');
+  assert(knownOnlyDecision({ env: { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '60' }, sid: 'cos-1', sessions: ss }) === 'emit', 'known-only 自動要約だけでは cos chief とみなさない');
   console.log('cos self-test: ok');
 }
 
@@ -1577,6 +1655,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
                                             期間の材料（依頼ごとの数字・CoS の会話のユーザーの発言）を集めて記録の下書きを作る
   cos retro done [--file F]                 振り返りを締めて期限を進める（[未定] の改善案が残っていると断る）
   cos reorient [--hook]                     （フック用）起動時・要約や /clear のあとに文脈を戻す
+  cos reorient --hook --known-only          （ユーザー全体の設定のフック用）記録済みの CoS を cos chief 無しで再開したときだけ戻す
   cos chief [claude への引数]                CoS のセッションをいまのペインで起動する（60% で自動要約）
   cos self-test`;
 

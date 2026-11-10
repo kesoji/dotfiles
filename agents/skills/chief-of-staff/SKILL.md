@@ -37,6 +37,7 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
 - 起動時は、フック（`chief-settings.json` → `cos reorient --hook`）が振り返りの期限を1行戻す。要約や /clear のあとは「CoS であること・読み直すもの・いまの作業セッションの一覧・振り返りの期限」を文脈に戻す。
 - 同じフックが、このセッションを CoS として `<git-common-dir>/cos/chief.json` に記録する（振り返りで会話ログを読むため）。`/chief-of-staff` で途中から CoS になったセッションも、`cos watch`・`cos spawn` などを打った時点で記録される。
 - `claude` に渡したい引数はそのまま続けて書ける（例 `cos chief --model opus`）。
+- herdr から `claude --resume` などで `cos chief` を通らずに CoS のセッションを開き直したときは、ユーザー全体の設定のフック（`cos reorient --hook --known-only`、matcher `resume|compact|clear`）が、chief.json に記録済みのセッションに限って要約後と同じ文脈と「`cos chief --resume <セッションID>` で開き直すと自動要約と起動のフックが入る」注意を戻す。記録に無いセッション・作業セッション・`cos chief` で起動したセッション（`COS_CHIEF=1`。chief-settings.json のフックが出すので二重にしない）では何も出さない。
 - すでに走っている claude を CoS にするなら、`/chief-of-staff` と打つか「CoS として動いて」と言う（この場合は自動要約のしきい値と起動・要約後のフックは付かない）。
 
 ## 始めるとき・再開するとき（/clear やコンパクト化のあとも同じ）
@@ -44,7 +45,8 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
 1. `cos status` で依頼中の作業セッションと振り返りの期限を見る（台帳はファイルなので会話が消えても残る）。
 2. リポジトリの `chiefRules` を読む。
 3. 見張りを1本だけ張る: `cos watch` を **Bash の run_in_background** で走らせる。何か起きると終了して CoS が起こされる。すでに張っていれば張らない。**作業セッションが0本でも張る**（振り返りの期限も見張っている）。
-4. 名前を付けておくとユーザーが見つけやすい: `herdr agent rename "$HERDR_PANE_ID" <名前>`（例 `cos`。herdr 全体で一意）。
+4. `cos chief` を通らずに再開したと文脈に出ていたら（上の「起動のしかた」）、話の区切りでユーザーに `cos chief --resume <セッションID>` での開き直しを勧める。
+5. 名前を付けておくとユーザーが見つけやすい: `herdr agent rename "$HERDR_PANE_ID" <名前>`（例 `cos`。herdr 全体で一意）。
 
 ## 依頼の流れ
 
@@ -145,6 +147,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]` | 期間の材料を集めて記録の下書きを作る。`--session` で CoS の会話を足せる（記録の前のセッションなど） |
 | `cos retro done [--file F]` | 振り返りを締めて期限を進める |
 | `cos reorient [--hook]` | （フック用）起動時・要約や /clear のあとに文脈を戻し、CoS のセッションを記録する |
+| `cos reorient --hook --known-only` | （ユーザー全体の設定のフック用）記録済みの CoS を `cos chief` 無しで開いたときだけ文脈と注意を戻す。ほかは何も出さず何も書かない |
 | `cos self-test` | 判定の自己テスト |
 
 ## リポジトリ側の設定（`.claude/cos.json`・任意）
