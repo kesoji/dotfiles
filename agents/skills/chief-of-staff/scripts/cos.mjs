@@ -3,7 +3,7 @@
 // 依頼書を渡し、状態の変化を見張り、終わったら片付けるための CLI。依存は node・git・herdr だけ。
 //
 //   cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF]
-//                  [--no-worktree] [--no-setup] [--setup] [--force] [-- <エージェントへの引数>]
+//                  [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- <エージェントへの引数>]
 //   cos rename <ID> <短い名前>
 //   cos send <ID> (<text> | --file <file> | --first)
 //   cos watch [--timeout 秒(既定 3000)] [--interval 秒(既定 5)]
@@ -28,6 +28,10 @@
 // 環境変数 COS_DIR で状態の置き場所を差し替えられる（試験用＝本物の台帳を触らずに watch などを試す）。
 //
 // 設定は CoS が動いている作業ツリーの `.claude/cos.json`（無くてもよい）。項目は SKILL.md を参照。
+//
+// --repo: 作業ツリーを CoS のリポジトリ（ハブ）ではなく別のリポジトリ（対象）に作る。台帳・依頼書の決まり・
+// 見張りはハブに置いたまま、worktree・ブランチ・準備・マージ済みの判定・片付けは対象のリポジトリで行う。
+// 作業セッションは対象の worktree で起動する＝対象の .claude/（フック・権限）がそのまま効く。
 import { execFileSync } from 'node:child_process';
 import {
   cpSync,
@@ -44,7 +48,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -562,12 +566,42 @@ function chiefSessionFromEnv() {
   return process.env.COS_WORKER_ID ? null : process.env.CLAUDE_CODE_SESSION_ID || null;
 }
 
-function ensureExcluded(common, pattern) {
+function ensureExcluded(common, pattern, note = '依頼書・報告書') {
   const file = join(common, 'info', 'exclude');
   const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
   if (text.split('\n').some((l) => l.trim() === pattern)) return;
   mkdirSync(dirname(file), { recursive: true });
-  appendFileSync(file, `${text && !text.endsWith('\n') ? '\n' : ''}# cos（chief of staff）の依頼書・報告書\n${pattern}\n`);
+  appendFileSync(file, `${text && !text.endsWith('\n') ? '\n' : ''}# cos（chief of staff）の${note}\n${pattern}\n`);
+}
+
+// 作業ツリーを作るリポジトリ。--repo が無ければ CoS のリポジトリ（ハブ）自身。
+// --repo はハブの cos.json の repos にある名前か、パス（~ 可）。repos の値はパスか {path, setup}。
+// 対象の準備は repos の setup → 対象の cos.json の setup の順で選ぶ。worktree の置き場所は対象の cos.json の worktreeDir（既定 .claude/worktrees）。
+function repoFor(ctx, spec) {
+  const self = { name: null, top: ctx.top, main: ctx.main, common: ctx.common, worktreeDir: ctx.cfg.worktreeDir, setup: ctx.cfg.setup };
+  if (!spec) return self;
+  const ent = ctx.cfg.repos?.[spec];
+  const raw = typeof ent === 'string' ? ent : ent?.path ?? spec;
+  const abs = resolve(raw.replace(/^~(?=\/|$)/, homedir()));
+  if (!existsSync(abs)) die(`--repo ${spec}: ${abs} がありません${ent ? '' : `（cos.json の repos にもありません: ${Object.keys(ctx.cfg.repos ?? {}).join(', ') || 'なし'}）`}`);
+  const t = repoCtx(abs);
+  if (realpathSync(t.main) === realpathSync(ctx.main)) return self;
+  return {
+    name: ent ? spec : basename(t.main), top: t.main, main: t.main, common: t.common,
+    worktreeDir: t.cfg.worktreeDir, setup: (typeof ent === 'object' && ent?.setup) || t.cfg.setup || '',
+  };
+}
+
+// 対象のリポジトリで worktree の置き場所が git 管理外になっていなければ info/exclude に足す
+// （ハブは cos.json の worktreeDir を自分で .gitignore に入れる前提。対象はそうとは限らない）。
+function ensureIgnored(R) {
+  if (gitOk(['check-ignore', '-q', join(R.worktreeDir, 'x')], R.main)) return;
+  ensureExcluded(R.common, `/${R.worktreeDir.replace(/^\/+|\/+$/g, '')}/`, '作業 worktree の置き場所');
+}
+
+// 台帳の依頼の git 操作をするツリー（--repo の依頼は対象の本体・それ以外は CoS のツリー）。
+function gitDirOf(ctx, w) {
+  return w.repo ?? ctx.top;
 }
 
 function readReport(w) {
@@ -644,9 +678,9 @@ function renderBrief(ctx, v) {
     ID: v.id,
     TITLE: v.title,
     CWD: v.cwd,
-    WHERE: v.where === 'worktree'
+    WHERE: (v.repo ? `リポジトリ ${v.repo} の、` : '') + (v.where === 'worktree'
       ? `この依頼専用の git worktree・ブランチ \`${v.branch}\``
-      : `この依頼専用の git worktree（ブランチなし・CoS のツリーの ${v.base.slice(0, 10)} を detached で見る）`,
+      : `この依頼専用の git worktree（ブランチなし・${v.repo ? 'そのリポジトリ' : 'CoS のツリー'}の ${v.base.slice(0, 10)} を detached で見る）`),
     REPORT: v.reportFile,
     BRANCH_RULE: branchRule,
   });
@@ -673,6 +707,10 @@ function cmdSpawn(argv) {
   if (!brief) die('依頼書が空です');
   requireHerdr();
   const ctx = repoCtx();
+  const R = repoFor(ctx, opt.repo);
+  // herdr でどこに worktree を作るか: ハブなら CoS のワークスペースの下（サイドバーで字下げ）、対象なら対象のリポジトリ。
+  const herdrWhere = R.name ? ['--cwd', R.main] : ['--workspace', process.env.HERDR_WORKSPACE_ID];
+  const herdrHint = R.name ? `対象のリポジトリ ${R.main}` : `CoS のワークスペース ${process.env.HERDR_WORKSPACE_ID} の場所`;
   const kind = opt.kind ?? 'claude';
   // --no-worktree は「ブランチを作らない」の意味（調査・レビュー用・コミットしない前提）。作業ツリーは
   // detached の linked worktree（CoS のツリーの HEAD か --base）。本体を共有しないのは、herdr のサイドバーが
@@ -704,36 +742,38 @@ function cmdSpawn(argv) {
   let r;
   if (where === 'worktree') {
     branch = `${ctx.cfg.branchPrefix}${s}`;
-    if (gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], ctx.top)) die(`ブランチ ${branch} がすでにあります`);
-    base = git(['rev-parse', '--verify', `${opt.base ?? 'HEAD'}^{commit}`], ctx.top);
-    cwd = join(ctx.main, ctx.cfg.worktreeDir, `cos-${s}`);
+    if (gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], R.top)) die(`ブランチ ${branch} がすでにあります${R.name ? `（${R.name}）` : ''}`);
+    base = git(['rev-parse', '--verify', `${opt.base ?? 'HEAD'}^{commit}`], R.top);
+    cwd = join(R.main, R.worktreeDir, `cos-${s}`);
     if (existsSync(cwd)) die(`${cwd} がすでにあります`);
+    if (R.name) ensureIgnored(R);
     r = herdr([
-      'worktree', 'create', '--workspace', process.env.HERDR_WORKSPACE_ID,
+      'worktree', 'create', ...herdrWhere,
       '--branch', branch, '--base', base, '--path', cwd, '--label', label, '--no-focus',
     ]).result;
     const root = r.workspace?.worktree?.repo_root;
-    if (!root || realpathSync(root) !== realpathSync(ctx.main)) {
-      die(`herdr が別のリポジトリ（${root}）に worktree を作りました。CoS のワークスペース ${process.env.HERDR_WORKSPACE_ID} の場所を確かめてください（作られたワークスペース: ${r.workspace?.workspace_id}）`);
+    if (!root || realpathSync(root) !== realpathSync(R.main)) {
+      die(`herdr が別のリポジトリ（${root}）に worktree を作りました。${herdrHint}を確かめてください（作られたワークスペース: ${r.workspace?.workspace_id}）`);
     }
   } else {
     // herdr の worktree create は必ずブランチを作る＝detached は git で作ってから herdr で開く（開くとグループの子になる）。
-    base = git(['rev-parse', '--verify', `${opt.base ?? 'HEAD'}^{commit}`], ctx.top);
-    cwd = join(ctx.main, ctx.cfg.worktreeDir, `cos-${s}`);
+    base = git(['rev-parse', '--verify', `${opt.base ?? 'HEAD'}^{commit}`], R.top);
+    cwd = join(R.main, R.worktreeDir, `cos-${s}`);
     if (existsSync(cwd)) die(`${cwd} がすでにあります`);
-    git(['worktree', 'add', '--detach', cwd, base], ctx.top);
+    if (R.name) ensureIgnored(R);
+    git(['worktree', 'add', '--detach', cwd, base], R.top);
     try {
       r = herdr([
-        'worktree', 'open', '--workspace', process.env.HERDR_WORKSPACE_ID,
+        'worktree', 'open', ...herdrWhere,
         '--path', cwd, '--label', label, '--no-focus',
       ]).result;
     } catch (e) {
-      git(['worktree', 'remove', '--force', cwd], ctx.top);
+      git(['worktree', 'remove', '--force', cwd], R.top);
       die(`herdr で worktree を開けませんでした（${e.code}: ${e.message}）。作った worktree は消しました`);
     }
     const root = r.workspace?.worktree?.repo_root;
-    if (!root || realpathSync(root) !== realpathSync(ctx.main)) {
-      die(`herdr が別のリポジトリ（${root}）の worktree として開きました。CoS のワークスペース ${process.env.HERDR_WORKSPACE_ID} の場所を確かめてください（ワークスペース: ${r.workspace?.workspace_id}・worktree: ${cwd}）`);
+    if (!root || realpathSync(root) !== realpathSync(R.main)) {
+      die(`herdr が別のリポジトリ（${root}）の worktree として開きました。${herdrHint}を確かめてください（ワークスペース: ${r.workspace?.workspace_id}・worktree: ${cwd}）`);
     }
   }
   const pane = r.root_pane.pane_id;
@@ -743,15 +783,16 @@ function cmdSpawn(argv) {
 
   const mbox = join(cwd, '.cos', s);
   mkdirSync(mbox, { recursive: true });
-  ensureExcluded(ctx.common, '.cos/');
+  ensureExcluded(R.common, '.cos/');
   const briefFile = join(mbox, 'brief.md');
   const reportFile = join(mbox, 'report.md');
-  writeFileSync(briefFile, renderBrief(ctx, { id, title, where, cwd, branch, base, reportFile, brief }));
+  writeFileSync(briefFile, renderBrief(ctx, { id, title, where, cwd, branch, base, reportFile, brief, repo: R.name ? R.main : null }));
   if (!existsSync(reportFile)) writeFileSync(reportFile, reportTemplate(id));
 
   const chiefSession = chiefSessionFromEnv();
   const entry = {
     id, title, label, agent, kind, model: opt.model ?? null, where, cwd, branch, base,
+    repo: R.name ? R.main : null, // --repo の依頼: worktree・ブランチは対象のリポジトリにある
     workspace, tab, pane, brief: briefFile, report: reportFile,
     // 振り返りの材料: CoS が書いた依頼書の長さ・どの CoS のセッションが立てたか
     briefChars: [...brief].length, briefLines: brief.split('\n').length, chiefSession,
@@ -766,8 +807,9 @@ function cmdSpawn(argv) {
   // 作業セッションの印（環境変数）。リポジトリのフックはこれで「作業セッションには禁止」を判定できる。
   // 準備（setup）はエージェントを起動する前に同じシェルで流す＝失敗を CoS がその場で知れる。
   const nonce = Math.random().toString(36).slice(2, 8).toUpperCase();
-  const exportsLine = `export COS_WORKER_ID=${shq(id)} COS_WORKER_REPORT=${shq(reportFile)} COS_WORKER_MODE=${where}`;
-  const setup = setupFor(where, opt, ctx.cfg.setup) ?? 'true';
+  // COS_REPO_MAIN は worktree の元のリポジトリの本体＝準備で git 管理外の設定（.dev.vars など）を写すのに使う。
+  const exportsLine = `export COS_WORKER_ID=${shq(id)} COS_WORKER_REPORT=${shq(reportFile)} COS_WORKER_MODE=${where} COS_REPO_MAIN=${shq(R.main)}`;
+  const setup = setupFor(where, opt, R.setup) ?? 'true';
   // 打った行がそのまま画面に出ても一致しないよう、目印は printf で組み立てる。
   // pane run は受け付けたことしか返さない（JSON も無い）＝結果は下の wait-output で見る。
   herdr(['pane', 'run', pane, `${exportsLine}; ${setup} && printf 'COS_${nonce}_%s\\n' OK || printf 'COS_${nonce}_%s\\n' NG`], { json: false });
@@ -801,6 +843,7 @@ function cmdSpawn(argv) {
   sendFirst(ctx, { ...entry, state: 'starting' });
 
   console.log(`立てました: ${id} → エージェント ${agent}（ワークスペース「${label}」${fitted.cut ? `＝幅 ${ctx.cfg.labelWidth} に切りました（cos rename で付け直せます）` : ''}・ワークスペース ${workspace}・タブ ${tab}・ペイン ${pane}）`);
+  if (R.name) console.log(`  リポジトリ: ${R.name}（${R.main}）`);
   if (where === 'worktree') console.log(`  作業ツリー: ${cwd}（ブランチ ${branch}・base ${base.slice(0, 10)}）`);
   else console.log(`  作業ツリー: ${cwd}（ブランチなし・detached ${base.slice(0, 10)}・準備 ${setup === 'true' ? 'なし' : setup}）`);
   console.log(`  依頼書: ${briefFile}\n  報告書: ${reportFile}`);
@@ -941,7 +984,11 @@ function cmdStatus(argv) {
   } catch (e) {
     herdrErr = e.message;
   }
-  const head = git(['rev-parse', 'HEAD'], ctx.top);
+  const heads = new Map(); // git 操作をするツリー → その HEAD（--repo の依頼は対象の本体の HEAD でマージ済みを見る）
+  const headOf = (dir) => {
+    if (!heads.has(dir)) heads.set(dir, git(['rev-parse', 'HEAD'], dir));
+    return heads.get(dir);
+  };
   const rows = Object.values(led.workers)
     .filter((w) => opt.all || w.state !== 'closed')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -952,14 +999,15 @@ function cmdStatus(argv) {
         id: w.id, title: w.title, label: w.label ?? null, agent: w.agent, state: w.state, where: w.where,
         status: a ? a.agent_status : w.state === 'closed' ? '-' : 'gone',
         report: rep.state, reportUpdated: rep.mtime, workspace: w.workspace, pane: w.pane,
-        branch: w.branch, cwd: w.cwd,
+        branch: w.branch, cwd: w.cwd, repo: w.repo ?? null,
       };
       if (w.where === 'detached' && w.state !== 'closed' && existsSync(w.cwd)) {
         row.dirty = git(['status', '--porcelain'], w.cwd).split('\n').filter(Boolean).length;
       }
       if (w.where === 'worktree' && w.state !== 'closed' && existsSync(w.cwd)) {
-        row.commits = Number(git(['rev-list', '--count', `${w.base}..${w.branch}`], ctx.top));
-        row.merged = gitOk(['merge-base', '--is-ancestor', w.branch, head], ctx.top);
+        const gdir = gitDirOf(ctx, w);
+        row.commits = Number(git(['rev-list', '--count', `${w.base}..${w.branch}`], gdir));
+        row.merged = gitOk(['merge-base', '--is-ancestor', w.branch, headOf(gdir)], gdir);
         row.dirty = git(['status', '--porcelain'], w.cwd).split('\n').filter(Boolean).length;
       }
       return row;
@@ -978,7 +1026,7 @@ function cmdStatus(argv) {
   for (const r of rows) {
     const rep = r.report ? `報告「${r.report}」${r.reportUpdated ? `（${ago(r.reportUpdated)}）` : ''}` : '報告なし';
     const st = r.state === 'running' ? r.status : `${r.state}${r.status !== '-' ? `／${r.status}` : ''}`;
-    console.log(`  ${r.id}「${r.label ?? '-'}」  ${r.agent}  ${st}  ${rep}  ${r.title !== r.id ? r.title : ''}`);
+    console.log(`  ${r.id}「${r.label ?? '-'}」${r.repo ? ` [${basename(r.repo)}]` : ''}  ${r.agent}  ${st}  ${rep}  ${r.title !== r.id ? r.title : ''}`);
     if (r.where === 'worktree' && r.commits !== undefined) {
       console.log(`      ${r.branch}  コミット ${r.commits}${r.commits ? (r.merged ? '（マージ済み）' : '（未マージ）') : ''}・未コミット ${r.dirty}  ワークスペース ${r.workspace}・ペイン ${r.pane}`);
     } else if (r.where === 'detached' && r.dirty !== undefined) {
@@ -1086,10 +1134,11 @@ function cmdClose(argv) {
     const dirty = git(['status', '--porcelain'], w.cwd);
     if (dirty && !opt.force) die(`未コミットの変更があります（捨ててよければ --force）:\n${dirty}`);
   }
+  const gdir = gitDirOf(ctx, w);
   if (w.where === 'worktree') {
-    const hasBranch = gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], ctx.top);
-    merged = !hasBranch || gitOk(['merge-base', '--is-ancestor', w.branch, 'HEAD'], ctx.top);
-    if (!merged && !opt.force) die(`${w.branch} はこのツリーの HEAD にマージされていません（捨ててよければ --force）`);
+    const hasBranch = gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir);
+    merged = !hasBranch || gitOk(['merge-base', '--is-ancestor', w.branch, 'HEAD'], gdir);
+    if (!merged && !opt.force) die(`${w.branch} は${w.repo ? ` ${w.repo} の` : 'このツリーの'} HEAD にマージされていません（捨ててよければ --force）`);
   }
 
   // 控えを先に取る（worktree を消すと依頼書・報告書も消える）。
@@ -1105,10 +1154,10 @@ function cmdClose(argv) {
       herdr(['worktree', 'remove', '--workspace', w.workspace, ...(opt.force ? ['--force'] : [])]);
     } else if (existsSync(w.cwd)) {
       // ワークスペースはユーザーが閉じ済み。worktree だけ残っている。
-      git(['worktree', 'remove', ...(opt.force ? ['--force'] : []), w.cwd], ctx.top);
+      git(['worktree', 'remove', ...(opt.force ? ['--force'] : []), w.cwd], gdir);
     }
-    if (w.where === 'worktree' && !opt['keep-branch'] && gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], ctx.top)) {
-      git(['branch', merged ? '-d' : '-D', w.branch], ctx.top);
+    if (w.where === 'worktree' && !opt['keep-branch'] && gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir)) {
+      git(['branch', merged ? '-d' : '-D', w.branch], gdir);
     }
   } else {
     // 前の版の作業ツリーを分けない依頼（shared・tab）: そのワークスペース（tab はタブ）を閉じ、受け箱を消す（控えは取ってある）。
@@ -1642,7 +1691,8 @@ function selfTest() {
 }
 
 const HELP = `cos — chief of staff の作業セッション管理（herdr）
-  cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]
+  cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]
+                                            --repo: 作業ツリーを別のリポジトリに作る（台帳はこのリポジトリ・cos.json の repos で名前を付けられる）
   cos rename <ID> <短い名前>                サイドバーの名前を付け直す
   cos send <ID> (<text> | --file <file> | --first)
   cos watch [--timeout 秒] [--interval 秒]     出来事か振り返りの期限まで待つ（作業セッション0本でも待つ・CoS は裏で走らせる）

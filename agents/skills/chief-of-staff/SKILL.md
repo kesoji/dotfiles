@@ -135,7 +135,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 
 | コマンド | 内容 |
 | --- | --- |
-| `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--force` は同時実行数の上限を超える |
+| `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える |
 | `cos rename <ID> <名前>` | サイドバーの名前を付け直す |
 | `cos send <ID> (<text> \| --file <file> \| --first)` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す |
 | `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ |
@@ -163,7 +163,8 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
   "chiefRules": "",
   "maxWorkers": 3,
   "labelWidth": 10,
-  "retroIntervalDays": 7
+  "retroIntervalDays": 7,
+  "repos": {}
 }
 ```
 
@@ -172,8 +173,19 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `workerRules` / `chiefRules`: 作業セッション向け／CoS 向けの、そのリポジトリの決まり（ファイルへの相対パス）。`workerRules` は依頼書に差し込まれる。
 - `labelWidth`: サイドバーで読める幅（半角1・全角2）。`--label` をこの幅に収める。
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
+- `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。
+
+### 複数のリポジトリを1つの CoS で扱う（`--repo`）
+
+ときどき触るリポジトリをまとめて扱うときは、コードの無い小さなリポジトリ（ハブ）を作り、そこで `cos chief` を起動する。ハブの `cos.json` の `repos` に対象を並べ、`cos spawn <ID> --repo <名前> …` で立てる。
+
+- 台帳・依頼書の決まり（`workerRules`）・見張り・振り返りはハブに置く。worktree・ブランチ・準備・`cos status` のマージ済みの判定・`cos close` の片付けは対象のリポジトリで行う。
+- 作業セッションは対象の worktree（対象の `worktreeDir`、既定 `.claude/worktrees`）で起動する。対象の `.claude/`（フック・権限）がそのまま効く。置き場所が対象で git 管理外になっていなければ、対象の `info/exclude` に足す。
+- herdr のワークスペースはハブの下ではなく、対象のリポジトリのものとしてサイドバーに出る。
+- 準備で git 管理外の設定を写すときは `COS_REPO_MAIN`（対象の本体のパス）を使う。例: `cp "$COS_REPO_MAIN/.dev.vars" . && pnpm install`。
+- マージは CoS が対象のリポジトリで行う（`git -C <対象> merge --ff-only <ブランチ>`）。そのあと `cos close`。
 - `retroIntervalDays`: 週1回の振り返りの間隔（日）。
 
 作業セッションのシェルには次の環境変数が入る。リポジトリのフックはこれを見て「作業セッションには禁止」を実装できる（例: タスク台帳を CoS だけが書く・外向きのコマンドを拒否する・定期作業の指示を出さない）。
 
-- `COS_WORKER_ID`（依頼の ID）・`COS_WORKER_REPORT`（報告書の絶対パス）・`COS_WORKER_MODE`（`worktree` / `detached`＝`--no-worktree`。前の版の `--no-worktree` は `shared`（本体を共有）・さらに前は `tab`）
+- `COS_WORKER_ID`（依頼の ID）・`COS_WORKER_REPORT`（報告書の絶対パス）・`COS_WORKER_MODE`（`worktree` / `detached`＝`--no-worktree`。前の版の `--no-worktree` は `shared`（本体を共有）・さらに前は `tab`）・`COS_REPO_MAIN`（worktree の元のリポジトリの本体。`--repo` なら対象）
