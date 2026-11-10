@@ -32,6 +32,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "resume|compact|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs\" reorient --hook --known-only",
+            "timeout": 30
+          }
+        ]
       }
     ]
   },
