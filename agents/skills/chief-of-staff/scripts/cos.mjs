@@ -326,7 +326,9 @@ export function pastProposals(text) {
 
 // 禁止語を含む行が「片付いた」と書いているか。数えないのは、語の直後が「無い」（例「`[停止]` なし」「[停止]: 0 件」）
 // の行と、直したと書いた行（例「直したもの: `[停止]` …」「[停止] … → 修正済み」）。
+// ただし「未解消」「解消していない」「修正済みではない」のように打ち消していれば残っているとみなす。
 function settledLine(line, term) {
+  if (/未(解消|修正|対応)|(直|解消|修正済み?)(して)?(い)?ない|(解消|修正済み?)(では|じゃ)ない/.test(line)) return false;
   if (/直した|修正した|修正済|解消/.test(line)) return true;
   const i = line.indexOf(term);
   return /^[\s`'"」）):：]*(は|が|も)?\s*(なし|無し|ない|無い|0\s*件|ゼロ)/.test(line.slice(i + term.length));
@@ -1221,12 +1223,17 @@ function tabExists(id) {
   }
 }
 
+// Claude Code の設定の置き場所（会話ログ・セッションの記録）。
+function claudeHome() {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
+}
+
 // 作業セッション（Claude Code）自身の Claude-Session。動いているあいだは ~/.claude/sessions/*.json の
 // bridgeSessionId（cwd が作業ツリーのもの）、終わっていても作業ツリーの会話ログの帰属の指示から拾う。
 function workerSessions(w) {
   const own = new Set();
   if (w.kind !== 'claude' || !w.cwd) return own;
-  const home = process.env.CLAUDE_CONFIG_DIR ? resolve(process.env.CLAUDE_CONFIG_DIR) : join(homedir(), '.claude');
+  const home = claudeHome();
   const sdir = join(home, 'sessions');
   for (const f of existsSync(sdir) ? readdirSync(sdir) : []) {
     if (!f.endsWith('.json')) continue;
@@ -1504,7 +1511,7 @@ function parseTime(s, name) {
 // セッションの会話ログを探す。フックが渡した transcript_path があればそれ、無ければ Claude Code の projects の下を ID で探す。
 function findTranscript(sid, known) {
   if (known && existsSync(known)) return known;
-  const base = join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'projects');
+  const base = join(claudeHome(), 'projects');
   if (!existsSync(base)) return null;
   for (const d of readdirSync(base)) {
     const f = join(base, d, `${sid}.jsonl`);
@@ -1870,6 +1877,10 @@ function selfTest() {
   assert(checkReportText(rpt('完了', '- `pnpm typecheck` 通過\n- 決裁書: 全員 OK・`[停止]` なし'), ckCfg).length === 0, 'check 揃っていれば警告なし（「[停止] なし」は残りと数えない）');
   assert(checkReportText(rpt('完了', '- 決裁書: [停止] は0件\n- make lint 通過'), ckCfg).length === 0, 'check 「[停止] は0件」も数えない');
   assert(checkReportText(rpt('完了', '- 決裁書\n  - `[停止]`: なし\n  - 直したもの: `[QA][停止]` テストが無い → abc で足した\n- pnpm test'), ckCfg).length === 0, 'check 「[停止]: なし」「直したもの」は数えない');
+  for (const left of ['`[停止]` 1件 未解消', '`[停止]` 修正済みではない', '`[停止]` 解消していない', '`[停止]` まだ直していない', '`[停止]` 1件']) {
+    const lw = checkReportText(rpt('完了', `- 決裁書: ${left}\n- pnpm test`), ckCfg);
+    assert(lw.length === 1 && /\[停止\]/.test(lw[0]), `check 残っている [停止] を数える: ${left}`);
+  }
   let cw = checkReportText(rpt('進行中', '- 決裁書: QA [停止] テストが無い\n- pnpm test'), ckCfg);
   assert(cw.length === 2 && /進行中/.test(cw[0]) && /\[停止\]/.test(cw[1]), `check 状態と [停止]: ${cw.join('|')}`);
   cw = checkReportText(rpt('完了', '- 画面で確かめた'), ckCfg);
