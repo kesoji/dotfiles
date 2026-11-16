@@ -95,9 +95,10 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
 
 ## 取り込みと片付け
 
+- まず `cos check <ID>` を打つ（PR やマージの前に必ず）。報告書の状態が完了か・「検証」に cos.json の `requireInReport` の語があり `forbidInReport` の語が残っていないか・実行したコマンドの行があるか・ブランチのコミットにこの作業セッション以外の `Claude-Session` が混ざっていないか・土台が `defaultBase` の最新から何コミット遅れているかを見て、「OK／警告 n 件」と警告の中身を出す。警告は作業セッションに返すか、理由を確かめてから進める。
 - 報告書と差分を見る（例 `git log --oneline <base>..<branch>`・`git diff --stat <base>...<branch>`）。**全部は読まない**＝要点と気になる所だけ。中身の検証は作業セッションの報告と、リポジトリが決めたレビューに任せる。
 - マージ・タスク台帳の更新など、取り込みの手順はリポジトリの `chiefRules` に従う。
-- 終わったら `cos close <ID>`。マージされていないブランチ・未コミットの変更があると断られる（捨てるなら `--force`＝ユーザーに確かめてから）。依頼書・報告書・追加の指示は `<git-common-dir>/cos/archive/` に控えが残る。
+- 終わったら `cos close <ID>`（先に `cos check` の結果を出す。警告があっても止めない）。マージされていないブランチ・未コミットの変更があると断られる（捨てるなら `--force`＝ユーザーに確かめてから）。依頼書・報告書・追加の指示は `<git-common-dir>/cos/archive/` に控えが残る。
 
 ## 週1回の振り返り
 
@@ -148,6 +149,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数） |
 | `cos report <ID>` | 報告書を出す（片付け済みなら控えから） |
 | `cos read <ID> [--lines N]` | 作業セッションの画面を読む（止まった理由を見るときだけ） |
+| `cos check <ID>` | 取り込み前の機械検査。報告書の状態（完了か）・「検証」の `requireInReport`／`forbidInReport` の語と実行したコマンドの行（`reportCommands`）・`<defaultBase>..<branch>` のコミットの `Claude-Session`（作業セッション自身の値は `~/.claude/sessions/*.json` と作業ツリーの会話ログから引く。マージのコミットは見ない）・土台の遅れ（`baseLagWarn` 以上で警告）。結果は「OK／警告 n 件」の1行と中身。警告があると終了コード 1。ブランチの無い依頼は報告書の状態だけ |
 | `cos close <ID> [--force] [--keep-branch]` | 控えを取り、エージェントを終わらせ、ワークスペース・worktree・ブランチを片付ける（`--no-worktree` の依頼は worktree まで消す。ブランチが無いのでマージの判定はしない。未コミットの変更があれば止まる。前の版で本体を共有して立てた依頼はワークスペースだけ、CoS のワークスペースのタブに立てた依頼はそのタブを閉じる） |
 | `cos retro status` | 振り返りの期限・前回・書きかけの記録 |
 | `cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]` | 期間の材料を集めて記録の下書きを作る。`--session` で CoS の会話を足せる（記録の前のセッションなど） |
@@ -171,6 +173,10 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
   "defaultBase": "",
   "labelWidth": 10,
   "retroIntervalDays": 7,
+  "requireInReport": [],
+  "forbidInReport": [],
+  "reportCommands": ["pnpm ", "npm ", "yarn ", "go test", "make ", "cargo ", "pytest", "node --test"],
+  "baseLagWarn": 30,
   "repos": {}
 }
 ```
@@ -179,6 +185,9 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `setup`: 新しい worktree でエージェントを起動する前に流すコマンド（依存の取得・git 管理外の設定のコピー等）。失敗すると spawn が止まる。
 - `workerRules` / `chiefRules`: 作業セッション向け／CoS 向けの、そのリポジトリの決まり（ファイルへの相対パス）。`workerRules` は依頼書に差し込まれる。
 - `defaultBase`: `--base` を付けなかったときの土台（例 `"origin/staging"`）。空なら CoS のツリーの HEAD。`<リモート>/<ブランチ>` の形なら、立てる前にそのブランチを fetch する（本体の作業ツリーのブランチが古くても、最新から立つ）。`--repo` では対象の cos.json の値を使う。
+- `requireInReport` / `forbidInReport`: `cos check` が報告書の「## 検証」で探す語（必ず要る語／残っていてはいけない語。例 `["決裁書"]`・`["[停止]"]`）。禁止語は、語の直後が「なし」「0件」などの行と、「直した」「修正済」「解消」を含む行では数えない。`--repo` の依頼もハブの値を使う。
+- `reportCommands`: 「検証」に実行したコマンドの行があるとみなす文字列（どれか1つが含まれればよい）。空の配列なら見ない。
+- `baseLagWarn`: ブランチの土台が `defaultBase` の最新からこのコミット数以上遅れていたら `cos check` が警告する。
 - `labelWidth`: サイドバーで読める幅（半角1・全角2）。`--label` をこの幅に収める。
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
 - `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。

@@ -10,6 +10,7 @@
 //   cos status [--all] [--json]
 //   cos report <ID>
 //   cos read <ID> [--lines N]
+//   cos check <ID>
 //   cos close <ID> [--force] [--keep-branch]
 //   cos retro status | collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force] | done [--file F]
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
@@ -70,6 +71,12 @@ const DEFAULT_CFG = {
   labelWidth: 10,
   // 週1回の振り返りの間隔（日）。前回の振り返りを終えてからこの日数で期限になる。
   retroIntervalDays: 7,
+  // cos check: 報告書の「検証」に必ず要る語・残っていてはいけない語・実行したコマンドとみなす書き出し。
+  requireInReport: [],
+  forbidInReport: [],
+  reportCommands: ['pnpm ', 'npm ', 'yarn ', 'go test', 'make ', 'cargo ', 'pytest', 'node --test'],
+  // cos check: ブランチの土台が defaultBase の最新からこのコミット数以上遅れていたら警告する。
+  baseLagWarn: 30,
 };
 const DAY_MS = 86_400_000;
 
@@ -313,6 +320,85 @@ export function checkRecord(text) {
 export function pastProposals(text) {
   const plan = recordSection(text, '改善案') ?? '';
   return plan.split('\n').filter((l) => /^\s*[-*]\s*\[(採用|却下|保留)\]/.test(l)).map((l) => l.trim());
+}
+
+// ───── cos check（取り込み前の機械検査）の判定 ─────
+
+// 禁止語を含む行が「片付いた」と書いているか。数えないのは、語の直後が「無い」（例「`[停止]` なし」「[停止]: 0 件」）
+// の行と、直したと書いた行（例「直したもの: `[停止]` …」「[停止] … → 修正済み」）。
+function settledLine(line, term) {
+  if (/直した|修正した|修正済|解消/.test(line)) return true;
+  const i = line.indexOf(term);
+  return /^[\s`'"」）):：]*(は|が|も)?\s*(なし|無し|ない|無い|0\s*件|ゼロ)/.test(line.slice(i + term.length));
+}
+
+// 報告書の検査。返すのは警告（1件1行）。code はブランチを持つ依頼（コードを変える依頼）か＝検証の記録まで見るか。
+export function checkReportText(text, cfg, { code = true } = {}) {
+  if (text === null) return ['報告書が読めません'];
+  const warns = [];
+  const state = reportState(text);
+  if (state !== '完了') warns.push(`報告書の状態が「${state ?? 'なし'}」（完了ではない）`);
+  if (!code) return warns;
+  const v = recordSection(text, '検証');
+  if (!v) return [...warns, '報告書の「## 検証」が空です'];
+  for (const term of cfg.requireInReport ?? []) {
+    if (!v.includes(term)) warns.push(`「検証」に「${term}」がありません`);
+  }
+  for (const term of cfg.forbidInReport ?? []) {
+    const lines = v.split('\n').filter((l) => l.includes(term) && !settledLine(l, term));
+    if (lines.length) warns.push(`「検証」に「${term}」が残っています: ${lines[0].trim().slice(0, 80)}`);
+  }
+  const cmds = cfg.reportCommands ?? [];
+  if (cmds.length && !cmds.some((c) => v.includes(c))) {
+    warns.push(`「検証」に実行したコマンドの行がありません（${cmds.map((c) => `「${c.trim()}」`).join('')}を探しました）`);
+  }
+  return warns;
+}
+
+// Claude-Session の値（URL か ID）を session_… の形にそろえる。
+export function sessionKey(v) {
+  return /session_[A-Za-z0-9]+/.exec(v)?.[0] ?? v.trim();
+}
+
+// `git log --format=%H%x00%s%x00%(trailers:key=Claude-Session,valueonly,separator=%x2C)%x1e` の出力を分ける。
+export function parseSessionLog(out) {
+  return out
+    .split('\x1e')
+    .map((r) => r.replace(/^\n+/, ''))
+    .filter(Boolean)
+    .map((r) => {
+      const [sha, subject, trailers = ''] = r.split('\x00');
+      return { sha, subject, sessions: [...new Set(trailers.split(',').map((s) => s.trim()).filter(Boolean).map(sessionKey))] };
+    });
+}
+
+// Claude Code の会話ログ（jsonl の生の文字列）から、そのセッション自身の Claude-Session を拾う。
+// 帰属の指示（「End git commit messages with: … Claude-Session: <URL>」）の中だけを見る
+// （git log の出力など、会話に出てきた他のセッションの値を拾わないため）。
+export function ownSessionsInTranscript(raw) {
+  const re = /End git commit messages with:(?:\\n|\n)[^"]{0,300}?Claude-Session: https:\/\/claude\.ai\/code\/(session_[A-Za-z0-9]+)/g;
+  return new Set([...raw.matchAll(re)].map((m) => m[1]));
+}
+
+// コミットの Claude-Session を作業セッションのもの（own）と照らす。own が空＝特定できなかった。
+export function sessionFindings(commits, own) {
+  const warns = [];
+  const info = [];
+  const fmt = (c) => `${c.sha.slice(0, 9)} ${c.subject.slice(0, 50)}${c.sessions.length ? `（${c.sessions.join(',')}）` : ''}`;
+  const list = (cs) => cs.slice(0, 10).map(fmt).join(' / ') + (cs.length > 10 ? ` ほか ${cs.length - 10} 件` : '');
+  const none = commits.filter((c) => !c.sessions.length);
+  if (none.length) warns.push(`Claude-Session の無いコミットが ${none.length} 件: ${list(none)}`);
+  const all = [...new Set(commits.flatMap((c) => c.sessions))];
+  if (own.size) {
+    const foreign = commits.filter((c) => c.sessions.some((s) => !own.has(s)));
+    if (foreign.length) warns.push(`この作業セッション（${[...own].join(',')}）以外の Claude-Session のコミットが ${foreign.length} 件: ${list(foreign)}`);
+    else if (commits.length) info.push(`Claude-Session: どのコミットもこの作業セッション（${[...own].join(',')}）のもの`);
+  } else if (all.length > 1) {
+    warns.push(`作業セッションの Claude-Session を特定できず、コミットに ${all.length} 種類が混ざっています: ${all.join(', ')}`);
+  } else if (all.length === 1) {
+    info.push(`Claude-Session は ${all[0]} の1種類（作業セッションのものかは照合できませんでした）`);
+  }
+  return { warns, info };
 }
 
 // ───────── 下回り ─────────
@@ -1135,6 +1221,77 @@ function tabExists(id) {
   }
 }
 
+// 作業セッション（Claude Code）自身の Claude-Session。動いているあいだは ~/.claude/sessions/*.json の
+// bridgeSessionId（cwd が作業ツリーのもの）、終わっていても作業ツリーの会話ログの帰属の指示から拾う。
+function workerSessions(w) {
+  const own = new Set();
+  if (w.kind !== 'claude' || !w.cwd) return own;
+  const home = process.env.CLAUDE_CONFIG_DIR ? resolve(process.env.CLAUDE_CONFIG_DIR) : join(homedir(), '.claude');
+  const sdir = join(home, 'sessions');
+  for (const f of existsSync(sdir) ? readdirSync(sdir) : []) {
+    if (!f.endsWith('.json')) continue;
+    try {
+      const j = JSON.parse(readFileSync(join(sdir, f), 'utf8'));
+      if (j.cwd === w.cwd && j.bridgeSessionId) own.add(sessionKey(j.bridgeSessionId));
+    } catch {
+      // 書きかけ・別の形のファイルは飛ばす
+    }
+  }
+  const pdir = join(home, 'projects', w.cwd.replace(/[^A-Za-z0-9]/g, '-'));
+  for (const f of existsSync(pdir) ? readdirSync(pdir) : []) {
+    if (!f.endsWith('.jsonl')) continue;
+    for (const s of ownSessionsInTranscript(readFileSync(join(pdir, f), 'utf8'))) own.add(s);
+  }
+  return own;
+}
+
+// cos check の本体。返すのは { warns, info }。台帳・作業ツリーは変えない（defaultBase の fetch だけする）。
+function runCheck(ctx, w) {
+  const code = w.where === 'worktree';
+  const warns = checkReportText(readReport(w).text, ctx.cfg, { code });
+  const info = [];
+  if (!code) return { warns, info: ['ブランチの無い依頼（コミットと土台は見ていません）'] };
+  const gdir = gitDirOf(ctx, w);
+  if (!gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir)) {
+    return { warns: [...warns, `ブランチ ${w.branch} がありません`], info };
+  }
+  const upstream = repoFor(ctx, w.repo ?? undefined).defaultBase;
+  let from = w.base;
+  if (upstream) {
+    const m = /^([^/]+)\/(.+)$/.exec(upstream);
+    if (m && gitOk(['remote', 'get-url', m[1]], gdir) && !gitOk(['fetch', '--quiet', m[1], m[2]], gdir)) {
+      warns.push(`git fetch ${m[1]} ${m[2]} に失敗しました（手元の ${upstream} で数えています）`);
+    }
+    if (gitOk(['rev-parse', '--verify', '--quiet', `${upstream}^{commit}`], gdir)) {
+      from = upstream;
+      const behind = Number(git(['rev-list', '--count', `${w.branch}..${upstream}`], gdir));
+      info.push(`土台: ${upstream} の最新から ${behind} コミット遅れ`);
+      if (behind >= Number(ctx.cfg.baseLagWarn)) warns.push(`ブランチの土台が ${upstream} の最新から ${behind} コミット遅れています（取り込みでぶつからないか見る）`);
+    } else warns.push(`defaultBase の ${upstream} が見つかりません`);
+  } else info.push('土台: defaultBase が無いので遅れは数えていません');
+  if (!from) return { warns, info };
+  // マージ済みの土台の変更（作業セッションが upstream を取り込んだもの）は数えない＝upstream に無いコミットだけ見る。
+  const commits = parseSessionLog(git(['log', '--no-merges', '--format=%H%x00%s%x00%(trailers:key=Claude-Session,valueonly,separator=%x2C)%x1e', `${from}..${w.branch}`], gdir));
+  info.push(`コミット: ${commits.length} 件（${from.length === 40 ? from.slice(0, 9) : from}..${w.branch}・マージを除く）`);
+  const s = sessionFindings(commits, workerSessions(w));
+  return { warns: [...warns, ...s.warns], info: [...info, ...s.info] };
+}
+
+function printCheck(id, r) {
+  console.log(`cos check ${id}: ${r.warns.length ? `警告 ${r.warns.length} 件` : 'OK'}`);
+  for (const x of r.warns) console.log(`  ! ${x}`);
+  for (const x of r.info) console.log(`  - ${x}`);
+}
+
+function cmdCheck(argv) {
+  const { pos } = parseArgs(argv);
+  const id = checkId(pos[0]);
+  const ctx = repoCtx();
+  const r = runCheck(ctx, getWorker(ctx, id));
+  printCheck(id, r);
+  if (r.warns.length) process.exitCode = 1;
+}
+
 function cmdClose(argv) {
   const { pos, opt } = parseArgs(argv, ['force', 'keep-branch']);
   const id = checkId(pos[0]);
@@ -1142,6 +1299,12 @@ function cmdClose(argv) {
   const ctx = repoCtx();
   const w = getWorker(ctx, id);
   const s = slug(id);
+  // 片付ける前に検査の結果を残す（警告があっても止めない＝取り込みの判断は済んでいる）。
+  try {
+    printCheck(id, runCheck(ctx, w));
+  } catch (e) {
+    console.log(`cos check ${id}: 検査できませんでした（${e.message}）`);
+  }
 
   let merged = true;
   if (hasOwnWorktree(w) && existsSync(w.cwd)) {
@@ -1701,6 +1864,33 @@ function selfTest() {
   assert(knownOnlyDecision({ env: { COS_WORKER_ID: 'x' }, sid: 'cos-1', sessions: ss }) === 'worker', 'known-only 作業セッション');
   assert(knownOnlyDecision({ env: { COS_CHIEF: '1' }, sid: 'cos-1', sessions: ss }) === 'chief', 'known-only cos chief で起動＝二重に出さない');
   assert(knownOnlyDecision({ env: { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '60' }, sid: 'cos-1', sessions: ss }) === 'emit', 'known-only 自動要約だけでは cos chief とみなさない');
+  // cos check: 報告書の検査
+  const ckCfg = { requireInReport: ['決裁書'], forbidInReport: ['[停止]'], reportCommands: ['pnpm ', 'go test', 'make '] };
+  const rpt = (state, verify) => `# 報告書 x\n\n状態: ${state}\n<!-- 状態は 着手前／進行中 -->\n\n## 要約\n\n## 検証\n\n${verify}\n\n## コミット\n\n- abc\n`;
+  assert(checkReportText(rpt('完了', '- `pnpm typecheck` 通過\n- 決裁書: 全員 OK・`[停止]` なし'), ckCfg).length === 0, 'check 揃っていれば警告なし（「[停止] なし」は残りと数えない）');
+  assert(checkReportText(rpt('完了', '- 決裁書: [停止] は0件\n- make lint 通過'), ckCfg).length === 0, 'check 「[停止] は0件」も数えない');
+  assert(checkReportText(rpt('完了', '- 決裁書\n  - `[停止]`: なし\n  - 直したもの: `[QA][停止]` テストが無い → abc で足した\n- pnpm test'), ckCfg).length === 0, 'check 「[停止]: なし」「直したもの」は数えない');
+  let cw = checkReportText(rpt('進行中', '- 決裁書: QA [停止] テストが無い\n- pnpm test'), ckCfg);
+  assert(cw.length === 2 && /進行中/.test(cw[0]) && /\[停止\]/.test(cw[1]), `check 状態と [停止]: ${cw.join('|')}`);
+  cw = checkReportText(rpt('完了', '- 画面で確かめた'), ckCfg);
+  assert(cw.length === 2 && /決裁書/.test(cw[0]) && /コマンド/.test(cw[1]), `check 決裁書とコマンドが無い: ${cw.join('|')}`);
+  assert(/空/.test(checkReportText(rpt('完了', '<!-- 書き方 -->'), ckCfg)[0]), 'check 検証が空');
+  assert(checkReportText(rpt('完了', ''), ckCfg, { code: false }).length === 0, 'check ブランチの無い依頼は状態だけ');
+  assert(checkReportText(null, ckCfg).length === 1, 'check 報告書が読めない');
+  // cos check: コミットの Claude-Session
+  assert(sessionKey('https://claude.ai/code/session_01AbC') === 'session_01AbC' && sessionKey(' x ') === 'x', 'sessionKey');
+  const slog = 'a1\x00one\x00https://claude.ai/code/session_A\n\x1e\nb2\x00two\x00\x1e\nc3\x00three\x00https://claude.ai/code/session_B,https://claude.ai/code/session_A\n\x1e';
+  const cs = parseSessionLog(slog);
+  assert(cs.length === 3 && cs[0].sessions.join() === 'session_A' && cs[1].sessions.length === 0 && cs[2].sessions.join() === 'session_B,session_A', `parseSessionLog: ${JSON.stringify(cs)}`);
+  let sf = sessionFindings(cs, new Set(['session_A']));
+  assert(sf.warns.length === 2 && /無い/.test(sf.warns[0]) && /c3 three/.test(sf.warns[1]) && !/a1/.test(sf.warns[1]), `sessionFindings 混ざり: ${sf.warns.join('|')}`);
+  sf = sessionFindings([cs[0], cs[2]], new Set());
+  assert(sf.warns.length === 1 && /2 種類/.test(sf.warns[0]), 'sessionFindings 特定できず複数');
+  sf = sessionFindings([cs[0]], new Set());
+  assert(sf.warns.length === 0 && sf.info.length === 1, 'sessionFindings 特定できず1種類');
+  assert(sessionFindings([cs[0]], new Set(['session_A'])).warns.length === 0, 'sessionFindings 自分のだけ');
+  const tr = '{"content":"- End git commit messages with:\\nCo-Authored-By: X <n@e.com>\\nClaude-Session: https://claude.ai/code/session_Own1\\n- End pull"}\n{"content":"commit abc\\n    Claude-Session: https://claude.ai/code/session_Other"}';
+  assert([...ownSessionsInTranscript(tr)].join() === 'session_Own1', 'ownSessionsInTranscript は帰属の指示だけ');
   console.log('cos self-test: ok');
 }
 
@@ -1713,7 +1903,8 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos status [--all] [--json]
   cos report <ID>
   cos read <ID> [--lines N]
-  cos close <ID> [--force] [--keep-branch]
+  cos check <ID>                            取り込み前の機械検査（報告書の状態と検証の記録・他のセッションのコミット・土台の遅れ）。PR を作る前に打つ
+  cos close <ID> [--force] [--keep-branch]  （先に cos check の結果を出す。警告があっても止めない）
   cos retro status                          週1回の振り返りの期限・前回
   cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]
                                             期間の材料（依頼ごとの数字・CoS の会話のユーザーの発言）を集めて記録の下書きを作る
@@ -1728,7 +1919,7 @@ if (isMain) {
   const [cmd, ...rest] = process.argv.slice(2);
   const table = {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, status: cmdStatus, ls: cmdStatus,
-    report: cmdReport, read: cmdRead, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro,
+    report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro,
     'self-test': selfTest,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
