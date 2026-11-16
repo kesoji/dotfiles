@@ -12,19 +12,18 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // 英単語がこれより少ない返答は見ない（「Done.」のような短い返答や、識別子の多い短文で止めすぎないため）
-export const MIN_LATIN_WORDS = 25;
-// かな・漢字の文字数が英単語数のこの倍率に満たなければ英語とみなす
+const MIN_LATIN_WORDS = 25;
+// かな・漢字の数が英単語の数より少なければ英語とみなす。
 // 日本語の技術文は識別子1つにつき日本語が数文字〜十数文字つく。英文は 0 に近い。
-export const MIN_JA_PER_WORD = 1.0;
 
 export const REASON =
-  "返答が英語になっています。ユーザーへの返答・報告は日本語で書き直してください。コマンド・コード・ログの引用は英語のままでかまいません。";
+  "返答が英語になっています。ユーザーへの返答・報告は日本語で書き直してください。英語のまま見せたいもの（コマンド・ログ・頼まれた英文の下書き）は、コードブロックか引用（>）に入れてください。";
 
 const JA_CHAR = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー]/gu;
 const LATIN_WORD = /[A-Za-z][A-Za-z'’-]*/g;
 
 /** 数えない部分（コード・引用・URL・パス）を取り除く */
-export function stripNonProse(text) {
+function stripNonProse(text) {
   return (
     text
       // フェンスで囲んだコードブロック（閉じていないものは末尾まで）
@@ -43,11 +42,11 @@ export function stripNonProse(text) {
   );
 }
 
-export function countJa(text) {
+function countJa(text) {
   return (text.match(JA_CHAR) ?? []).length;
 }
 
-export function countLatinWords(text) {
+function countLatinWords(text) {
   return (text.match(LATIN_WORD) ?? []).length;
 }
 
@@ -56,7 +55,7 @@ export function isEnglishProse(text) {
   const prose = stripNonProse(text);
   const words = countLatinWords(prose);
   if (words < MIN_LATIN_WORDS) return false;
-  return countJa(prose) < words * MIN_JA_PER_WORD;
+  return countJa(prose) < words;
 }
 
 function textOf(content) {
@@ -65,7 +64,11 @@ function textOf(content) {
   return content.filter((b) => b?.type === "text" && typeof b.text === "string").map((b) => b.text);
 }
 
-/** 人（またはその代わりの入力）が書いた発言か。tool_result だけの user 行は除く */
+/**
+ * 人（またはその代わりの入力）が書いた発言か。tool_result だけの user 行は除く。
+ * 要約（compact）の本文の user 行（isCompactSummary）は発言として数える: ターンの区切りになり、
+ * 要約の中に引かれたユーザーの日本語の発言が、日本語のセッションかどうかの手がかりになるため。
+ */
 function isPrompt(entry) {
   if (entry?.type !== "user" || entry.isMeta) return false;
   return textOf(entry.message?.content).length > 0;
@@ -76,7 +79,7 @@ function isPrompt(entry) {
  * - japaneseSession: ユーザーの発言に日本語が一度でも出てくるか
  * - turnTexts: 最後のユーザーの発言より後の assistant の text ブロック
  */
-export function extractFromTranscript(entries) {
+function extractFromTranscript(entries) {
   let japaneseSession = false;
   let lastPrompt = -1;
   entries.forEach((e, i) => {
