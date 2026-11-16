@@ -138,7 +138,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 
 | コマンド | 内容 |
 | --- | --- |
-| `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える |
+| `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は cos.json の `defaultBase`、無ければ CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える |
 | `cos rename <ID> <名前>` | サイドバーの名前を付け直す |
 | `cos send <ID> (<text> \| --file <file> \| --first)` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す |
 | `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ |
@@ -165,6 +165,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
   "workerRules": "",
   "chiefRules": "",
   "maxWorkers": 3,
+  "defaultBase": "",
   "labelWidth": 10,
   "retroIntervalDays": 7,
   "repos": {}
@@ -174,6 +175,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `worktreeDir`: 作業 worktree を置く場所（本体の作業ツリーからの相対）。本体の下に置くと、Claude Code のフォルダの信頼を引き継ぐので起動時の確認で止まらない。git 管理外にしておくこと。
 - `setup`: 新しい worktree でエージェントを起動する前に流すコマンド（依存の取得・git 管理外の設定のコピー等）。失敗すると spawn が止まる。
 - `workerRules` / `chiefRules`: 作業セッション向け／CoS 向けの、そのリポジトリの決まり（ファイルへの相対パス）。`workerRules` は依頼書に差し込まれる。
+- `defaultBase`: `--base` を付けなかったときの土台（例 `"origin/staging"`）。空なら CoS のツリーの HEAD。`<リモート>/<ブランチ>` の形なら、立てる前にそのブランチを fetch する（本体の作業ツリーのブランチが古くても、最新から立つ）。`--repo` では対象の cos.json の値を使う。
 - `labelWidth`: サイドバーで読める幅（半角1・全角2）。`--label` をこの幅に収める。
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
 - `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。

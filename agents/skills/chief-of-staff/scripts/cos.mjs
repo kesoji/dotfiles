@@ -64,6 +64,8 @@ const DEFAULT_CFG = {
   workerRules: '',
   chiefRules: '',
   maxWorkers: 3,
+  // --base を付けなかったときの土台（例 "origin/staging"）。空なら CoS のツリーの HEAD。<リモート>/<ブランチ> なら立てる前に fetch する。
+  defaultBase: '',
   // herdr のサイドバーで読める幅（半角＝1・全角＝2）。ワークスペースの名前はこの幅に収める。
   labelWidth: 10,
   // 週1回の振り返りの間隔（日）。前回の振り返りを終えてからこの日数で期限になる。
@@ -578,7 +580,7 @@ function ensureExcluded(common, pattern, note = '依頼書・報告書') {
 // --repo はハブの cos.json の repos にある名前か、パス（~ 可）。repos の値はパスか {path, setup}。
 // 対象の準備は repos の setup → 対象の cos.json の setup の順で選ぶ。worktree の置き場所は対象の cos.json の worktreeDir（既定 .claude/worktrees）。
 function repoFor(ctx, spec) {
-  const self = { name: null, top: ctx.top, main: ctx.main, common: ctx.common, worktreeDir: ctx.cfg.worktreeDir, setup: ctx.cfg.setup };
+  const self = { name: null, top: ctx.top, main: ctx.main, common: ctx.common, worktreeDir: ctx.cfg.worktreeDir, setup: ctx.cfg.setup, defaultBase: ctx.cfg.defaultBase };
   if (!spec) return self;
   const ent = ctx.cfg.repos?.[spec];
   const raw = typeof ent === 'string' ? ent : ent?.path ?? spec;
@@ -589,7 +591,19 @@ function repoFor(ctx, spec) {
   return {
     name: ent ? spec : basename(t.main), top: t.main, main: t.main, common: t.common,
     worktreeDir: t.cfg.worktreeDir, setup: (typeof ent === 'object' && ent?.setup) || t.cfg.setup || '',
+    defaultBase: t.cfg.defaultBase,
   };
+}
+
+// 土台のコミット。--base → cos.json の defaultBase → HEAD の順。<リモート>/<ブランチ> の形なら先に fetch して最新を使う
+// （本体の作業ツリーのブランチは古いことがあり、古い土台から立てると入っているはずの変更が無い）。
+function resolveBase(R, optBase) {
+  const ref = optBase || R.defaultBase || 'HEAD';
+  const m = /^([^/]+)\/(.+)$/.exec(ref);
+  if (m && gitOk(['remote', 'get-url', m[1]], R.top)) {
+    if (!gitOk(['fetch', '--quiet', m[1], m[2]], R.top)) die(`git fetch ${m[1]} ${m[2]} に失敗しました（土台 ${ref}）`);
+  }
+  return git(['rev-parse', '--verify', `${ref}^{commit}`], R.top);
 }
 
 // 対象のリポジトリで worktree の置き場所が git 管理外になっていなければ info/exclude に足す
@@ -743,7 +757,7 @@ function cmdSpawn(argv) {
   if (where === 'worktree') {
     branch = `${ctx.cfg.branchPrefix}${s}`;
     if (gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], R.top)) die(`ブランチ ${branch} がすでにあります${R.name ? `（${R.name}）` : ''}`);
-    base = git(['rev-parse', '--verify', `${opt.base ?? 'HEAD'}^{commit}`], R.top);
+    base = resolveBase(R, opt.base);
     cwd = join(R.main, R.worktreeDir, `cos-${s}`);
     if (existsSync(cwd)) die(`${cwd} がすでにあります`);
     if (R.name) ensureIgnored(R);
@@ -757,7 +771,7 @@ function cmdSpawn(argv) {
     }
   } else {
     // herdr の worktree create は必ずブランチを作る＝detached は git で作ってから herdr で開く（開くとグループの子になる）。
-    base = git(['rev-parse', '--verify', `${opt.base ?? 'HEAD'}^{commit}`], R.top);
+    base = resolveBase(R, opt.base);
     cwd = join(R.main, R.worktreeDir, `cos-${s}`);
     if (existsSync(cwd)) die(`${cwd} がすでにあります`);
     if (R.name) ensureIgnored(R);
