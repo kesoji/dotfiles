@@ -1090,24 +1090,10 @@ function cmdWatch(argv) {
   }
 }
 
-function cmdStatus(argv) {
-  const { opt } = parseArgs(argv, ['all', 'json']);
-  const ctx = repoCtx();
-  const led = readLedger(ctx);
-  let agents = [];
-  let herdrErr = null;
-  try {
-    agents = herdr(['agent', 'list']).result.agents;
-  } catch (e) {
-    herdrErr = e.message;
-  }
-  const heads = new Map(); // git 操作をするツリー → その HEAD（--repo の依頼は対象の本体の HEAD でマージ済みを見る）
-  const headOf = (dir) => {
-    if (!heads.has(dir)) heads.set(dir, git(['rev-parse', 'HEAD'], dir));
-    return heads.get(dir);
-  };
-  const rows = Object.values(led.workers)
-    .filter((w) => opt.all || w.state !== 'closed')
+// 台帳の依頼を cos status の行にする。ctx は台帳を持つ CoS のリポジトリ（top＝--repo の無い依頼の git 操作をするツリー）。
+function statusRows(ctx, led, agents, all, headOf) {
+  return Object.values(led.workers)
+    .filter((w) => all || w.state !== 'closed')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((w) => {
       const a = w.state === 'closed' ? null : findAgent(w, agents);
@@ -1129,16 +1115,37 @@ function cmdStatus(argv) {
       }
       return row;
     });
-  if (opt.json) {
-    const r = peekRetro(ctx);
-    const { dueAt, due } = retroDue(r, ctx.cfg.retroIntervalDays, Date.now());
-    const retro = { since: r.since, dueAt: new Date(dueAt).toISOString(), due, notifiedAt: r.notifiedAt, draft: r.draft, stored: r.stored };
-    console.log(JSON.stringify({ workers: rows, herdrError: herdrErr, retro }, null, 2));
-    return;
+}
+
+// ハブの cos.json の repos に並べた各リポジトリの CoS の台帳（ハブから --repo で立てた依頼はハブの台帳にあるので別物）。
+// 読むだけ。対象の cos.json は読まない（壊れていてもハブの status を止めない）。COS_DIR はハブにだけ効く。
+// 台帳の無いリポジトリは返さない。同じリポジトリ（git-common-dir が同じ）は1回だけ。
+function otherLedgers(ctx, agents, all, headOf) {
+  const seen = new Set([realpathSync(ctx.common)]);
+  const out = [];
+  for (const [name, ent] of Object.entries(ctx.cfg.repos ?? {})) {
+    const raw = typeof ent === 'string' ? ent : ent?.path;
+    const abs = raw ? resolve(raw.replace(/^~(?=\/|$)/, homedir())) : null;
+    const r = { name, path: abs, ledger: null, workers: [], error: null };
+    try {
+      if (!abs) throw new Error('パスがありません');
+      if (!existsSync(abs)) throw new Error(`${abs} がありません`);
+      const common = realpathSync(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], abs));
+      if (seen.has(common)) continue;
+      seen.add(common);
+      const main = git(['worktree', 'list', '--porcelain'], abs).split('\n').find((l) => l.startsWith('worktree ')).slice('worktree '.length);
+      r.ledger = join(common, 'cos', 'ledger.json');
+      if (!existsSync(r.ledger)) continue;
+      r.workers = statusRows({ top: main }, JSON.parse(readFileSync(r.ledger, 'utf8')), agents, all, headOf);
+    } catch (e) {
+      r.error = String(e.stderr || e.message).trim().split('\n')[0];
+    }
+    out.push(r);
   }
-  if (herdrErr) console.log(`（herdr に問い合わせられません: ${herdrErr}）`);
-  const live = rows.filter((r) => r.state !== 'closed').length;
-  console.log(`作業セッション ${live} 本（上限 ${ctx.cfg.maxWorkers}）・台帳 ${ctx.ledgerFile}`);
+  return out;
+}
+
+function printRows(rows) {
   if (rows.length === 0) console.log('  （なし）');
   for (const r of rows) {
     const rep = r.report ? `報告「${r.report}」${r.reportUpdated ? `（${ago(r.reportUpdated)}）` : ''}` : '報告なし';
@@ -1152,6 +1159,45 @@ function cmdStatus(argv) {
       const place = r.where === 'tab' ? '本体の作業ツリー（共有）・CoS のワークスペースのタブ' : r.where === 'shared' ? '本体の作業ツリー（共有）' : r.cwd;
       console.log(`      ${place}  ワークスペース ${r.workspace}・ペイン ${r.pane}`);
     }
+  }
+}
+
+function cmdStatus(argv) {
+  const { opt } = parseArgs(argv, ['all', 'json']);
+  const ctx = repoCtx();
+  const led = readLedger(ctx);
+  let agents = [];
+  let herdrErr = null;
+  try {
+    agents = herdr(['agent', 'list']).result.agents;
+  } catch (e) {
+    herdrErr = e.message;
+  }
+  const heads = new Map(); // git 操作をするツリー → その HEAD（--repo の依頼は対象の本体の HEAD でマージ済みを見る）
+  const headOf = (dir) => {
+    if (!heads.has(dir)) heads.set(dir, git(['rev-parse', 'HEAD'], dir));
+    return heads.get(dir);
+  };
+  const rows = statusRows(ctx, led, agents, opt.all, headOf);
+  const repos = otherLedgers(ctx, agents, opt.all, headOf);
+  if (opt.json) {
+    const r = peekRetro(ctx);
+    const { dueAt, due } = retroDue(r, ctx.cfg.retroIntervalDays, Date.now());
+    const retro = { since: r.since, dueAt: new Date(dueAt).toISOString(), due, notifiedAt: r.notifiedAt, draft: r.draft, stored: r.stored };
+    console.log(JSON.stringify({ workers: rows, herdrError: herdrErr, retro, repos }, null, 2));
+    return;
+  }
+  if (herdrErr) console.log(`（herdr に問い合わせられません: ${herdrErr}）`);
+  const live = rows.filter((r) => r.state !== 'closed').length;
+  console.log(`作業セッション ${live} 本（上限 ${ctx.cfg.maxWorkers}）・台帳 ${ctx.ledgerFile}`);
+  printRows(rows);
+  for (const o of repos) {
+    if (o.error) {
+      console.log(`[${o.name}] の台帳を読めません: ${o.error}`);
+      continue;
+    }
+    console.log(`[${o.name}] の CoS: 作業セッション ${o.workers.filter((r) => r.state !== 'closed').length} 本・台帳 ${o.ledger}`);
+    printRows(o.workers);
   }
   console.log(retroLine(ctx));
 }
