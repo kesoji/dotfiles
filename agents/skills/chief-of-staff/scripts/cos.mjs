@@ -5,7 +5,7 @@
 //   cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF]
 //                  [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- <エージェントへの引数>]
 //   cos rename <ID> <短い名前>
-//   cos send <ID> (<text> | --file <file> | --first)
+//   cos send <ID> (<text> | --file <file> | --first) [--seen]
 //   cos watch [--timeout 秒(既定 3000)] [--interval 秒(既定 5)]
 //   cos status [--all] [--json]
 //   cos report <ID>
@@ -970,11 +970,26 @@ function sendFirst(ctx, w) {
 }
 
 function cmdSend(argv) {
-  const { pos, opt } = parseArgs(argv, ['first']);
+  const { pos, opt } = parseArgs(argv, ['first', 'seen']);
   const id = checkId(pos[0]);
   requireHerdr();
   const ctx = repoCtx();
   const w = getWorker(ctx, id);
+  // 作業中の作業セッションへ向きを変える指示を、画面を見ずに送らない（報告書は古いことがある＝実際に進んでいた操作を止めた事故）。
+  // working のときは画面の最後を出して止まる。見てから送るなら --seen。
+  if (!opt.first && !opt.seen) {
+    const a = findAgent(w, herdr(['agent', 'list']).result.agents);
+    if (a && !SETTLED.has(a.agent_status)) {
+      let tail = '';
+      try {
+        tail = herdr(['agent', 'read', a.pane_id, '--source', 'recent-unwrapped', '--lines', '20'], { json: false });
+      } catch (e) {
+        tail = `（画面を読めませんでした: ${e.message}）`;
+      }
+      process.stdout.write(tail);
+      die(`${w.agent} はいま作業中（${a.agent_status}）です。上の画面で、何をしている最中か・報告書より先に進んでいないかを確かめてください。それでも送るなら cos send ${id} --seen …（ユーザーの「かも」程度の訂正なら、送る前に画面の事実を伝えて確かめ直す）`);
+    }
+  }
   if (opt.first) {
     sendFirst(ctx, w);
     console.log(`${id}（${w.agent}）に依頼書を渡しました`);
@@ -1909,7 +1924,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]
                                             --repo: 作業ツリーを別のリポジトリに作る（台帳はこのリポジトリ・cos.json の repos で名前を付けられる）
   cos rename <ID> <短い名前>                サイドバーの名前を付け直す
-  cos send <ID> (<text> | --file <file> | --first)
+  cos send <ID> (<text> | --file <file> | --first) [--seen]   作業中の相手には画面を出して止まる（見たら --seen）
   cos watch [--timeout 秒] [--interval 秒]     出来事か振り返りの期限まで待つ（作業セッション0本でも待つ・CoS は裏で走らせる）
   cos status [--all] [--json]
   cos report <ID>

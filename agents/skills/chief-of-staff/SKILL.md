@@ -144,7 +144,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | --- | --- |
 | `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は cos.json の `defaultBase`、無ければ CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える |
 | `cos rename <ID> <名前>` | サイドバーの名前を付け直す |
-| `cos send <ID> (<text> \| --file <file> \| --first)` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す |
+| `cos send <ID> (<text> \| --file <file> \| --first) [--seen]` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す。相手が作業中なら画面の最後を出して止まる（報告書より先に進んでいることがある）。画面を見て、それでも送るなら `--seen` |
 | `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ |
 | `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数） |
 | `cos report <ID>` | 報告書を出す（片付け済みなら控えから） |
