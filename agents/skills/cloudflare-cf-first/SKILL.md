@@ -11,9 +11,10 @@ v3（2026-09-29）。`cf` は 2026/04/13 発表の wrangler 後継で、**2026-0
 
 ## 番頭（m1pro）の導入状態
 
-- `cf` はグローバル導入済み＝`~/.local/bin/cf`、**v1.0.0-beta.11**（2026-10-04 時点）。ベータは数日で何版も進むので、着手時に `cf --version` を見る。
+- `cf` はグローバル導入済み＝`~/.local/bin/cf`、**v1.0.0-rc.0**（2026-11-19 時点。rc.1 は publish 2日未満で柵に当たったので rc.0）。ベータは数日で何版も進むので、着手時に `cf --version` を見る。
 - **`npm i -g cf` だと 0.15.0 が入る**。1.x は prerelease 扱いなので、
-  入れる／上げるときは **バージョン明示**（例 `npm i -g cf@1.0.0-beta.11`）。
+  入れる／上げるときは **バージョン明示**（例 `npm i -g cf@1.0.0-rc.0`）。版ごとの publish 日時は `npm view cf time --json`。
+- zsh の補完は zshrc の `cached_eval "cf complete zsh"`。上げたあと補完が古いときは `clear_cached_eval`。
 - 依存の `workerd` の postinstall は allowScripts 方針で走っていない。
   **`cf dev` / `--local`（ローカル実行）は未検証**。必要になったら
   `npm i -g --allow-scripts=workerd cf@<ver>` を本人に確認してから。

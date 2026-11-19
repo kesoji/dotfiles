@@ -323,6 +323,11 @@ if command -v gh &>/dev/null; then
     alias ghprd='gh pr create --draft --fill'
 fi
 
+# Cloudflare cf cli（補完はキャッシュ。cf を上げて補完が古いときは clear_cached_eval）
+if command -v cf &>/dev/null; then
+    cached_eval "cf complete zsh"
+fi
+
 # lazygit
 if command -v lazygit &>/dev/null; then
     alias lg='lazygit'
