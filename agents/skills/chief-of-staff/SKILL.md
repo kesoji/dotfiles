@@ -94,6 +94,9 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
 | `blocked`（承認や質問の画面） | `cos read <ID>` で内容を見て、ユーザーに「<エージェント名> が承認待ち: 〜」と伝える。**CoS はキーを送って答えない**（何を許すかはユーザーの判断）。起動時に止まった（`start-blocked`）なら、ユーザーが片付けたあと `cos send <ID> --first` で依頼書を渡す。 |
 | `gone`（エージェントがいない） | 報告書を読む。途中ならユーザーに伝える。 |
 | `retro-due`（振り返りの期限） | ユーザーに一言伝え、「週1回の振り返り」を始める。ユーザーとの話や急ぎの対応の途中なら、その区切りで。同じ日にはもう出ない（翌日また出る）。 |
+| `deploy-done`（デプロイの run が全部成功） | 待っていた件（マージ・push の報告など）を締め、ユーザーに一言「<repo> の <sha> のデプロイが終わりました」と伝える。 |
+| `deploy-failed`（失敗・取り消しの run がある） | 出来事の `failed` の workflow と URL をユーザーに伝える。原因の調べと直しは作業セッションに頼む（同じ依頼の作業セッションが残っていればそこへ返す）。取り消し（`cancelled`）は次の push に置き換わっただけのこともあるので、そう見えるならそう添える。 |
+| `deploy-missing`（登録から `deployMissingSec` 秒 run が無い・gh に問い合わせられない） | push が届いているか（`git ls-remote`）・workflow の path のフィルタで走らなかったのではないかを確かめ、ユーザーに伝える。走るはずのない push なら知らせるだけでよい。 |
 | `timeout` | 張り直すだけ。**ユーザーには知らせない**（何も起きていないことを報告しない）。 |
 
 - 出来事が来ても、状態が前と変わっていない（すでに伝えた質問の待機中・待ち時間の要約だけ・途中経過の「進行中」・時間切れ）ときは、ユーザーに知らせず張り直す。知らせるのは、新しい質問・完了・承認待ち・止まった理由など、ユーザーに伝える中身があるときだけ。**知らせないターンでは「返事を待っているもの」も並べない**（出すのは張り直した事実の1行まで）。空のターンに一覧だけを出すと、直前にユーザーが読んでいた回答を押し流し、問い直させる。
@@ -106,6 +109,7 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
 - まず `cos check <ID>` を打つ（PR やマージの前に必ず）。報告書の状態が完了か・「検証」に cos.json の `requireInReport` の語があり `forbidInReport` の語が残っていないか・実行したコマンドの行があるか・ブランチのコミットにこの作業セッション以外の `Claude-Session` が混ざっていないか・土台が `defaultBase` の最新から何コミット遅れているかを見て、「OK／警告 n 件」と警告の中身を出す。警告は作業セッションに返すか、理由を確かめてから進める。
 - 報告書と差分を見る（例 `git log --oneline <base>..<branch>`・`git diff --stat <base>...<branch>`）。**全部は読まない**＝要点と気になる所だけ。中身の検証は作業セッションの報告と、リポジトリが決めたレビューに任せる。
 - マージ・タスク台帳の更新など、取り込みの手順はリポジトリの `chiefRules` に従う。
+- push したら（CoS がユーザーの指示で push したとき・ユーザーから push したと聞いたとき）、**デプロイの完了を前面で待たない**（`gh run watch` などを前で走らせると、その間ユーザーに返事ができない）。`cos deploy-watch <リポジトリ> <コミット>` を打って返り、結果は `cos watch` の `deploy-done` / `deploy-failed` / `deploy-missing` で受ける。リポジトリは `owner/name`・cos.json の `repos` の名前・手元のパスのどれでもよく、手元のパスならコミットは `HEAD` やブランチ名でもよい。workflow を絞るなら `--workflow deploy.yml`。数える run は既定で event が `push`・`workflow_run` のもの（タグや手動起動のデプロイは `--event release,workflow_dispatch` のように足す）。
 - 終わったら `cos close <ID>`（先に `cos check` の結果を出す。警告があっても止めない）。マージされていないブランチ・未コミットの変更があると断られる（捨てるなら `--force`＝ユーザーに確かめてから）。依頼書・報告書・追加の指示は `<git-common-dir>/cos/archive/` に控えが残る。
 
 ## 週1回の振り返り
@@ -153,8 +157,10 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は cos.json の `defaultBase`、無ければ CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える |
 | `cos rename <ID> <名前>` | サイドバーの名前を付け直す |
 | `cos send <ID> (<text> \| --file <file> \| --first) [--seen]` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す。相手が作業中なら画面の最後を出して止まる（報告書より先に進んでいることがある）。画面を見て、それでも送るなら `--seen` |
-| `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ |
-| `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数） |
+| `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった・デプロイの終わり）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ。デプロイは張り直さなくても、走っている見張りが次の問い合わせから拾う |
+| `cos deploy-watch <repo> <sha> [--workflow W] [--label 名前] [--event E,...]` | push のあとに打つ。デプロイを見張りの台帳（`<git-common-dir>/cos/deploys.json`）に足してすぐ返る。`cos watch` が `deployPollSec` ごとに `gh run list --commit` でそのコミットの run を見て、全部終わったら `deploy-done`（成功）／`deploy-failed`（失敗した workflow と run の URL）、`deployMissingSec` 秒 run が無ければ `deploy-missing` を出し、台帳から消す。全部終わってももう1回同じ顔ぶれで終わっているのを見てから出す（`workflow_run` で続く workflow を待つ）。登録のときに1回 gh を呼んで、リポジトリ・workflow の名前の誤りをその場で知らせる |
+| `cos deploy-watch --cancel <ID>` | デプロイの見張りをやめる（ID は `cos status` に出る。例 `app@1a2b3c4`） |
+| `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数・見張り中のデプロイ） |
 | `cos report <ID>` | 報告書を出す（片付け済みなら控えから） |
 | `cos read <ID> [--lines N]` | 作業セッションの画面を読む（止まった理由を見るときだけ） |
 | `cos check <ID>` | 取り込み前の機械検査。報告書の状態（完了か）・「検証」の `requireInReport`／`forbidInReport` の語と実行したコマンドの行（`reportCommands`）・`<defaultBase>..<branch>` のコミットの `Claude-Session`（作業セッション自身の値は `~/.claude/sessions/*.json` と作業ツリーの会話ログから引く。マージのコミットは見ない）・土台の遅れ（`baseLagWarn` 以上で警告）。結果は「OK／警告 n 件」の1行と中身。警告があると終了コード 1。ブランチの無い依頼は報告書の状態だけ |
@@ -185,6 +191,8 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
   "forbidInReport": [],
   "reportCommands": ["pnpm ", "npm ", "yarn ", "go test", "make ", "cargo ", "pytest", "node --test"],
   "baseLagWarn": 30,
+  "deployPollSec": 20,
+  "deployMissingSec": 300,
   "repos": {}
 }
 ```
@@ -196,6 +204,8 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `requireInReport` / `forbidInReport`: `cos check` が報告書の「## 検証」で探す語（必ず要る語／残っていてはいけない語。例 `["決裁書"]`・`["[停止]"]`）。禁止語は、語の直後が「なし」「0件」などの行と、「直した」「修正済」「解消」を含む行では数えない。`--repo` の依頼もハブの値を使う。
 - `reportCommands`: 「検証」に実行したコマンドの行があるとみなす文字列（どれか1つが含まれればよい）。空の配列なら見ない。
 - `baseLagWarn`: ブランチの土台が `defaultBase` の最新からこのコミット数以上遅れていたら `cos check` が警告する。
+- `deployPollSec`: `cos deploy-watch` で登録したデプロイを gh に問い合わせる間隔（秒）。`cos watch --interval` の方が長ければそちら。1件につき1回の `gh run list` なので、20 秒なら1時間に 180 回（GitHub API の上限は1時間 5000 回）。
+- `deployMissingSec`: 登録してからこの秒数 run が1つも無ければ（または gh に問い合わせられないままなら）`deploy-missing` を出して見張りをやめる。
 - `labelWidth`: サイドバーで読める幅（半角1・全角2）。`--label` をこの幅に収める。
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
 - `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。

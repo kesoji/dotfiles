@@ -7,6 +7,7 @@
 //   cos rename <ID> <短い名前>
 //   cos send <ID> (<text> | --file <file> | --first) [--seen]
 //   cos watch [--timeout 秒(既定 3000)] [--interval 秒(既定 5)]
+//   cos deploy-watch <repo> <sha> [--workflow W] [--label 名前] [--event E,...] | --cancel <ID>
 //   cos status [--all] [--json]
 //   cos report <ID>
 //   cos read <ID> [--lines N]
@@ -25,6 +26,7 @@
 //   <git-common-dir>/cos/retro.json     週1回の振り返りの期限（since＝今の期間の始まり・知らせた日・履歴）
 //   <git-common-dir>/cos/retros/        振り返りの記録（材料の下書き＋CoS の判断＋改善案の採否）
 //   <git-common-dir>/cos/chief.json     CoS だったセッションの記録（振り返りで会話ログを読むため）
+//   <git-common-dir>/cos/deploys.json   見張り中のデプロイ（cos deploy-watch で登録・cos watch が出来事を出したら消す）
 // 依頼書と報告書は作業セッションの作業ツリーの `.cos/<slug>/` に置く（info/exclude で git から外す）。
 // 環境変数 COS_DIR で状態の置き場所を差し替えられる（試験用＝本物の台帳を触らずに watch などを試す）。
 //
@@ -77,6 +79,10 @@ const DEFAULT_CFG = {
   reportCommands: ['pnpm ', 'npm ', 'yarn ', 'go test', 'make ', 'cargo ', 'pytest', 'node --test'],
   // cos check: ブランチの土台が defaultBase の最新からこのコミット数以上遅れていたら警告する。
   baseLagWarn: 30,
+  // cos deploy-watch: GitHub Actions に問い合わせる間隔（秒。cos watch の --interval の方が長ければそちら）と、
+  // 登録から run が1つも見つからないまま deploy-missing を出すまでの秒数。
+  deployPollSec: 20,
+  deployMissingSec: 300,
 };
 const DAY_MS = 86_400_000;
 
@@ -403,6 +409,52 @@ export function sessionFindings(commits, own) {
   return { warns, info };
 }
 
+// ───── デプロイの見張り（cos deploy-watch）の判定 ─────
+
+// 成功とみなす run の結論。cancelled・failure・timed_out・action_required などは失敗として知らせる
+// （同じブランチへの次の push で取り消された run も、CoS が見て判断できるよう失敗に入れる）。
+const DEPLOY_OK = new Set(['success', 'skipped', 'neutral']);
+// 既定で数える run の event。既定ブランチのコミットには schedule・issues・issue_comment などの run も付き、
+// 後から増え続ける＝数えるといつまでも終わらず、関係ない失敗も拾う。push と、それに続く workflow_run だけを見る。
+export const DEPLOY_EVENTS = ['push', 'workflow_run'];
+
+// 見張り中のデプロイの ID（cos status と --cancel で使う）。
+export function deployId(repo, sha, workflow) {
+  return `${repo.split('/').pop()}@${sha.slice(0, 7)}${workflow ? `:${workflow}` : ''}`;
+}
+
+// git の origin の URL から GitHub の owner/name を引く。GitHub でなければ null。
+export function parseGithubRemote(url) {
+  const m = /github\.com[:/]([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/.exec(String(url).trim());
+  return m ? `${m[1]}/${m[2]}` : null;
+}
+
+// そのコミットの run の一覧（`gh run list --json …` の配列）から、見張りの次の手を決める。
+// - error: gh が失敗した（ネットワーク・認証）。最後に問い合わせられた時から missingMs たっていれば missing。
+// - run が無い: 登録から missingMs たっていれば missing（path のフィルタで走らなかった・workflow 名の違い）。
+// - 1つでも終わっていなければ wait。
+// - 全部終わった: 前の問い合わせでも同じ顔ぶれで全部終わっていたら done / failed。初めてなら settling
+//   （workflow_run で続けて起動する workflow があると、前の run が終わった直後にはまだ一覧に出ていないため）。
+// 数える run は event が entry.events（無ければ DEPLOY_EVENTS）のものだけ。
+export function deployDecision({ runs, error = null, entry, nowMs, missingMs }) {
+  const created = Date.parse(entry.createdAt);
+  if (error) {
+    const okAt = entry.lastOkAt ? Date.parse(entry.lastOkAt) : created;
+    return nowMs - okAt >= missingMs ? { state: 'missing', error } : { state: 'wait', error };
+  }
+  const events = entry.events?.length ? entry.events : DEPLOY_EVENTS;
+  const rs = runs.filter((r) => events.includes(r.event));
+  const total = rs.length;
+  const done = rs.filter((r) => r.status === 'completed').length;
+  if (!total) return nowMs - created >= missingMs ? { state: 'missing', total, done } : { state: 'wait', total, done };
+  if (done < total) return { state: 'wait', total, done };
+  const ids = rs.map((r) => String(r.databaseId)).sort().join(',');
+  if (entry.settleIds !== ids) return { state: 'settling', ids, total, done };
+  const brief = (r) => ({ workflow: r.workflowName || r.name, conclusion: r.conclusion, url: r.url });
+  const failed = rs.filter((r) => !DEPLOY_OK.has(r.conclusion)).map(brief);
+  return { state: failed.length ? 'failed' : 'done', total, done, runs: rs.map(brief), failed };
+}
+
 // ───────── 下回り ─────────
 
 class UsageError extends Error {}
@@ -514,6 +566,7 @@ function repoCtx(cwd = process.cwd()) {
     retroFile: join(dir, 'retro.json'),
     retrosDir: join(dir, 'retros'),
     chiefFile: join(dir, 'chief.json'),
+    deploysFile: join(dir, 'deploys.json'),
   };
 }
 
@@ -584,6 +637,124 @@ function readEvents(ctx) {
         throw new Error(`${ctx.eventsFile} の ${i + 1} 行目が読めません`);
       }
     });
+}
+
+// ── 見張り中のデプロイ（deploys.json） ──
+
+function readDeploys(ctx) {
+  if (!existsSync(ctx.deploysFile)) return { version: 1, deploys: {} };
+  return JSON.parse(readFileSync(ctx.deploysFile, 'utf8')); // 壊れていたら止める（黙って空にすると見張りを失う）
+}
+
+function updateDeploys(ctx, fn) {
+  return withLock(ctx, () => {
+    const d = readDeploys(ctx);
+    const r = fn(d);
+    writeAtomic(ctx.deploysFile, `${JSON.stringify(d, null, 2)}\n`);
+    return r;
+  });
+}
+
+function gh(args) {
+  try {
+    return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000, maxBuffer: 16 << 20 });
+  } catch (e) {
+    if (e.code === 'ENOENT') throw new Error('gh が見つかりません');
+    throw new Error(String(e.stderr || e.message).trim().split('\n')[0] || 'gh が失敗しました');
+  }
+}
+
+// そのコミットの workflow run の一覧（gh を1回呼ぶ）。
+function ghRuns(d) {
+  const args = ['run', 'list', '-R', d.repo, '--commit', d.sha, '--limit', '50', '--json', 'databaseId,name,workflowName,status,conclusion,url,event,createdAt'];
+  if (d.workflow) args.push('--workflow', d.workflow);
+  return JSON.parse(gh(args));
+}
+
+// <repo> を GitHub の owner/name にする。cos.json の repos の名前 → 手元のパス（origin から引く） → owner/name の順。
+function resolveGhRepo(ctx, spec) {
+  const ent = ctx.cfg.repos?.[spec];
+  const raw = typeof ent === 'string' ? ent : ent?.path ?? spec;
+  const abs = resolve(raw.replace(/^~(?=\/|$)/, homedir()));
+  if (ent || existsSync(abs)) {
+    if (!existsSync(abs)) die(`${spec}: ${abs} がありません`);
+    let url;
+    try {
+      url = git(['remote', 'get-url', 'origin'], abs);
+    } catch {
+      die(`${abs} に origin がありません（owner/name で指定してください）`);
+    }
+    const repo = parseGithubRemote(url);
+    if (!repo) die(`${abs} の origin（${url}）が GitHub ではありません`);
+    return { repo, local: abs };
+  }
+  if (/^[\w.-]+\/[\w.-]+$/.test(spec)) return { repo: spec, local: null };
+  die(`リポジトリが分かりません: ${spec}（owner/name・cos.json の repos の名前・手元のパス のどれか）`);
+}
+
+// <sha> を 40 桁にする（gh run list --commit は 40 桁でないと一致しない）。手元のパスならブランチ名・HEAD も可。
+function resolveSha(repo, local, spec) {
+  if (local && gitOk(['rev-parse', '--verify', '--quiet', `${spec}^{commit}`], local)) return git(['rev-parse', `${spec}^{commit}`], local);
+  if (/^[0-9a-f]{40}$/i.test(spec)) return spec.toLowerCase();
+  try {
+    return gh(['api', `repos/${repo}/commits/${spec}`, '--jq', '.sha']).trim();
+  } catch (e) {
+    die(`${repo} のコミット ${spec} が見つかりません（${e.message}）`);
+  }
+}
+
+function deploySummary(dec) {
+  if (dec.error) return `問い合わせ失敗: ${dec.error}`;
+  if (!dec.total) return 'run はまだありません';
+  return `${dec.done}/${dec.total} 件が終了${dec.state === 'settling' ? '（続く run が無いか確かめ中）' : ''}`;
+}
+
+// 見張りの1周で、問い合わせ時期の来たデプロイを gh で見て、終わったものの出来事を返す（台帳からは消す）。
+// 見張りが2本走っていても、出来事を出すのはロックの中で台帳から消せた方だけ（同じ出来事を二度出さない）。
+function pollDeploys(ctx, { pollMs, missingMs }) {
+  if (!existsSync(ctx.deploysFile)) return [];
+  const due = Object.values(readDeploys(ctx).deploys).filter((d) => !d.checkedAt || Date.now() - Date.parse(d.checkedAt) >= pollMs);
+  if (!due.length) return [];
+  const results = due.map((d) => {
+    try {
+      return { id: d.id, runs: ghRuns(d), error: null };
+    } catch (e) {
+      return { id: d.id, runs: null, error: e.message };
+    }
+  });
+  return updateDeploys(ctx, (x) => {
+    const out = [];
+    for (const r of results) {
+      const d = x.deploys[r.id];
+      if (!d) continue; // 別の見張りが出した・--cancel で消された
+      const nowMs = Date.now();
+      const dec = deployDecision({ runs: r.runs, error: r.error, entry: d, nowMs, missingMs });
+      const at = new Date(nowMs).toISOString();
+      d.checkedAt = at;
+      if (!r.error) d.lastOkAt = at;
+      d.lastError = r.error;
+      d.summary = deploySummary(dec);
+      if (dec.state === 'settling') d.settleIds = dec.ids;
+      if (dec.state === 'done' || dec.state === 'failed' || dec.state === 'missing') {
+        delete x.deploys[r.id];
+        out.push({
+          event: `deploy-${dec.state}`, id: d.id, repo: d.repo, sha: d.sha, workflow: d.workflow ?? undefined, label: d.label ?? undefined,
+          ...(dec.state === 'missing'
+            ? { afterSec: Math.round((nowMs - Date.parse(d.createdAt)) / 1000), error: dec.error ?? undefined }
+            : { runs: dec.runs, failed: dec.failed.length ? dec.failed : undefined }),
+        });
+      }
+    }
+    return out;
+  });
+}
+
+function deployLine(ev) {
+  const name = `デプロイ ${ev.id}${ev.label ? `「${ev.label}」` : ''}（${ev.repo} ${ev.sha.slice(0, 7)}）`;
+  if (ev.event === 'deploy-done') return `${name}: 成功（${ev.runs.map((r) => r.workflow).join('・')}）`;
+  if (ev.event === 'deploy-failed') return `${name}: 失敗 — ${ev.failed.map((r) => `${r.workflow}（${r.conclusion}） ${r.url}`).join(' / ')}`;
+  if (ev.error) return `${name}: ${Math.round(ev.afterSec / 60)} 分 gh に問い合わせられません（${ev.error}）。見張りをやめました`;
+  return `${name}: 登録から ${Math.round(ev.afterSec / 60)} 分たっても run が見つかりません（path のフィルタで走らなかった・workflow 名の違い・まだ push していない など）。見張りをやめました`;
 }
 
 // ── 振り返りの期限の記録（retro.json） ──
@@ -1039,8 +1210,10 @@ function cmdWatch(argv) {
         for (const [id, st] of Object.entries(seen)) if (l.workers[id]) l.workers[id].lastSeen = st;
       });
     }
+    // 見張り中のデプロイ（登録が無ければ gh を呼ばない・問い合わせは deployPollSec ごと）
+    const deployEvents = pollDeploys(ctx, { pollMs: Math.max(ctx.cfg.deployPollSec * 1000, intervalMs), missingMs: ctx.cfg.deployMissingSec * 1000 });
     let retroNotify = false;
-    if (events.length === 0 && retroDue(peekRetro(ctx), interval, Date.now()).notify) {
+    if (events.length === 0 && deployEvents.length === 0 && retroDue(peekRetro(ctx), interval, Date.now()).notify) {
       // 同じ日に二度出さない。見張りが2本走っていても1本だけが出すよう、ロックの中で確かめ直して印を付ける。
       retroNotify = updateRetro(ctx, (r) => {
         if (!retroDue(r, interval, Date.now()).notify) return false;
@@ -1048,7 +1221,7 @@ function cmdWatch(argv) {
         return true;
       });
     }
-    const step = watchStep({ events, retroNotify, timedOut: Date.now() - t0 > timeoutMs });
+    const step = watchStep({ events: [...events, ...deployEvents], retroNotify, timedOut: Date.now() - t0 > timeoutMs });
     if (step === 'retro-due') {
       const r = peekRetro(ctx);
       const { dueAt } = retroDue(r, interval, Date.now());
@@ -1068,6 +1241,10 @@ function cmdWatch(argv) {
         logEvent(ctx, { kind: 'event', ...ev });
         console.log(JSON.stringify(ev));
       }
+      for (const ev of deployEvents) {
+        logEvent(ctx, { kind: ev.event, id: ev.id, repo: ev.repo, sha: ev.sha });
+        console.log(JSON.stringify(ev));
+      }
       console.log('');
       for (const ev of events) {
         const what = {
@@ -1078,6 +1255,7 @@ function cmdWatch(argv) {
         }[ev.status];
         console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}`);
       }
+      for (const ev of deployEvents) console.log(deployLine(ev));
       console.log('\n対応したら cos watch を張り直してください。');
       return;
     }
@@ -1088,6 +1266,54 @@ function cmdWatch(argv) {
     }
     sleep(intervalMs);
   }
+}
+
+function cmdDeployWatch(argv) {
+  const { pos, opt } = parseArgs(argv, []);
+  const ctx = repoCtx();
+  if (opt.cancel) {
+    const gone = updateDeploys(ctx, (x) => {
+      const had = Boolean(x.deploys[opt.cancel]);
+      delete x.deploys[opt.cancel];
+      return had;
+    });
+    if (!gone) die(`${opt.cancel} は見張っていません（cos status で一覧）`);
+    logEvent(ctx, { kind: 'deploy-cancel', id: opt.cancel });
+    console.log(`見張りをやめました: ${opt.cancel}`);
+    return;
+  }
+  if (pos.length !== 2) throw new UsageError('cos deploy-watch <repo> <sha> [--workflow W] [--label 名前] [--event E,...] | --cancel <ID>');
+  const { repo, local } = resolveGhRepo(ctx, pos[0]);
+  const sha = resolveSha(repo, local, pos[1]);
+  const workflow = opt.workflow ?? null;
+  const id = deployId(repo, sha, workflow);
+  if (readDeploys(ctx).deploys[id]) {
+    console.log(`すでに見張っています: ${id}`);
+    return;
+  }
+  // 最初に1回問い合わせる＝リポジトリ・認証・workflow の名前の誤りをここで知らせる（見張りの中で黙って失敗させない）。
+  let runs;
+  try {
+    runs = ghRuns({ repo, sha, workflow });
+  } catch (e) {
+    die(`gh run list が失敗しました（${repo} ${sha.slice(0, 7)}${workflow ? ` --workflow ${workflow}` : ''}）: ${e.message}`);
+  }
+  const at = now();
+  const entry = {
+    id, repo, sha, workflow, label: opt.label ?? null,
+    events: opt.event ? opt.event.split(',').map((x) => x.trim()).filter(Boolean) : null,
+    createdAt: at, checkedAt: at, lastOkAt: at, lastError: null, settleIds: null, summary: null,
+  };
+  const dec = deployDecision({ runs, entry, nowMs: Date.parse(at), missingMs: ctx.cfg.deployMissingSec * 1000 });
+  if (dec.state === 'settling') entry.settleIds = dec.ids;
+  entry.summary = deploySummary(dec);
+  updateDeploys(ctx, (x) => {
+    x.deploys[id] = entry;
+  });
+  logEvent(ctx, { kind: 'deploy-watch', id, repo, sha, workflow: workflow ?? undefined });
+  noteChiefSession(ctx, chiefSessionFromEnv(), 'deploy-watch');
+  console.log(`見張りに足しました: ${id}（${repo} ${sha.slice(0, 10)}${workflow ? `・workflow ${workflow}` : ''}）・いま ${entry.summary}`);
+  console.log(`終わったら cos watch が deploy-done / deploy-failed を出します（${ctx.cfg.deployMissingSec} 秒 run が無ければ deploy-missing）。cos watch が裏で動いていなければ張ってください。`);
 }
 
 // 台帳の依頼を cos status の行にする。ctx は台帳を持つ CoS のリポジトリ（top＝--repo の無い依頼の git 操作をするツリー）。
@@ -1184,7 +1410,7 @@ function cmdStatus(argv) {
     const r = peekRetro(ctx);
     const { dueAt, due } = retroDue(r, ctx.cfg.retroIntervalDays, Date.now());
     const retro = { since: r.since, dueAt: new Date(dueAt).toISOString(), due, notifiedAt: r.notifiedAt, draft: r.draft, stored: r.stored };
-    console.log(JSON.stringify({ workers: rows, herdrError: herdrErr, retro, repos }, null, 2));
+    console.log(JSON.stringify({ workers: rows, herdrError: herdrErr, retro, repos, deploys: Object.values(readDeploys(ctx).deploys) }, null, 2));
     return;
   }
   if (herdrErr) console.log(`（herdr に問い合わせられません: ${herdrErr}）`);
@@ -1198,6 +1424,13 @@ function cmdStatus(argv) {
     }
     console.log(`[${o.name}] の CoS: 作業セッション ${o.workers.filter((r) => r.state !== 'closed').length} 本・台帳 ${o.ledger}`);
     printRows(o.workers);
+  }
+  const deploys = Object.values(readDeploys(ctx).deploys).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (deploys.length) {
+    console.log(`見張り中のデプロイ ${deploys.length} 件・台帳 ${ctx.deploysFile}`);
+    for (const d of deploys) {
+      console.log(`  ${d.id}${d.label ? `「${d.label}」` : ''}  ${d.repo} ${d.sha.slice(0, 7)}${d.workflow ? `  workflow ${d.workflow}` : ''}  ${d.summary ?? '-'}・登録 ${ago(d.createdAt)}・確認 ${ago(d.checkedAt)}`);
+    }
   }
   console.log(retroLine(ctx));
 }
@@ -1963,6 +2196,35 @@ function selfTest() {
   assert(sessionFindings([cs[0]], new Set(['session_A'])).warns.length === 0, 'sessionFindings 自分のだけ');
   const tr = '{"content":"- End git commit messages with:\\nCo-Authored-By: X <n@e.com>\\nClaude-Session: https://claude.ai/code/session_Own1\\n- End pull"}\n{"content":"commit abc\\n    Claude-Session: https://claude.ai/code/session_Other"}';
   assert([...ownSessionsInTranscript(tr)].join() === 'session_Own1', 'ownSessionsInTranscript は帰属の指示だけ');
+  // デプロイの見張り: run の一覧 → 出来事
+  assert(deployId('o/app', 'abcdef0123456789', null) === 'app@abcdef0' && deployId('o/app', 'abcdef0123', 'deploy.yml') === 'app@abcdef0:deploy.yml', 'deployId');
+  assert(parseGithubRemote('git@github.com:o/n.git') === 'o/n' && parseGithubRemote('https://github.com/o/n') === 'o/n' && parseGithubRemote('https://github.com/o/n.git/') === 'o/n', 'parseGithubRemote');
+  assert(parseGithubRemote('ssh://git@github.com/o/n.git') === 'o/n' && parseGithubRemote('https://gitlab.com/o/n.git') === null, 'parseGithubRemote ssh・GitHub 以外');
+  const T0 = Date.parse('2026-11-20T00:00:00Z');
+  const de = (o = {}) => ({ createdAt: new Date(T0).toISOString(), lastOkAt: null, settleIds: null, events: null, ...o });
+  const run = (id, status, conclusion = '', o = {}) => ({ databaseId: id, name: `wf${id}`, workflowName: `wf${id}`, status, conclusion, url: `https://example.invalid/runs/${id}`, event: 'push', ...o });
+  const MISS = 300_000;
+  const dd = (runs, entry = de(), nowMs = T0 + 60_000, error = null) => deployDecision({ runs, error, entry, nowMs, missingMs: MISS });
+  assert(dd([]).state === 'wait', 'deploy run がまだ無い→待つ');
+  assert(dd([], de(), T0 + MISS).state === 'missing', 'deploy run が現れないまま時間切れ→missing');
+  assert(dd([run(1, 'completed', 'success', { event: 'schedule' }), run(2, 'in_progress', '', { event: 'issues' })], de(), T0 + MISS).state === 'missing', 'deploy 定期実行・issues の run は数えない');
+  assert(dd([run(1, 'completed', 'success'), run(2, 'completed', 'success', { event: 'workflow_run' })], de({ settleIds: '1,2' })).state === 'done', 'deploy 続く workflow_run は数える');
+  let dz = dd([run(1, 'completed', 'success'), run(2, 'in_progress')]);
+  assert(dz.state === 'wait' && dz.done === 1 && dz.total === 2, 'deploy 終わっていない run があれば待つ');
+  assert(dd([run(1, 'queued')], de(), T0 + MISS * 3).state === 'wait', 'deploy run があれば missing にしない');
+  dz = dd([run(2, 'completed', 'success'), run(1, 'completed', 'skipped')]);
+  assert(dz.state === 'settling' && dz.ids === '1,2', 'deploy 全部終わった初回は確かめ中');
+  dz = dd([run(1, 'completed', 'skipped'), run(2, 'completed', 'success')], de({ settleIds: '1,2' }));
+  assert(dz.state === 'done' && dz.runs.length === 2 && !dz.failed.length, 'deploy 同じ顔ぶれで2回終わっていれば done（skipped は成功）');
+  assert(dd([run(1, 'completed', 'success'), run(2, 'completed', 'success'), run(3, 'completed', 'success')], de({ settleIds: '1,2' })).state === 'settling', 'deploy 続く run が増えたら確かめ直す');
+  dz = dd([run(1, 'completed', 'success'), run(2, 'completed', 'failure')], de({ settleIds: '1,2' }));
+  assert(dz.state === 'failed' && dz.failed.length === 1 && dz.failed[0].workflow === 'wf2' && /runs\/2$/.test(dz.failed[0].url), 'deploy 失敗した workflow と URL');
+  assert(dd([run(1, 'completed', 'cancelled')], de({ settleIds: '1' })).state === 'failed', 'deploy 取り消しも失敗として知らせる');
+  assert(dd([run(1, 'completed', 'success'), run(2, 'in_progress', '', { event: 'workflow_run' })], de({ settleIds: '1', events: ['push'] })).state === 'done', 'deploy --event で絞る');
+  assert(dd([run(1, 'completed', 'success', { event: 'workflow_dispatch' })], de({ settleIds: '1', events: ['workflow_dispatch'] })).state === 'done', 'deploy --event で足す');
+  dz = dd(null, de(), T0 + 60_000, 'HTTP 502');
+  assert(dz.state === 'wait' && dz.error === 'HTTP 502', 'deploy gh の失敗は待つ');
+  assert(dd(null, de({ lastOkAt: new Date(T0 + 10_000).toISOString() }), T0 + 10_000 + MISS, 'x').state === 'missing', 'deploy gh の失敗が続けば missing');
   console.log('cos self-test: ok');
 }
 
@@ -1972,6 +2234,10 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos rename <ID> <短い名前>                サイドバーの名前を付け直す
   cos send <ID> (<text> | --file <file> | --first) [--seen]   作業中の相手には画面を出して止まる（見たら --seen）
   cos watch [--timeout 秒] [--interval 秒]     出来事か振り返りの期限まで待つ（作業セッション0本でも待つ・CoS は裏で走らせる）
+  cos deploy-watch <repo> <sha> [--workflow W] [--label 名前] [--event E,...]
+                                            push のあとに打つ（--event の既定は push,workflow_run）。そのコミットの workflow run を cos watch が見て deploy-done / deploy-failed / deploy-missing を出す
+                                            repo は owner/name・cos.json の repos の名前・手元のパス。sha は手元のパスならブランチ名・HEAD も可
+  cos deploy-watch --cancel <ID>            デプロイの見張りをやめる（ID は cos status に出る）
   cos status [--all] [--json]
   cos report <ID>
   cos read <ID> [--lines N]
@@ -1990,7 +2256,7 @@ const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPat
 if (isMain) {
   const [cmd, ...rest] = process.argv.slice(2);
   const table = {
-    spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, status: cmdStatus, ls: cmdStatus,
+    spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, 'deploy-watch': cmdDeployWatch, status: cmdStatus, ls: cmdStatus,
     report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro,
     'self-test': selfTest,
   };
