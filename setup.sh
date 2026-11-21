@@ -49,6 +49,18 @@ step() {
 	fi
 }
 
+# Xcode 本体は Brewfile の mas "Xcode" で入る（App Store にサインインしておく）。ここでは初期設定だけ
+xcode_init() {
+	local app=/Applications/Xcode.app
+	if [ ! -d "$app" ]; then
+		echo -e "${RED}Xcode が入っていない。App Store にサインインして brew bundle（または mas install 497799835）を流してから、もう一度${NC}" >&2
+		return 1
+	fi
+	sudo xcode-select -s "$app/Contents/Developer" &&
+		sudo xcodebuild -license accept &&
+		xcodebuild -runFirstLaunch
+}
+
 karabiner_link() {
 	mkdir -p "$HOME/.config/karabiner" && sh ./karabinerlink.sh
 }
@@ -67,6 +79,7 @@ summary() {
 echo -e "${BOLD}${BLUE}===== Setup ($DOTFILES) =====${NC}"
 
 step "Homebrew とアプリ（setup_mac_app.sh・brew bundle）" bash ./setup_mac_app.sh
+step "Xcode の初期設定（xcode-select・ライセンス同意・初回起動の準備）" xcode_init
 step "版と sha256 を固定したツール（homebrew/install-pinned.sh）" bash ./homebrew/install-pinned.sh
 step "設定ファイルのリンク（dotfilesLink.sh）" sh ./dotfilesLink.sh
 step "Karabiner の設定のリンク（karabinerlink.sh）" karabiner_link
