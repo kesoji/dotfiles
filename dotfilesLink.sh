@@ -46,11 +46,6 @@ safe_ln ~/dotfiles/vimrc ~/.vimrc
 safe_ln ~/dotfiles/gvimrc ~/.gvimrc
 safe_ln ~/dotfiles/ideavimrc ~/.ideavimrc
 safe_ln ~/dotfiles/vim/config ~/.vim/config
-safe_ln ~/dotfiles/vim/rc ~/.vim/rc
-safe_ln ~/dotfiles/vim/snippets ~/.vim/snippets
-safe_ln ~/dotfiles/vim/after ~/.vim/after
-safe_ln ~/dotfiles/vim/memo ~/.vim/memo
-safe_ln ~/dotfiles/vim/template ~/.vim/template
 # neovim
 safe_ln ~/dotfiles/nvim ~/.config/nvim
 
