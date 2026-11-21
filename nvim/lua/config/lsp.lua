@@ -60,6 +60,16 @@ local vue_bin = vim.fn.exepath("vue-language-server")
 if vue_bin ~= "" then
   local real = vim.uv.fs_realpath(vue_bin) or vue_bin
   local vue_pkg = vim.fs.root(real, "package.json")
+  if not vue_pkg then
+    -- devbox（nix）のものは bin が包みのスクリプトなので、中に書かれた本体の場所から探す
+    local f = io.open(real, "r")
+    local text = f and f:read(4096) or ""
+    if f then
+      f:close()
+    end
+    local js = text:match("(/[^%s'\"]+/bin/vue%-language%-server%.js)")
+    vue_pkg = js and vim.fs.root(js, "package.json")
+  end
   if vue_pkg then
     vim.lsp.config("vtsls", {
       filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },

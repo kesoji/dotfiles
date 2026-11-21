@@ -3,6 +3,11 @@
 -- 更新は :PackCooldown update だけ（初めて見てから30日たった版にだけ進む。lua/pack_cooldown.lua）。
 require("config.options")
 require("config.pack").setup()
+-- 見た目のポップアップ（通知・コマンドライン・キーの案内）。lockfile に無くて入っていないときは飛ばす
+local ok_ui, err_ui = pcall(require, "config.ui")
+if not ok_ui then
+  vim.notify("config.ui を読めませんでした: " .. tostring(err_ui), vim.log.levels.WARN)
+end
 require("config.plugins")
 require("config.lsp")
 require("config.autocmds")

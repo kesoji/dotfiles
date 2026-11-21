@@ -58,8 +58,8 @@ opt.splitkeep = "screen"
 opt.splitright = true
 opt.tabstop = 2
 opt.termguicolors = true
--- which-key が無くなったので、<leader> のあとのキーを待つ時間は標準（1秒）に戻す
-opt.timeoutlen = 1000
+-- <leader> のあとのキーを待つ時間（LazyVim と同じ 0.3秒。止まると which-key が案内を出す）
+opt.timeoutlen = 300
 opt.undofile = true
 opt.undolevels = 10000
 opt.updatetime = 200

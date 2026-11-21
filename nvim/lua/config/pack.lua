@@ -33,6 +33,11 @@ M.plugins = {
     branch = "main",
   },
   { name = "SchemaStore.nvim", src = "https://github.com/b0o/SchemaStore.nvim", branch = "main" },
+  -- 見た目: 右上の通知・真ん中のコマンドライン・キーの案内
+  { name = "nui.nvim", src = "https://github.com/MunifTanjim/nui.nvim", branch = "main" },
+  { name = "nvim-notify", src = "https://github.com/rcarriga/nvim-notify", branch = "master" },
+  { name = "noice.nvim", src = "https://github.com/folke/noice.nvim", branch = "main" },
+  { name = "which-key.nvim", src = "https://github.com/folke/which-key.nvim", branch = "main" },
 }
 
 M.lock_path = vim.fs.joinpath(vim.fn.stdpath("config"), "nvim-pack-lock.json")
