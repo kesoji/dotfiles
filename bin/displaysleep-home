@@ -13,6 +13,9 @@
 #   HOME_MIN=15   家での分数（電源・バッテリーとも）
 #   AC_MIN=5      外での分数（電源）
 #   BATT_MIN=2    外での分数（バッテリー）
+#   HOME_AUDIO="" 家になったときに切り替える音声の出力先（SwitchAudioSource -a -t output の名前。空なら何もしない）
+#   AWAY_AUDIO="" 外になったときに切り替える音声の出力先
+#   音声は家⇔外が変わったときだけ切り替える（その間に手で変えた出力先は上書きしない）。要 switchaudio-osx
 #
 # pmset は root が要る。sudoers には install が出す「決まった値だけ」の行を足す。
 set -euo pipefail
@@ -24,7 +27,8 @@ PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$CONF_DIR/log"
 SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 
-HOME_DISPLAYS=""; HOME_MIN=15; AC_MIN=5; BATT_MIN=2
+STATE="$CONF_DIR/state"
+HOME_DISPLAYS=""; HOME_MIN=15; AC_MIN=5; BATT_MIN=2; HOME_AUDIO=""; AWAY_AUDIO=""
 [ -f "$CONF" ] && . "$CONF"
 
 # 外部モニターを "vendor:product:serial<TAB>名前" で1行ずつ出す
@@ -70,12 +74,36 @@ apply() { # apply <-c|-b> <分>
 	fi
 }
 
-check() {
-	mkdir -p "$CONF_DIR"
-	if at_home; then
-		apply -c "$HOME_MIN"; apply -b "$HOME_MIN"
+switch_audio() { # switch_audio <出力先の名前>
+	local want="$1" sas cur
+	[ -n "$want" ] || return 0
+	sas="$(command -v SwitchAudioSource || echo /opt/homebrew/bin/SwitchAudioSource)"
+	[ -x "$sas" ] || { echo "$(date '+%F %T') 音声: SwitchAudioSource が無い（brew install switchaudio-osx）" >> "$LOG"; return 1; }
+	cur="$("$sas" -c -t output 2>/dev/null || true)"
+	[ "$cur" = "$want" ] && return 0
+	if "$sas" -t output -s "$want" >/dev/null 2>&1; then
+		echo "$(date '+%F %T') 音声: $cur -> $want" >> "$LOG"
 	else
-		apply -c "$AC_MIN"; apply -b "$BATT_MIN"
+		echo "$(date '+%F %T') 音声: $want に切り替えられない（出力先が見つからない?）" >> "$LOG"
+		return 1
+	fi
+}
+
+check() {
+	local now prev
+	mkdir -p "$CONF_DIR"
+	if at_home; then now=home; else now=away; fi
+	prev="$(cat "$STATE" 2>/dev/null || true)"
+	if [ "$now" != "$prev" ]; then
+		echo "$(date '+%F %T') 判定: ${prev:-なし} -> $now" >> "$LOG"
+		# 音声は変わったときだけ。切り替えに失敗したら state を進めず、次の回にもう一度試す
+		if [ "$now" = home ]; then switch_audio "$HOME_AUDIO"; else switch_audio "$AWAY_AUDIO"; fi \
+			&& echo "$now" > "$STATE"
+	fi
+	if [ "$now" = home ]; then
+		apply -c "$HOME_MIN" || true; apply -b "$HOME_MIN" || true
+	else
+		apply -c "$AC_MIN" || true; apply -b "$BATT_MIN" || true
 	fi
 }
 
@@ -96,6 +124,8 @@ HOME_DISPLAYS="$HOME_DISPLAYS"
 HOME_MIN=$HOME_MIN
 AC_MIN=$AC_MIN
 BATT_MIN=$BATT_MIN
+HOME_AUDIO="$HOME_AUDIO"
+AWAY_AUDIO="$AWAY_AUDIO"
 EOF
 }
 
@@ -145,7 +175,8 @@ EOF
 		echo "外しました。sudoers の行は sudo rm /etc/sudoers.d/displaysleep-home で消せます" ;;
 	status)
 		if at_home; then echo "判定: 家（${HOME_MIN}分にする）"; else echo "判定: 外（電源 ${AC_MIN}分・バッテリー ${BATT_MIN}分にする）"; fi
-		echo "いま: 電源 $(current AC)分・バッテリー $(current Battery)分"
+		echo "いま: 電源 $(current AC)分・バッテリー $(current Battery)分・音声 $(SwitchAudioSource -c -t output 2>/dev/null || echo ?)"
+		echo "音声の切り替え: 家 ${HOME_AUDIO:-（しない）} / 外 ${AWAY_AUDIO:-（しない）}"
 		echo "外部モニター:"; external_displays | sed 's/^/  /'
 		launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && echo "launchd: 登録あり" || echo "launchd: 登録なし"
 		[ -f "$LOG" ] && { echo "直近の記録:"; tail -3 "$LOG" | sed 's/^/  /'; } ;;
