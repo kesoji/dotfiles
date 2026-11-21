@@ -1,4 +1,6 @@
 #!/bin/sh
+# local は POSIX に無いが、macOS の /bin/sh（bash）も dash も使える
+# shellcheck disable=SC3043
 
 # Function to create symlink only if it doesn't exist or points to different target
 safe_ln() {
@@ -13,6 +15,14 @@ safe_ln() {
     return 1
   fi
 
+  # ふつうのファイルがあれば <名前>.bak.<日時> に退避してからリンクする（黙って上書きしない）
+  if [ ! -L "$target" ] && [ -e "$target" ]; then
+    local backup
+    backup="$target.bak.$(date +%Y%m%d%H%M%S)"
+    mv "$target" "$backup" || return 1
+    echo "safe_ln: 既にあった $target を $backup に退避しました"
+  fi
+
   # If target doesn't exist or is not a symlink, create it
   if [ ! -L "$target" ]; then
     ln -sfn "$source" "$target"
@@ -20,7 +30,8 @@ safe_ln() {
   fi
 
   # If target exists and is a symlink, check if it points to the correct source
-  local current_target=$(readlink "$target")
+  local current_target
+  current_target="$(readlink "$target")"
   if [ "$current_target" != "$source" ]; then
     ln -sfn "$source" "$target"
   fi

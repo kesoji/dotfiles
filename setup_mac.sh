@@ -4,6 +4,7 @@
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
@@ -15,12 +16,17 @@ confirm_and_execute() {
 
     echo -e "${BLUE}${description}${NC}"
     echo -e "${BOLD}現在の設定値: ${GREEN}$(eval "$read_command" 2>&1)${NC}"
-    read -p "$(echo -e ${YELLOW}"${write_command} を実行しますか? (Y/n): "${NC})" choice
+    # Ctrl-D（EOF）は「いいえ」
+    read -r -p "$(echo -e "${YELLOW}${write_command} を実行しますか? (Y/n): ${NC}")" choice || choice=n
 
     if [[ $choice =~ ^[Yy]$ || -z $choice ]]; then
-        eval "$write_command"
-        echo -e "${GREEN}✓${NC}\n"
-        return 0
+        if eval "$write_command"; then
+            echo -e "${GREEN}✓${NC}\n"
+            return 0
+        else
+            echo -e "${RED}✗ 失敗しました${NC}\n"
+            return 2
+        fi
     else
         echo -e "${YELLOW}スキップしました${NC}\n"
         return 1

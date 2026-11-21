@@ -1,6 +1,8 @@
 # switchaudio-osx を版と sha256 で固定したもの（homebrew/core の formula を元にした）。
 # 作者のアカウントが乗っ取られて別物の新しい版が出ても、ここを書き換えない限り入らない。
-# 版を上げるときは、新しい版の中身を確かめてから url と sha256 を手で書き換える。
+# 版を上げるときは、新しい版の中身を確かめてから url・sha256・version を手で書き換える。
+# 信頼の起点はこのファイル。pull したら homebrew/Formula/ の差分（url・sha256）を確かめる
+#（git log -p homebrew/Formula/）。書き換えた覚えのない差分があれば install-pinned.sh を流さない。
 class SwitchaudioOsxPinned < Formula
   desc "Change macOS audio source from the command-line (pinned version)"
   homepage "https://github.com/deweller/switchaudio-osx/"
