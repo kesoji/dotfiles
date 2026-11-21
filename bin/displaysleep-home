@@ -5,7 +5,7 @@
 #   displaysleep-home add-current  … いまつながっている外部モニターを「家のモニター」として設定に書く
 #   displaysleep-home install      … launchd に登録し、sudoers に足す行を出す
 #   displaysleep-home uninstall    … launchd から外し、元の値に戻す
-#   displaysleep-home status       … 判定といまの値を出す
+#   displaysleep-home status       … 判定といまの値を出す（5分以上動いていなければ警告）
 #   displaysleep-home check        … 判定して pmset を合わせる（launchd が呼ぶ）
 #
 # 設定（リポジトリの外）: ~/.config/displaysleep-home/conf
@@ -26,8 +26,14 @@ CONF="$CONF_DIR/conf"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$CONF_DIR/log"
 SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+# launchd に覚えさせるパス。worktree や別の clone から install しても、ここを書く（消えるパスを覚えさせない）
+INSTALL_PATH="$HOME/dotfiles/bin/displaysleep-home"
 
 STATE="$CONF_DIR/state"
+LAST_RUN="$CONF_DIR/last-run" # check のたびに更新する（止まったことに気づくため。zprofile も見る）
+NOTED="$CONF_DIR/noted"       # 前の回に書いた判定・失敗の記録（同じものを毎分書かないため）
+DEDUP=0
+noted_now=""
 HOME_DISPLAYS=""; HOME_MIN=15; AC_MIN=5; BATT_MIN=2; HOME_AUDIO=""; AWAY_AUDIO=""
 [ -f "$CONF" ] && . "$CONF"
 
@@ -54,6 +60,25 @@ at_home() {
 	return 1
 }
 
+# 判定と失敗をログに書く。check の中では、前の回にも書いたものは状態が変わるまで書かない
+note() {
+	local msg="$1"
+	if [ "$DEDUP" = 1 ]; then
+		noted_now+="$msg"$'\n'
+		grep -qxF -- "$msg" "$NOTED" 2>/dev/null && return 0
+	fi
+	echo "$(date '+%F %T') $msg" >> "$LOG"
+}
+
+# SwitchAudioSource のパス（launchd の PATH には Homebrew が無いので、決まった場所も見る）
+find_sas() {
+	local p
+	for p in "$(command -v SwitchAudioSource 2>/dev/null || true)" /opt/homebrew/bin/SwitchAudioSource /usr/local/bin/SwitchAudioSource; do
+		[ -n "$p" ] && [ -x "$p" ] && { echo "$p"; return 0; }
+	done
+	return 1
+}
+
 # いまの値: current <AC|Battery>
 current() {
 	/usr/bin/pmset -g custom | awk -v p="$1 Power:" '
@@ -69,7 +94,7 @@ apply() { # apply <-c|-b> <分>
 	if sudo -n /usr/bin/pmset "$flag" displaysleep "$want" 2>/dev/null; then
 		echo "$(date '+%F %T') $prof: $cur -> $want" >> "$LOG"
 	else
-		echo "$(date '+%F %T') $prof: $cur -> $want に変えられない（sudoers を確認: ${SELF} install）" >> "$LOG"
+		note "$prof: $cur -> $want に変えられない（sudoers を確認: ${INSTALL_PATH} install）"
 		return 1
 	fi
 }
@@ -77,14 +102,13 @@ apply() { # apply <-c|-b> <分>
 switch_audio() { # switch_audio <出力先の名前>
 	local want="$1" sas cur
 	[ -n "$want" ] || return 0
-	sas="$(command -v SwitchAudioSource || echo /opt/homebrew/bin/SwitchAudioSource)"
-	[ -x "$sas" ] || { echo "$(date '+%F %T') 音声: SwitchAudioSource が無い（brew install switchaudio-osx）" >> "$LOG"; return 1; }
+	sas="$(find_sas)" || { note "音声: SwitchAudioSource が無い（~/dotfiles/homebrew/install-pinned.sh で入れる）"; return 1; }
 	cur="$("$sas" -c -t output 2>/dev/null || true)"
 	[ "$cur" = "$want" ] && return 0
 	if "$sas" -t output -s "$want" >/dev/null 2>&1; then
 		echo "$(date '+%F %T') 音声: $cur -> $want" >> "$LOG"
 	else
-		echo "$(date '+%F %T') 音声: $want に切り替えられない（出力先が見つからない?）" >> "$LOG"
+		note "音声: $want に切り替えられない（出力先が見つからない?）"
 		return 1
 	fi
 }
@@ -92,10 +116,12 @@ switch_audio() { # switch_audio <出力先の名前>
 check() {
 	local now prev
 	mkdir -p "$CONF_DIR"
+	touch "$LAST_RUN"
+	DEDUP=1
 	if at_home; then now=home; else now=away; fi
 	prev="$(cat "$STATE" 2>/dev/null || true)"
 	if [ "$now" != "$prev" ]; then
-		echo "$(date '+%F %T') 判定: ${prev:-なし} -> $now" >> "$LOG"
+		note "判定: ${prev:-なし} -> $now"
 		# 音声は変わったときだけ。切り替えに失敗したら state を進めず、次の回にもう一度試す
 		if [ "$now" = home ]; then switch_audio "$HOME_AUDIO"; else switch_audio "$AWAY_AUDIO"; fi \
 			&& echo "$now" > "$STATE"
@@ -104,6 +130,20 @@ check() {
 		apply -c "$HOME_MIN" || true; apply -b "$HOME_MIN" || true
 	else
 		apply -c "$AC_MIN" || true; apply -b "$BATT_MIN" || true
+	fi
+	printf '%s' "$noted_now" > "$NOTED"
+}
+
+# 5分以上 check が動いていなければ警告する
+warn_if_stale() {
+	local t
+	t="$(/usr/bin/stat -f %m "$LAST_RUN" 2>/dev/null || echo 0)"
+	if [ $(( $(/bin/date +%s) - t )) -ge 300 ]; then
+		if [ "$t" = 0 ]; then
+			echo "警告: check が一度も動いた記録が無い（${LAST_RUN} が無い）。launchd の登録と ${INSTALL_PATH} を確かめる"
+		else
+			echo "警告: check が5分以上動いていない（最後: $(/bin/date -r "$t" '+%F %T')）。launchd の登録と ${INSTALL_PATH} を確かめる"
+		fi
 	fi
 }
 
@@ -132,17 +172,29 @@ EOF
 case "${1:-check}" in
 	check) check ;;
 	add-current)
-		found=0
+		found=0; ok=0
 		while IFS=$'\t' read -r key name; do
 			found=1
-			case " $HOME_DISPLAYS " in *" $key "*) echo "登録済み: $name ($key)"; continue ;; esac
+			case " $HOME_DISPLAYS " in *" $key "*) echo "登録済み: $name ($key)"; ok=1; continue ;; esac
+			serial="${key##*:}"
+			if [ -z "$serial" ] || [ "$serial" = 0 ]; then
+				# シリアルが無いと同じ機種ならどこでも「家」になる（会社やコワーキングの同じモニターでも長くなる）
+				echo "登録しない: $name ($key)。シリアル番号を返さないモニターは、同じ機種と見分けられない" >&2
+				continue
+			fi
 			HOME_DISPLAYS="${HOME_DISPLAYS:+$HOME_DISPLAYS }$key"
-			echo "追加: $name ($key)"
+			echo "追加: $name ($key)"; ok=1
 		done < <(external_displays)
 		[ "$found" = 1 ] || { echo "外部モニターがつながっていません" >&2; exit 1; }
+		[ "$ok" = 1 ] || { echo "登録できる外部モニターがありません" >&2; exit 1; }
 		write_conf
 		echo "設定: $CONF" ;;
 	install)
+		if [ ! -x "$INSTALL_PATH" ]; then
+			echo "${INSTALL_PATH} がありません。launchd にはこのパスを登録するので、~/dotfiles に clone してから流してください" >&2
+			exit 1
+		fi
+		[ "$SELF" = "$INSTALL_PATH" ] || echo "注意: launchd には ${SELF} ではなく ${INSTALL_PATH} を登録する"
 		[ -f "$CONF" ] || write_conf
 		mkdir -p "$(dirname "$PLIST")" "$CONF_DIR"
 		cat > "$PLIST" <<EOF
@@ -151,7 +203,7 @@ case "${1:-check}" in
 <plist version="1.0">
 <dict>
 	<key>Label</key><string>$LABEL</string>
-	<key>ProgramArguments</key><array><string>$SELF</string><string>check</string></array>
+	<key>ProgramArguments</key><array><string>$INSTALL_PATH</string><string>check</string></array>
 	<key>StartInterval</key><integer>60</integer>
 	<key>RunAtLoad</key><true/>
 	<key>StandardErrorPath</key><string>$LOG</string>
@@ -159,7 +211,13 @@ case "${1:-check}" in
 </plist>
 EOF
 		launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-		launchctl bootstrap "gui/$(id -u)" "$PLIST"
+		# bootout は非同期。解除し切る前だと "Bootstrap failed: 5" になるので、1秒おいて3回まで試す
+		ok=0
+		for i in 1 2 3; do
+			if launchctl bootstrap "gui/$(id -u)" "$PLIST"; then ok=1; break; fi
+			[ "$i" = 3 ] || sleep 1
+		done
+		[ "$ok" = 1 ] || { echo "launchd に登録できませんでした（launchctl bootstrap gui/$(id -u) ${PLIST}）" >&2; exit 1; }
 		echo "launchd に登録: ${PLIST}（1分ごと）"
 		echo
 		echo "pmset をパスワード無しで流すため、次を実行して下の行を貼ってください:"
@@ -175,10 +233,15 @@ EOF
 		echo "外しました。sudoers の行は sudo rm /etc/sudoers.d/displaysleep-home で消せます" ;;
 	status)
 		if at_home; then echo "判定: 家（${HOME_MIN}分にする）"; else echo "判定: 外（電源 ${AC_MIN}分・バッテリー ${BATT_MIN}分にする）"; fi
-		echo "いま: 電源 $(current AC)分・バッテリー $(current Battery)分・音声 $(SwitchAudioSource -c -t output 2>/dev/null || echo ?)"
+		sas="$(find_sas || echo SwitchAudioSource)"
+		echo "いま: 電源 $(current AC)分・バッテリー $(current Battery)分・音声 $("$sas" -c -t output 2>/dev/null || echo ?)"
 		echo "音声の切り替え: 家 ${HOME_AUDIO:-（しない）} / 外 ${AWAY_AUDIO:-（しない）}"
 		echo "外部モニター:"; external_displays | sed 's/^/  /'
-		launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && echo "launchd: 登録あり" || echo "launchd: 登録なし"
+		if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
+			echo "launchd: 登録あり"; warn_if_stale
+		else
+			echo "launchd: 登録なし"
+		fi
 		[ -f "$LOG" ] && { echo "直近の記録:"; tail -3 "$LOG" | sed 's/^/  /'; } ;;
 	*) sed -n '2,10p' "$0"; exit 2 ;;
 esac
