@@ -88,6 +88,9 @@ const DEFAULT_CFG = {
   // 登録から run が1つも見つからないまま deploy-missing を出すまでの秒数。
   deployPollSec: 20,
   deployMissingSec: 300,
+  // cos watch: ターンが終わったのに報告書が「進行中」のまま、この分数動かない作業セッションを stalled として出す
+  // （API の接続切れなどで応答の途中で止まり、入力待ちのまま放置されるのを拾うため）。
+  stallMin: 20,
 };
 const DAY_MS = 86_400_000;
 
@@ -167,6 +170,29 @@ export function detectEvents(workers, agents) {
     }
   }
   return { events, seen };
+}
+
+// 画面の末尾に API のエラーが出ているか（応答の途中で切れて、入力待ちのまま止まった印）。
+export const API_ERROR_RE = /API Error|Connection lost mid-response|Request timed out|overloaded_error|Internal server error/i;
+export function screenShowsApiError(text) {
+  return API_ERROR_RE.test(text ?? '');
+}
+
+// ターンが終わった（idle/done）のに報告書が「進行中」のまま stallMs 以上動かない作業セッション＝止まった疑い。
+// 終わった直後の idle は detectEvents が出すが、CoS が「途中経過」と読んで張り直すと、そのまま誰も気づかない。
+// 同じ止まり（lastSeen.seq）では一度だけ出す。lastSeenAt が無い（前の版の台帳）ときは startedAt から数える。
+export function detectStalled(workers, nowMs, stallMs, reportStateOf) {
+  const out = [];
+  for (const w of workers) {
+    const ls = w.lastSeen;
+    if (!ls || (ls.status !== 'idle' && ls.status !== 'done')) continue;
+    const since = Date.parse(w.lastSeenAt ?? w.startedAt ?? '');
+    if (!Number.isFinite(since) || nowMs - since < stallMs) continue;
+    if (w.stallNotified === String(ls.seq)) continue;
+    if (reportStateOf(w) !== '進行中') continue;
+    out.push({ id: w.id, agent: w.agent, status: 'stalled', seq: ls.seq });
+  }
+  return out;
 }
 
 export function renderTemplate(tpl, vars) {
@@ -1254,11 +1280,16 @@ function cmdWatch(argv) {
     const led = readLedger(ctx);
     const ws = Object.values(led.workers).filter((w) => WATCHED.has(w.state));
     // 作業セッションが0本なら herdr に問い合わせない（0本でも見張りは終わらない＝振り返りの期限を待つ）。
-    const { events, seen } = ws.length > 0 ? detectEvents(ws, herdr(['agent', 'list']).result.agents) : { events: [], seen: {} };
+    const agents = ws.length > 0 ? herdr(['agent', 'list']).result.agents : [];
+    const { events, seen } = ws.length > 0 ? detectEvents(ws, agents) : { events: [], seen: {} };
     if (Object.keys(seen).length > 0) {
       updateLedger(ctx, (l) => {
-        for (const [id, st] of Object.entries(seen)) if (l.workers[id]) l.workers[id].lastSeen = st;
+        for (const [id, st] of Object.entries(seen)) if (l.workers[id]) Object.assign(l.workers[id], { lastSeen: st, lastSeenAt: now() });
       });
+    }
+    // 終わったまま「進行中」で動かない作業セッション（同じ周で出来事が出ている作業セッションは除く）
+    for (const ev of detectStalled(ws, Date.now(), ctx.cfg.stallMin * 60_000, (w) => readReport(w).state)) {
+      if (!seen[ev.id]) events.push(ev);
     }
     // 見張り中のデプロイ（登録が無ければ gh を呼ばない・問い合わせは deployPollSec ごと）
     const deployEvents = pollDeploys(ctx, { pollMs: Math.max(ctx.cfg.deployPollSec * 1000, intervalMs), missingMs: ctx.cfg.deployMissingSec * 1000 });
@@ -1288,6 +1319,19 @@ function cmdWatch(argv) {
         const w = led.workers[ev.id];
         ev.report = readReport(w).state;
         ev.startBlocked = w.state === 'start-blocked' || undefined;
+        if (ev.status === 'idle' || ev.status === 'done' || ev.status === 'stalled') {
+          const a = findAgent(w, agents);
+          try {
+            if (a) ev.apiError = screenShowsApiError(herdr(['agent', 'read', a.pane_id, '--source', 'recent-unwrapped', '--lines', '15'], { json: false })) || undefined;
+          } catch {
+            // 画面が読めなくても出来事は出す
+          }
+        }
+        if (ev.status === 'stalled') {
+          updateLedger(ctx, (l) => {
+            if (l.workers[ev.id]) l.workers[ev.id].stallNotified = String(ev.seq);
+          });
+        }
         logEvent(ctx, { kind: 'event', ...ev });
         console.log(JSON.stringify(ev));
       }
@@ -1302,8 +1346,9 @@ function cmdWatch(argv) {
           done: 'ターンが終わった',
           blocked: '承認や質問の画面で止まっている',
           gone: 'エージェントがいなくなった',
+          stalled: `ターンが終わったまま ${ctx.cfg.stallMin} 分以上動いていない（止まった疑い。cos read で画面を見る）`,
         }[ev.status];
-        console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}`);
+        console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}${ev.apiError ? `・画面に API のエラー（応答の途中で切れて止まった。cos send ${ev.id} --seen で続きを促す）` : ''}`);
       }
       for (const ev of deployEvents) console.log(deployLine(ev));
       console.log('\n対応したら cos watch を張り直してください。');
@@ -2078,10 +2123,26 @@ function cmdRoot(argv) {
   console.log(opt.sub ? ctx.sub : ctx.root);
 }
 
+function selfTestStall(assert) {
+  const T = Date.parse('2026-11-21T10:00:00Z');
+  const w = (o) => ({ id: 'A', agent: 'a', lastSeen: { status: 'idle', seq: 3 }, lastSeenAt: '2026-11-21T09:00:00Z', ...o });
+  const prog = () => '進行中';
+  assert(detectStalled([w()], T, 20 * 60_000, prog).length === 1, '1時間「進行中」のまま idle なら stalled');
+  assert(detectStalled([w({ lastSeenAt: '2026-11-21T09:50:00Z' })], T, 20 * 60_000, prog).length === 0, '10分なら出さない');
+  assert(detectStalled([w()], T, 20 * 60_000, () => '完了').length === 0, '完了なら出さない');
+  assert(detectStalled([w({ lastSeen: { status: 'working', seq: 3 } })], T, 20 * 60_000, prog).length === 0, '作業中なら出さない');
+  assert(detectStalled([w({ stallNotified: '3' })], T, 20 * 60_000, prog).length === 0, '同じ止まりは一度だけ');
+  assert(detectStalled([w({ stallNotified: '2' })], T, 20 * 60_000, prog).length === 1, '別の止まりはまた出す');
+  assert(detectStalled([w({ lastSeenAt: undefined, startedAt: '2026-11-21T08:00:00Z' })], T, 20 * 60_000, prog).length === 1, 'lastSeenAt が無ければ startedAt');
+  assert(screenShowsApiError('⏺ API Error: Connection lost mid-response.'), 'API Error を見つける');
+  assert(!screenShowsApiError('ラベルをつなぎました'), '普通の画面は API エラーでない');
+}
+
 function selfTest() {
   const assert = (c, m) => {
     if (!c) throw new Error(`self-test 失敗: ${m}`);
   };
+  selfTestStall(assert);
   assert(slug('T-42') === 't-42', 'slug');
   assert(agentName('', 't-42') === 't-42', 'agentName 素');
   assert(agentName('ab-', 't-42') === 'ab-t-42', 'agentName 接頭辞');
