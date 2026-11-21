@@ -4,6 +4,9 @@
 #   cos chief [claude への追加の引数...]
 #
 # - リポジトリの本体の作業ツリーで動かす（worktree の中なら注意を出す）。
+# - cwd から上へ .claude/cos.json を探し、見つかったディレクトリで起動する（サブディレクトリで見つかれば
+#   そのサブディレクトリ専用の CoS。無ければ git の最上位）。そこを COS_ROOT に入れる＝CoS が cd しても、
+#   cos のコマンドとフックは同じ CoS の台帳を見る。
 # - 長く聞き続ける前提なので、コンテキストが 60% で自動要約（auto compact）する
 #   （CLAUDE_AUTOCOMPACT_PCT_OVERRIDE。COS_AUTOCOMPACT_PCT で変えられる）。
 # - 起動時に振り返りの期限を、要約や /clear のあとに CoS であることと立て直す手順を文脈に戻すフックを足す
@@ -18,8 +21,12 @@ main="$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')"
 if [ "$top" != "$main" ]; then
   echo "cos chief: 注意: ここは本体の作業ツリーではありません（$top）。CoS はふつう本体（$main）で動かします。" >&2
 fi
-cd "$top"
+# 外から受け継いだ COS_ROOT（CoS の中で打った場合など）ではなく、いまの場所から決める。
+root="$(COS_ROOT= node "$here/scripts/cos.mjs" root)"
+sub="$(COS_ROOT= node "$here/scripts/cos.mjs" root --sub)"
+cd "$root"
 
 export COS_CHIEF=1
+export COS_ROOT="$root"
 export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE="${COS_AUTOCOMPACT_PCT:-60}"
-exec claude --name "CoS $(basename "$main")" --settings "$here/chief-settings.json" "$@" "/chief-of-staff"
+exec claude --name "CoS $(basename "$main")${sub:+/$sub}" --settings "$here/chief-settings.json" "$@" "/chief-of-staff"

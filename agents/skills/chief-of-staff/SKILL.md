@@ -23,11 +23,11 @@ CoS の価値は2つ。
 
 - herdr のペインの中で動いていること（`test "$HERDR_ENV" = 1`）。違えばそう伝えて止まる。
 - コマンドは `cos`（`node ~/.claude/skills/chief-of-staff/scripts/cos.mjs` と同じ）。`cos help` で一覧。
-- リポジトリに `.claude/cos.json` があれば設定として読まれる（下の「リポジトリ側の設定」）。`chiefRules` が指すファイルがあれば、**CoS として動く前に必ず読む**（そのリポジトリでのタスクの選び方・取り込み方・台帳の書き方）。
+- リポジトリに `.claude/cos.json` があれば設定として読まれる（下の「リポジトリ側の設定」。サブディレクトリに置くと、そのサブディレクトリ専用の CoS になる＝「サブディレクトリごとに CoS を分ける」）。`chiefRules` が指すファイルがあれば、**CoS として動く前に必ず読む**（そのリポジトリでのタスクの選び方・取り込み方・台帳の書き方）。
 
 ## 起動のしかた
 
-herdr で、リポジトリの本体の作業ツリーにいるペインから:
+herdr で、リポジトリの本体の作業ツリーにいるペインから（サブディレクトリ専用の CoS なら、そのサブディレクトリの中から）:
 
 ```bash
 cos chief            # claude を CoS として起動する（/chief-of-staff を読み込んだ状態で始まる）
@@ -171,6 +171,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos retro done [--file F]` | 振り返りを締めて期限を進める |
 | `cos reorient [--hook]` | （フック用）起動時・要約や /clear のあとに文脈を戻し、CoS のセッションを記録する |
 | `cos reorient --hook --known-only` | （ユーザー全体の設定のフック用）記録済みの CoS を `cos chief` 無しで開いたときだけ文脈と注意を戻す。ほかは何も出さず何も書かない |
+| `cos root [--sub]` | 今の場所の CoS のディレクトリ（cos.json を上へ探したもの・無ければ最上位）。`--sub` は最上位からの相対（最上位の CoS なら空） |
 | `cos self-test` | 判定の自己テスト |
 
 ## リポジトリ側の設定（`.claude/cos.json`・任意）
@@ -198,9 +199,9 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 }
 ```
 
-- `worktreeDir`: 作業 worktree を置く場所（本体の作業ツリーからの相対）。本体の下に置くと、Claude Code のフォルダの信頼を引き継ぐので起動時の確認で止まらない。git 管理外にしておくこと。
+- `worktreeDir`: 作業 worktree を置く場所（本体の作業ツリーの最上位からの相対。サブディレクトリの cos.json でも最上位から）。本体の下に置くと、Claude Code のフォルダの信頼を引き継ぐので起動時の確認で止まらない。git 管理外にしておくこと。
 - `setup`: 新しい worktree でエージェントを起動する前に流すコマンド（依存の取得・git 管理外の設定のコピー等）。失敗すると spawn が止まる。
-- `workerRules` / `chiefRules`: 作業セッション向け／CoS 向けの、そのリポジトリの決まり（ファイルへの相対パス）。`workerRules` は依頼書に差し込まれる。
+- `workerRules` / `chiefRules`: 作業セッション向け／CoS 向けの、そのリポジトリの決まり（その cos.json のあるディレクトリ＝`.claude` の親からの相対パス）。`workerRules` は依頼書に差し込まれる。
 - `defaultBase`: `--base` を付けなかったときの土台（例 `"origin/staging"`）。空なら CoS のツリーの HEAD。`<リモート>/<ブランチ>` の形なら、立てる前にそのブランチを fetch する（本体の作業ツリーのブランチが古くても、最新から立つ）。`--repo` では対象の cos.json の値を使う。
 - `requireInReport` / `forbidInReport`: `cos check` が報告書の「## 検証」で探す語（必ず要る語／残っていてはいけない語。例 `["決裁書"]`・`["[停止]"]`）。禁止語は、語の直後が「なし」「0件」などの行と、「直した」「修正済」「解消」を含む行では数えない。`--repo` の依頼もハブの値を使う。
 - `reportCommands`: 「検証」に実行したコマンドの行があるとみなす文字列（どれか1つが含まれればよい）。空の配列なら見ない。
@@ -211,11 +212,22 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
 - `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。
 
+### サブディレクトリごとに CoS を分ける
+
+1つのリポジトリに複数のアプリが同居していて、アプリごとに別の CoS を動かしたいときは、そのアプリのディレクトリに `.claude/cos.json` を置く（例 `apps/web/.claude/cos.json`）。
+
+- **探し方**: cos は cwd から git の最上位まで上へ `.claude/cos.json` を探し、最初に見つかったものを使う。どこにも無ければ最上位の CoS（設定は既定値）。最上位にだけある・どこにも無いリポジトリは今までと同じ。
+- **状態の置き場所**: 最上位の CoS は `<git-common-dir>/cos/`。サブディレクトリ `<sub>` の CoS は `<git-common-dir>/cos/sub/<sub を encodeURIComponent したもの>/`（例 `apps/web` → `cos/sub/apps%2Fweb/`）。台帳・出来事・振り返り・chief.json・デプロイの見張りが別になる＝2つの CoS が出来事を取り合わない。`COS_DIR` があればそれが最優先。
+- **起動**: そのサブディレクトリ（の下）で `cos chief`。cos.json のあるディレクトリで claude を起動し、そこを `COS_ROOT` に入れる。cos のコマンドとフック（`cos reorient --hook`・`--known-only`）は cwd の代わりに `COS_ROOT` から探すので、CoS が Bash で最上位へ cd しても同じ CoS のまま。`cos chief` を通らずに CoS にしたセッションは cwd で決まるので、cos のコマンドはそのサブディレクトリで打つ。`cos root` で今の場所がどの CoS か（cos.json のあるディレクトリ）を確かめられる。
+- **相対パスの基準**: `workerRules`・`chiefRules` は cos.json のあるディレクトリから。`worktreeDir` は最上位から（worktree はリポジトリ全体の写しなので、最上位の CoS と同じ置き場所にまとめる。git 管理外になっていなければ `info/exclude` に足す）。
+- **作業セッション**: worktree はリポジトリ全体で作り、その中の同じサブディレクトリで起動する（そこの `CLAUDE.md`・`.claude/` が効く。土台にそのサブディレクトリが無ければ worktree の最上位）。`setup` もそこで流れる。
+- **名前の衝突**: 最上位の CoS と同じリポジトリでブランチ・worktree・herdr のエージェント名を使うので、`agentPrefix` と `branchPrefix` を分ける（例 `"agentPrefix": "web-"`・`"branchPrefix": "cos/web-"`）。分けなくても同じ名前があれば spawn が断る。
+
 ### 複数のリポジトリを1つの CoS で扱う（`--repo`）
 
 ときどき触るリポジトリをまとめて扱うときは、コードの無い小さなリポジトリ（ハブ）を作り、そこで `cos chief` を起動する。ハブの `cos.json` の `repos` に対象を並べ、`cos spawn <ID> --repo <名前> …` で立てる。
 
-- ハブの `cos status` は、`repos` に並べた各リポジトリに CoS の台帳（そこで `cos chief` を動かしたときのもの）があれば、ハブの台帳の後ろに `[名前] の CoS:` として並べる（読むだけ。見張り・`cos send` などの対象はハブの台帳だけ）。
+- ハブの `cos status` は、`repos` に並べた各リポジトリ（パスがサブディレクトリなら、そこから上へ cos.json を探した CoS）に CoS の台帳（そこで `cos chief` を動かしたときのもの）があれば、ハブの台帳の後ろに `[名前] の CoS:` として並べる（読むだけ。見張り・`cos send` などの対象はハブの台帳だけ）。
 - 台帳・依頼書の決まり（`workerRules`）・見張り・振り返りはハブに置く。worktree・ブランチ・準備・`cos status` のマージ済みの判定・`cos close` の片付けは対象のリポジトリで行う。
 - 作業セッションは対象の worktree（対象の `worktreeDir`、既定 `.claude/worktrees`）で起動する。対象の `.claude/`（フック・権限）がそのまま効く。置き場所が対象で git 管理外になっていなければ、対象の `info/exclude` に足す。
 - herdr のワークスペースはハブの下ではなく、対象のリポジトリのものとしてサイドバーに出る。

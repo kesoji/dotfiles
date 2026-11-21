@@ -18,6 +18,7 @@
 //   cos reorient --hook --known-only   （ユーザー全体の設定のフック用）chief.json にあるセッションを `cos chief` 無しで再開したときだけ戻す
 //   cos self-test
 //   cos chief               CoS のセッションを起動する（bin/cos が scripts/chief.sh へ渡す）
+//   cos root [--sub]        この場所の CoS のディレクトリ（chief.sh 用）
 //
 // 状態の正本（git 管理外・worktree をまたいで1つ）:
 //   <git-common-dir>/cos/ledger.json    作業セッションの台帳
@@ -30,7 +31,11 @@
 // 依頼書と報告書は作業セッションの作業ツリーの `.cos/<slug>/` に置く（info/exclude で git から外す）。
 // 環境変数 COS_DIR で状態の置き場所を差し替えられる（試験用＝本物の台帳を触らずに watch などを試す）。
 //
-// 設定は CoS が動いている作業ツリーの `.claude/cos.json`（無くてもよい）。項目は SKILL.md を参照。
+// 設定は `.claude/cos.json`（無くてもよい）。項目は SKILL.md を参照。cwd から git の最上位まで上へ探し、
+// 最初に見つかったものを使う（どこにも無ければ最上位の CoS）。サブディレクトリ <sub> で見つかったら、
+// そのサブディレクトリ専用の CoS＝状態は <git-common-dir>/cos/sub/<encodeURIComponent(sub)>/ に分ける
+// （最上位の CoS の置き場所は今までと同じ）。COS_ROOT が設定されていれば cwd の代わりにそこから探す
+// （`cos chief` が入れる＝CoS が cd しても同じ CoS のまま）。COS_DIR があればそれが最優先。
 //
 // --repo: 作業ツリーを CoS のリポジトリ（ハブ）ではなく別のリポジトリ（対象）に作る。台帳・依頼書の決まり・
 // 見張りはハブに置いたまま、worktree・ブランチ・準備・マージ済みの判定・片付けは対象のリポジトリで行う。
@@ -51,7 +56,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -100,6 +105,24 @@ export function knownOnlyDecision({ env = {}, sid, sessions }) {
   if (!sid) return 'no-session';
   if (!sessions || !Object.hasOwn(sessions, sid)) return 'unknown';
   return 'emit';
+}
+
+// cos.json を探す: rel（git の最上位から cwd への相対・'/' 区切り・'' は最上位）から上へ、
+// hasCfg(dir) が真になる最初のディレクトリ（最上位からの相対）。どこにも無ければ ''（最上位）。
+export function findCosSub(rel, hasCfg) {
+  const parts = rel ? rel.split('/').filter((x) => x && x !== '.') : [];
+  for (let n = parts.length; n > 0; n--) {
+    const r = parts.slice(0, n).join('/');
+    if (hasCfg(r)) return r;
+  }
+  return '';
+}
+
+// 状態の置き場所。COS_DIR → サブディレクトリの CoS は cos/sub/<sub を1段に符号化> → 最上位は cos/（今までと同じ）。
+// sub を1段にするのは、入れ子のサブディレクトリ（a と a/archive）が互いの archive/・retros/ とぶつからないため。
+export function stateDirFor(common, sub, envDir) {
+  if (envDir) return resolve(envDir);
+  return sub ? join(common, 'cos', 'sub', encodeURIComponent(sub)) : join(common, 'cos');
 }
 
 export function slug(id) {
@@ -534,19 +557,38 @@ function writeAtomic(file, text) {
   renameSync(tmp, file);
 }
 
-function repoCtx(cwd = process.cwd()) {
-  let top;
+// cos のコマンドが CoS の場所として見るディレクトリ。`cos chief` は COS_ROOT を入れる（CoS が cd しても変わらない）。
+function startDir() {
+  const r = process.env.COS_ROOT;
+  if (!r) return process.cwd();
+  if (!existsSync(r)) die(`COS_ROOT（${r}）がありません`);
+  return r;
+}
+
+// git の最上位・共有の git ディレクトリ・CoS のサブディレクトリ（cos.json を上へ探す）・状態の置き場所。
+// envDir は COS_DIR（ハブが別のリポジトリの台帳を読むときは渡さない）。
+function locate(cwd, envDir) {
+  const top = git(['rev-parse', '--show-toplevel'], cwd);
+  const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], top);
+  let rel = relative(realpathSync(top), realpathSync(cwd));
+  if (rel.startsWith('..') || isAbsolute(rel)) rel = '';
+  const sub = findCosSub(rel.split(sep).join('/'), (r) => existsSync(join(top, r, '.claude', 'cos.json')));
+  return { top, common, sub, root: sub ? join(top, sub) : top, dir: stateDirFor(common, sub, envDir) };
+}
+
+function repoCtx(cwd = startDir()) {
+  let loc;
   try {
-    top = git(['rev-parse', '--show-toplevel'], cwd);
+    loc = locate(cwd, process.env.COS_DIR);
   } catch {
     die('git リポジトリの中で実行してください');
   }
-  const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], top);
+  const { top, common, sub, root, dir } = loc;
   const main = git(['worktree', 'list', '--porcelain'], top)
     .split('\n')
     .find((l) => l.startsWith('worktree '))
     .slice('worktree '.length);
-  const cfgFile = join(top, '.claude', 'cos.json');
+  const cfgFile = join(root, '.claude', 'cos.json');
   let user = {};
   if (existsSync(cfgFile)) {
     try {
@@ -558,9 +600,10 @@ function repoCtx(cwd = process.cwd()) {
   const cfg = { ...DEFAULT_CFG, ...user };
   if (!(Number(cfg.retroIntervalDays) > 0)) die(`${cfgFile} の retroIntervalDays が正の数ではありません: ${cfg.retroIntervalDays}`);
   cfg.retroIntervalDays = Number(cfg.retroIntervalDays);
-  const dir = process.env.COS_DIR ? resolve(process.env.COS_DIR) : join(common, 'cos');
   return {
-    top, common, main, cfg, dir,
+    // root: cos.json のあるディレクトリ（workerRules・chiefRules の基準）。sub: 最上位からの相対（'' は最上位の CoS）。
+    // worktreeDir は最上位（本体）の基準のまま（worktree はリポジトリ全体の写しなので）。
+    top, common, main, cfg, dir, sub, root, cfgFile,
     ledgerFile: join(dir, 'ledger.json'),
     eventsFile: join(dir, 'events.jsonl'),
     retroFile: join(dir, 'retro.json'),
@@ -836,10 +879,11 @@ function ensureExcluded(common, pattern, note = '依頼書・報告書') {
 }
 
 // 作業ツリーを作るリポジトリ。--repo が無ければ CoS のリポジトリ（ハブ）自身。
+// sub はそのリポジトリの CoS のサブディレクトリ（作業セッションは worktree の中の同じサブディレクトリで起動する）。
 // --repo はハブの cos.json の repos にある名前か、パス（~ 可）。repos の値はパスか {path, setup}。
 // 対象の準備は repos の setup → 対象の cos.json の setup の順で選ぶ。worktree の置き場所は対象の cos.json の worktreeDir（既定 .claude/worktrees）。
 function repoFor(ctx, spec) {
-  const self = { name: null, top: ctx.top, main: ctx.main, common: ctx.common, worktreeDir: ctx.cfg.worktreeDir, setup: ctx.cfg.setup, defaultBase: ctx.cfg.defaultBase };
+  const self = { name: null, top: ctx.top, main: ctx.main, common: ctx.common, sub: ctx.sub, worktreeDir: ctx.cfg.worktreeDir, setup: ctx.cfg.setup, defaultBase: ctx.cfg.defaultBase };
   if (!spec) return self;
   const ent = ctx.cfg.repos?.[spec];
   const raw = typeof ent === 'string' ? ent : ent?.path ?? spec;
@@ -848,7 +892,7 @@ function repoFor(ctx, spec) {
   const t = repoCtx(abs);
   if (realpathSync(t.main) === realpathSync(ctx.main)) return self;
   return {
-    name: ent ? spec : basename(t.main), top: t.main, main: t.main, common: t.common,
+    name: ent ? spec : basename(t.main), top: t.main, main: t.main, common: t.common, sub: t.sub,
     worktreeDir: t.cfg.worktreeDir, setup: (typeof ent === 'object' && ent?.setup) || t.cfg.setup || '',
     defaultBase: t.cfg.defaultBase,
   };
@@ -866,7 +910,7 @@ function resolveBase(R, optBase) {
 }
 
 // 対象のリポジトリで worktree の置き場所が git 管理外になっていなければ info/exclude に足す
-// （ハブは cos.json の worktreeDir を自分で .gitignore に入れる前提。対象はそうとは限らない）。
+// （ハブは cos.json の worktreeDir を自分で .gitignore に入れる前提。対象とサブディレクトリの CoS はそうとは限らない）。
 function ensureIgnored(R) {
   if (gitOk(['check-ignore', '-q', join(R.worktreeDir, 'x')], R.main)) return;
   ensureExcluded(R.common, `/${R.worktreeDir.replace(/^\/+|\/+$/g, '')}/`, '作業 worktree の置き場所');
@@ -958,7 +1002,7 @@ function renderBrief(ctx, v) {
     BRANCH_RULE: branchRule,
   });
   if (ctx.cfg.workerRules) {
-    const f = join(ctx.top, ctx.cfg.workerRules);
+    const f = join(ctx.root, ctx.cfg.workerRules);
     if (!existsSync(f)) die(`cos.json の workerRules（${f}）がありません`);
     text += `\n## このリポジトリの決まり\n\n${readFileSync(f, 'utf8').trim()}\n`;
   }
@@ -1019,7 +1063,7 @@ function cmdSpawn(argv) {
     base = resolveBase(R, opt.base);
     cwd = join(R.main, R.worktreeDir, `cos-${s}`);
     if (existsSync(cwd)) die(`${cwd} がすでにあります`);
-    if (R.name) ensureIgnored(R);
+    if (R.name || R.sub) ensureIgnored(R);
     r = herdr([
       'worktree', 'create', ...herdrWhere,
       '--branch', branch, '--base', base, '--path', cwd, '--label', label, '--no-focus',
@@ -1033,7 +1077,7 @@ function cmdSpawn(argv) {
     base = resolveBase(R, opt.base);
     cwd = join(R.main, R.worktreeDir, `cos-${s}`);
     if (existsSync(cwd)) die(`${cwd} がすでにあります`);
-    if (R.name) ensureIgnored(R);
+    if (R.name || R.sub) ensureIgnored(R);
     git(['worktree', 'add', '--detach', cwd, base], R.top);
     try {
       r = herdr([
@@ -1054,17 +1098,21 @@ function cmdSpawn(argv) {
   const tab = r.tab.tab_id;
   herdr(['tab', 'rename', tab, id]); // ワークスペースの中のタブには ID を出す
 
+  // サブディレクトリの CoS の作業セッションは、worktree の中の同じサブディレクトリで起動する
+  // （そこの CLAUDE.md・.claude/ が効く）。土台にそのサブディレクトリが無ければ worktree の最上位。
+  const startCwd = R.sub && existsSync(join(cwd, R.sub)) ? join(cwd, R.sub) : cwd;
   const mbox = join(cwd, '.cos', s);
   mkdirSync(mbox, { recursive: true });
   ensureExcluded(R.common, '.cos/');
   const briefFile = join(mbox, 'brief.md');
   const reportFile = join(mbox, 'report.md');
-  writeFileSync(briefFile, renderBrief(ctx, { id, title, where, cwd, branch, base, reportFile, brief, repo: R.name ? R.main : null }));
+  writeFileSync(briefFile, renderBrief(ctx, { id, title, where, cwd: startCwd, branch, base, reportFile, brief, repo: R.name ? R.main : null }));
   if (!existsSync(reportFile)) writeFileSync(reportFile, reportTemplate(id));
 
   const chiefSession = chiefSessionFromEnv();
   const entry = {
     id, title, label, agent, kind, model: opt.model ?? null, where, cwd, branch, base,
+    sub: startCwd === cwd ? null : R.sub, // 起動したサブディレクトリ（cwd は worktree の最上位のまま＝git の操作と片付けの基準）
     repo: R.name ? R.main : null, // --repo の依頼: worktree・ブランチは対象のリポジトリにある
     workspace, tab, pane, brief: briefFile, report: reportFile,
     // 振り返りの材料: CoS が書いた依頼書の長さ・どの CoS のセッションが立てたか
@@ -1085,7 +1133,8 @@ function cmdSpawn(argv) {
   const setup = setupFor(where, opt, R.setup) ?? 'true';
   // 打った行がそのまま画面に出ても一致しないよう、目印は printf で組み立てる。
   // pane run は受け付けたことしか返さない（JSON も無い）＝結果は下の wait-output で見る。
-  herdr(['pane', 'run', pane, `${exportsLine}; ${setup} && printf 'COS_${nonce}_%s\\n' OK || printf 'COS_${nonce}_%s\\n' NG`], { json: false });
+  const cdLine = startCwd === cwd ? '' : `cd ${shq(startCwd)} && `;
+  herdr(['pane', 'run', pane, `${cdLine}${exportsLine}; ${setup} && printf 'COS_${nonce}_%s\\n' OK || printf 'COS_${nonce}_%s\\n' NG`], { json: false });
   let matched;
   try {
     matched = herdr([
@@ -1117,6 +1166,7 @@ function cmdSpawn(argv) {
 
   console.log(`立てました: ${id} → エージェント ${agent}（ワークスペース「${label}」${fitted.cut ? `＝幅 ${ctx.cfg.labelWidth} に切りました（cos rename で付け直せます）` : ''}・ワークスペース ${workspace}・タブ ${tab}・ペイン ${pane}）`);
   if (R.name) console.log(`  リポジトリ: ${R.name}（${R.main}）`);
+  if (startCwd !== cwd) console.log(`  起動した場所: ${startCwd}（サブディレクトリの CoS）`);
   if (where === 'worktree') console.log(`  作業ツリー: ${cwd}（ブランチ ${branch}・base ${base.slice(0, 10)}）`);
   else console.log(`  作業ツリー: ${cwd}（ブランチなし・detached ${base.slice(0, 10)}・準備 ${setup === 'true' ? 'なし' : setup}）`);
   console.log(`  依頼書: ${briefFile}\n  報告書: ${reportFile}`);
@@ -1345,9 +1395,10 @@ function statusRows(ctx, led, agents, all, headOf) {
 
 // ハブの cos.json の repos に並べた各リポジトリの CoS の台帳（ハブから --repo で立てた依頼はハブの台帳にあるので別物）。
 // 読むだけ。対象の cos.json は読まない（壊れていてもハブの status を止めない）。COS_DIR はハブにだけ効く。
-// 台帳の無いリポジトリは返さない。同じリポジトリ（git-common-dir が同じ）は1回だけ。
+// 台帳の無いリポジトリは返さない。同じ台帳は1回だけ。パスがサブディレクトリなら、そこから上へ cos.json を探した CoS の台帳。
 function otherLedgers(ctx, agents, all, headOf) {
-  const seen = new Set([realpathSync(ctx.common)]);
+  const real = (d) => (existsSync(d) ? realpathSync(d) : resolve(d));
+  const seen = new Set([real(ctx.dir)]);
   const out = [];
   for (const [name, ent] of Object.entries(ctx.cfg.repos ?? {})) {
     const raw = typeof ent === 'string' ? ent : ent?.path;
@@ -1356,11 +1407,12 @@ function otherLedgers(ctx, agents, all, headOf) {
     try {
       if (!abs) throw new Error('パスがありません');
       if (!existsSync(abs)) throw new Error(`${abs} がありません`);
-      const common = realpathSync(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], abs));
-      if (seen.has(common)) continue;
-      seen.add(common);
+      const loc = locate(abs, null);
+      const key = real(loc.dir);
+      if (seen.has(key)) continue;
+      seen.add(key);
       const main = git(['worktree', 'list', '--porcelain'], abs).split('\n').find((l) => l.startsWith('worktree ')).slice('worktree '.length);
-      r.ledger = join(common, 'cos', 'ledger.json');
+      r.ledger = join(loc.dir, 'ledger.json');
       if (!existsSync(r.ledger)) continue;
       r.workers = statusRows({ top: main }, JSON.parse(readFileSync(r.ledger, 'utf8')), agents, all, headOf);
     } catch (e) {
@@ -1415,6 +1467,7 @@ function cmdStatus(argv) {
   }
   if (herdrErr) console.log(`（herdr に問い合わせられません: ${herdrErr}）`);
   const live = rows.filter((r) => r.state !== 'closed').length;
+  if (ctx.sub) console.log(`サブディレクトリ ${ctx.sub}/ の CoS（設定 ${ctx.cfgFile}）`);
   console.log(`作業セッション ${live} 本（上限 ${ctx.cfg.maxWorkers}）・台帳 ${ctx.ledgerFile}`);
   printRows(rows);
   for (const o of repos) {
@@ -1679,7 +1732,7 @@ function cmdReorient(argv = []) {
   }
   if (opt['known-only']) return reorientKnownOnly(input);
   const source = input.source ?? 'manual';
-  const inRepo = gitOk(['rev-parse', '--git-dir'], process.cwd());
+  const inRepo = gitOk(['rev-parse', '--git-dir'], startDir());
   let ctx = null;
   if (inRepo) {
     ctx = repoCtx();
@@ -1724,7 +1777,7 @@ function reorientText(ctx, { header, notes = [], retroIsDue, inputErr }) {
     status = `（cos status が失敗しました: ${String(e.stderr || e.message).trim()}）`;
   }
   // git の外なら決まりの場所は分からない（手順だけ戻す）。
-  const rules = ctx?.cfg.chiefRules ? join(ctx.top, ctx.cfg.chiefRules) : '';
+  const rules = ctx?.cfg.chiefRules ? join(ctx.root, ctx.cfg.chiefRules) : '';
   return [
     header,
     ...notes,
@@ -1744,9 +1797,9 @@ function reorientKnownOnly(input) {
   const env = process.env;
   let sessions = null;
   try {
-    if (gitOk(['rev-parse', '--git-dir'], process.cwd())) {
-      const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], process.cwd());
-      const chiefFile = join(env.COS_DIR ? resolve(env.COS_DIR) : join(common, 'cos'), 'chief.json');
+    const cwd = env.COS_ROOT || process.cwd();
+    if (gitOk(['rev-parse', '--git-dir'], cwd)) {
+      const chiefFile = join(locate(cwd, env.COS_DIR).dir, 'chief.json');
       if (existsSync(chiefFile)) sessions = JSON.parse(readFileSync(chiefFile, 'utf8')).sessions;
     }
   } catch {
@@ -1936,7 +1989,7 @@ function retroCollect(argv) {
   const L = [];
   L.push(`# CoS の振り返り ${localDay(untilMs)}`, '');
   L.push(`- 期間: ${fmtWhen(sinceMs)} 〜 ${fmtWhen(untilMs)}（${fmtDur(untilMs - sinceMs)}）`);
-  L.push(`- リポジトリ: ${ctx.main}`);
+  L.push(`- リポジトリ: ${ctx.main}${ctx.sub ? `（サブディレクトリ ${ctx.sub}/ の CoS）` : ''}`);
   L.push(`- 下書きを作った時刻: ${fmtWhen(Date.now())}（cos retro collect）`, '');
   L.push('<!-- 「材料」は cos retro collect が機械的に集めたもの（判断は入っていない）。「振り返り」と「改善案」を CoS が書き、', '改善案はユーザーに差分で見せて採否をもらう。終わったら cos retro done。 -->', '');
   L.push('## 材料', '', `### 依頼（${rows.length} 件）`, '');
@@ -2015,6 +2068,14 @@ function retroDone(argv) {
   });
   logEvent(ctx, { kind: 'retro-done', file, tally: chk.tally });
   console.log(`振り返りを締めました（採用 ${chk.tally.採用}・却下 ${chk.tally.却下}・保留 ${chk.tally.保留}）。次の期限は ${fmtWhen(Date.parse(to) + ctx.cfg.retroIntervalDays * DAY_MS)}。`);
+}
+
+// `cos root`: この場所の CoS のディレクトリ（cos.json のあるディレクトリ・無ければ git の最上位）を出す。
+// --sub は最上位からの相対（最上位の CoS なら空行）。chief.sh が起動する場所と名前を決めるのに使う。
+function cmdRoot(argv) {
+  const { opt } = parseArgs(argv, ['sub']);
+  const ctx = repoCtx();
+  console.log(opt.sub ? ctx.sub : ctx.root);
 }
 
 function selfTest() {
@@ -2225,6 +2286,47 @@ function selfTest() {
   dz = dd(null, de(), T0 + 60_000, 'HTTP 502');
   assert(dz.state === 'wait' && dz.error === 'HTTP 502', 'deploy gh の失敗は待つ');
   assert(dd(null, de({ lastOkAt: new Date(T0 + 10_000).toISOString() }), T0 + 10_000 + MISS, 'x').state === 'missing', 'deploy gh の失敗が続けば missing');
+  // cos.json を cwd から上へ探す（最上位・サブディレクトリ・両方・COS_DIR 優先）
+  const has = (...dirs) => (r) => dirs.includes(r);
+  assert(findCosSub('', has('')) === '' && findCosSub('a/b', has()) === '', 'findCosSub 無し・最上位は今と同じ');
+  assert(findCosSub('a/b', has('')) === '', 'findCosSub 最上位だけ');
+  assert(findCosSub('a/b', has('a')) === 'a' && findCosSub('a', has('a')) === 'a', 'findCosSub サブディレクトリ');
+  assert(findCosSub('a/b', has('', 'a')) === 'a' && findCosSub('c', has('', 'a')) === '', 'findCosSub 両方＝近い方');
+  assert(findCosSub('a/b/c', has('a', 'a/b')) === 'a/b', 'findCosSub 入れ子');
+  assert(stateDirFor('/g', '', null) === '/g/cos', 'stateDirFor 最上位');
+  assert(stateDirFor('/g', 'a/b', null) === '/g/cos/sub/a%2Fb', 'stateDirFor サブディレクトリは1段');
+  assert(stateDirFor('/g', 'a/archive', null) !== join(stateDirFor('/g', 'a', null), 'archive'), 'stateDirFor 入れ子が archive/ とぶつからない');
+  assert(stateDirFor('/g', 'a', '/x/y') === '/x/y' && stateDirFor('/g', '', '/x/y') === '/x/y', 'stateDirFor COS_DIR 優先');
+  // 一時リポジトリで locate を通しで（git の最上位・サブディレクトリ・worktree の中）
+  const tmp = realpathSync(execFileSync('mktemp', ['-d', join(process.env.TMPDIR || '/tmp', 'cos-selftest.XXXXXX')], { encoding: 'utf8' }).trim());
+  try {
+    const g = (...a) => execFileSync('git', a, { cwd: tmp, stdio: 'ignore' });
+    g('init', '-q');
+    mkdirSync(join(tmp, 'app', 'src', '.claude'), { recursive: true });
+    mkdirSync(join(tmp, 'other'), { recursive: true });
+    const common = join(tmp, '.git');
+    let l = locate(join(tmp, 'app', 'src'), null);
+    assert(l.sub === '' && l.dir === join(common, 'cos') && l.root === tmp, `locate cos.json 無し: ${JSON.stringify(l)}`);
+    mkdirSync(join(tmp, '.claude'));
+    writeFileSync(join(tmp, '.claude', 'cos.json'), '{}');
+    l = locate(join(tmp, 'app', 'src'), null);
+    assert(l.sub === '' && l.dir === join(common, 'cos'), 'locate 最上位の cos.json');
+    mkdirSync(join(tmp, 'app', '.claude'));
+    writeFileSync(join(tmp, 'app', '.claude', 'cos.json'), '{}');
+    l = locate(join(tmp, 'app', 'src'), null);
+    assert(l.sub === 'app' && l.root === join(tmp, 'app') && l.dir === join(common, 'cos', 'sub', 'app'), `locate 両方＝サブディレクトリ: ${JSON.stringify(l)}`);
+    l = locate(join(tmp, 'other'), null);
+    assert(l.sub === '' && l.dir === join(common, 'cos'), 'locate 別のサブディレクトリは最上位');
+    assert(locate(join(tmp, 'app'), join(tmp, 'x')).dir === join(tmp, 'x'), 'locate COS_DIR 優先');
+    // 作業セッションの worktree の中（サブディレクトリに cos.json がコミットされている）でも同じ台帳
+    g('add', '-A');
+    g('-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-qm', 'x');
+    g('worktree', 'add', '-q', '--detach', join(tmp, '.claude', 'worktrees', 'w'));
+    l = locate(join(tmp, '.claude', 'worktrees', 'w', 'app'), null);
+    assert(l.sub === 'app' && realpathSync(l.common) === realpathSync(common) && l.dir === join(l.common, 'cos', 'sub', 'app'), `locate worktree の中: ${JSON.stringify(l)}`);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
   console.log('cos self-test: ok');
 }
 
@@ -2250,6 +2352,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos reorient [--hook]                     （フック用）起動時・要約や /clear のあとに文脈を戻す
   cos reorient --hook --known-only          （ユーザー全体の設定のフック用）記録済みの CoS を cos chief 無しで再開したときだけ戻す
   cos chief [claude への引数]                CoS のセッションをいまのペインで起動する（60% で自動要約）
+  cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
   cos self-test`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -2257,7 +2360,7 @@ if (isMain) {
   const [cmd, ...rest] = process.argv.slice(2);
   const table = {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, 'deploy-watch': cmdDeployWatch, status: cmdStatus, ls: cmdStatus,
-    report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro,
+    report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot,
     'self-test': selfTest,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
