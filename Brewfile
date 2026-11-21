@@ -1,6 +1,5 @@
 brew "mas"
 brew "vim"
-brew "switchaudio-osx"
 cask "bartender"
 cask "bettertouchtool"
 cask "cleanshot"

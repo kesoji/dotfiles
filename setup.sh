@@ -67,6 +67,7 @@ summary() {
 echo -e "${BOLD}${BLUE}===== Setup ($DOTFILES) =====${NC}"
 
 step "Homebrew とアプリ（setup_mac_app.sh・brew bundle）" bash ./setup_mac_app.sh
+step "版と sha256 を固定したツール（homebrew/install-pinned.sh）" bash ./homebrew/install-pinned.sh
 step "設定ファイルのリンク（dotfilesLink.sh）" sh ./dotfilesLink.sh
 step "Karabiner の設定のリンク（karabinerlink.sh）" karabiner_link
 step "macOS の設定（setup_mac.sh・項目ごとに聞く）" bash ./setup_mac.sh
