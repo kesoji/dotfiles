@@ -73,12 +73,12 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-# displaysleep-home（bin/displaysleep-home）が launchd に登録されているのに5分以上動いていなければ1行だけ警告する。
+# displaysleep-home（bin/displaysleep-home）が launchd に登録されているのに10分以上動いていなければ1行だけ警告する。
 # シェルの起動を遅くしないよう、ファイルがあるか・last-run の mtime だけを見る（launchctl などは呼ばない）
 if [[ -o interactive && -f ~/Library/LaunchAgents/com.kesoji.displaysleep-home.plist && -f ~/.config/displaysleep-home/conf ]]; then
     () {
-        (( $# )) || echo "displaysleep-home が5分以上動いていない（displaysleep-home status で確かめる）"
-    } ~/.config/displaysleep-home/last-run(N.mm-5)
+        (( $# )) || echo "displaysleep-home が10分以上動いていない（displaysleep-home status で確かめる）"
+    } ~/.config/displaysleep-home/last-run(N.mm-10)
 fi
 
 # dotfiles 同期のローカルコマンド（devproxy-bootstrap / devproxy-register / generate-dev-domain 等）

@@ -5,7 +5,7 @@
 #   displaysleep-home add-current  … いまつながっている外部モニターを「家のモニター」として設定に書く
 #   displaysleep-home install      … launchd に登録し、sudoers に足す行を出す
 #   displaysleep-home uninstall    … launchd から外し、元の値に戻す
-#   displaysleep-home status       … 判定といまの値を出す（5分以上動いていなければ警告）
+#   displaysleep-home status       … 判定といまの値を出す（10分以上動いていなければ警告）
 #   displaysleep-home check        … 判定して pmset を合わせる（launchd が呼ぶ）
 #
 # 設定（リポジトリの外）: ~/.config/displaysleep-home/conf
@@ -55,6 +55,8 @@ at_home() {
 	local key
 	[ -n "$HOME_DISPLAYS" ] || return 1
 	while IFS=$'\t' read -r key _; do
+		# シリアルが無いキー（末尾が : か :0）は、conf に残っていても家として扱わない
+		case "${key##*:}" in ""|0) continue ;; esac
 		for h in $HOME_DISPLAYS; do [ "$key" = "$h" ] && return 0; done
 	done < <(external_displays)
 	return 1
@@ -134,15 +136,15 @@ check() {
 	printf '%s' "$noted_now" > "$NOTED"
 }
 
-# 5分以上 check が動いていなければ警告する
+# 10分以上 check が動いていなければ警告する
 warn_if_stale() {
 	local t
 	t="$(/usr/bin/stat -f %m "$LAST_RUN" 2>/dev/null || echo 0)"
-	if [ $(( $(/bin/date +%s) - t )) -ge 300 ]; then
+	if [ $(( $(/bin/date +%s) - t )) -ge 600 ]; then
 		if [ "$t" = 0 ]; then
 			echo "警告: check が一度も動いた記録が無い（${LAST_RUN} が無い）。launchd の登録と ${INSTALL_PATH} を確かめる"
 		else
-			echo "警告: check が5分以上動いていない（最後: $(/bin/date -r "$t" '+%F %T')）。launchd の登録と ${INSTALL_PATH} を確かめる"
+			echo "警告: check が10分以上動いていない（最後: $(/bin/date -r "$t" '+%F %T')）。launchd の登録と ${INSTALL_PATH} を確かめる"
 		fi
 	fi
 }

@@ -8,6 +8,9 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
+# 失敗（✗）した項目の数。最後に非0で終わるために数える（スキップは失敗にしない）
+failed=0
+
 # 確認・実行の共通関数
 confirm_and_execute() {
     local description="$1"
@@ -25,6 +28,7 @@ confirm_and_execute() {
             return 0
         else
             echo -e "${RED}✗ 失敗しました${NC}\n"
+            failed=$((failed + 1))
             return 2
         fi
     else
@@ -130,4 +134,8 @@ confirm_and_execute \
     "claude mcp add --scope user playwright -- npx @playwright/mcp@latest"
 
 
+if [ "$failed" -gt 0 ]; then
+    echo -e "${RED}${BOLD}失敗した項目が ${failed} 件あります${NC}"
+    exit 1
+fi
 echo -e "${GREEN}${BOLD}スクリプトの実行が完了しました！${NC}"

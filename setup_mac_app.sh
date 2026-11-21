@@ -8,6 +8,8 @@ fi
 for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do [ -x "$b" ] && eval "$("$b" shellenv)" && break; done
 
 # どこから流してもスクリプトの隣の Brewfile を使う
-brew bundle --file="$(cd "$(dirname "$0")" && pwd)/Brewfile"
+rc=0
+brew bundle --file="$(cd "$(dirname "$0")" && pwd)/Brewfile" || rc=$?
 
 echo "Dockerは手でインストールしましょう"
+exit "${rc:-0}"
