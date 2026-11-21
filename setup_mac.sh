@@ -49,6 +49,18 @@ confirm_and_execute \
     "echo '現在の設定を反映します'" \
     "killall cfprefsd"
 
+# ディスプレイのスリープ
+# 外での値を先に入れる（家の仕組みを入れ忘れても長くならないように）
+confirm_and_execute \
+    "ディスプレイのスリープ（外の値: 電源5分・バッテリー2分）" \
+    "pmset -g custom | grep -E 'Power:|displaysleep' | paste -sd ' ' -" \
+    "sudo pmset -c displaysleep 5 && sudo pmset -b displaysleep 2"
+# 家のモニターがつながっている間だけ長くする（bin/displaysleep-home）
+confirm_and_execute \
+    "家のモニターがつながっている間だけディスプレイのスリープを長くする（家のモニターをつないだ状態で）" \
+    "$HOME/dotfiles/bin/displaysleep-home status | head -2" \
+    "$HOME/dotfiles/bin/displaysleep-home add-current && $HOME/dotfiles/bin/displaysleep-home install"
+
 
 # ホットコーナーの設定
 confirm_and_execute \

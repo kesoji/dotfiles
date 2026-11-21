@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# displaysleep-home: 決めた外部モニターがつながっている間だけ、ディスプレイのスリープを長くする。
+# 外れたら元の値に戻す。launchd で 1 分ごとに check を流す。
+#
+#   displaysleep-home add-current  … いまつながっている外部モニターを「家のモニター」として設定に書く
+#   displaysleep-home install      … launchd に登録し、sudoers に足す行を出す
+#   displaysleep-home uninstall    … launchd から外し、元の値に戻す
+#   displaysleep-home status       … 判定といまの値を出す
+#   displaysleep-home check        … 判定して pmset を合わせる（launchd が呼ぶ）
+#
+# 設定（リポジトリの外）: ~/.config/displaysleep-home/conf
+#   HOME_DISPLAYS="<vendor>:<product>:<serial> ..."  家のモニター（どれか1台でもつながっていれば家）
+#   HOME_MIN=15   家での分数（電源・バッテリーとも）
+#   AC_MIN=5      外での分数（電源）
+#   BATT_MIN=2    外での分数（バッテリー）
+#
+# pmset は root が要る。sudoers には install が出す「決まった値だけ」の行を足す。
+set -euo pipefail
+
+LABEL="com.kesoji.displaysleep-home"
+CONF_DIR="$HOME/.config/displaysleep-home"
+CONF="$CONF_DIR/conf"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+LOG="$CONF_DIR/log"
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+HOME_DISPLAYS=""; HOME_MIN=15; AC_MIN=5; BATT_MIN=2
+[ -f "$CONF" ] && . "$CONF"
+
+# 外部モニターを "vendor:product:serial<TAB>名前" で1行ずつ出す
+external_displays() {
+	/usr/sbin/system_profiler SPDisplaysDataType -json 2>/dev/null | /usr/bin/python3 -c '
+import json, sys
+try: d = json.load(sys.stdin)
+except Exception: sys.exit(0)
+for g in d.get("SPDisplaysDataType", []):
+    for s in g.get("spdisplays_ndrvs", []):
+        if s.get("spdisplays_connection_type") == "spdisplays_internal": continue
+        key = ":".join(s.get(k, "") for k in ("_spdisplays_display-vendor-id", "_spdisplays_display-product-id", "_spdisplays_display-serial-number"))
+        print(key + "\t" + s.get("_name", "?"))
+'
+}
+
+at_home() {
+	local key
+	[ -n "$HOME_DISPLAYS" ] || return 1
+	while IFS=$'\t' read -r key _; do
+		for h in $HOME_DISPLAYS; do [ "$key" = "$h" ] && return 0; done
+	done < <(external_displays)
+	return 1
+}
+
+# いまの値: current <AC|Battery>
+current() {
+	/usr/bin/pmset -g custom | awk -v p="$1 Power:" '
+		$0 ~ /Power:$/ { on = ($0 == p) }
+		on && $1 == "displaysleep" { print $2; exit }'
+}
+
+apply() { # apply <-c|-b> <分>
+	local flag="$1" want="$2" prof cur
+	[ "$flag" = -c ] && prof=AC || prof=Battery
+	cur="$(current "$prof")"
+	[ "$cur" = "$want" ] && return 0
+	if sudo -n /usr/bin/pmset "$flag" displaysleep "$want" 2>/dev/null; then
+		echo "$(date '+%F %T') $prof: $cur -> $want" >> "$LOG"
+	else
+		echo "$(date '+%F %T') $prof: $cur -> $want に変えられない（sudoers を確認: ${SELF} install）" >> "$LOG"
+		return 1
+	fi
+}
+
+check() {
+	mkdir -p "$CONF_DIR"
+	if at_home; then
+		apply -c "$HOME_MIN"; apply -b "$HOME_MIN"
+	else
+		apply -c "$AC_MIN"; apply -b "$BATT_MIN"
+	fi
+}
+
+sudoers_lines() {
+	local u; u="$(id -un)"
+	for v in $(printf '%s\n' "$HOME_MIN" "$AC_MIN" | sort -u); do
+		echo "$u ALL=(root) NOPASSWD: /usr/bin/pmset -c displaysleep $v"
+	done
+	for v in $(printf '%s\n' "$HOME_MIN" "$BATT_MIN" | sort -u); do
+		echo "$u ALL=(root) NOPASSWD: /usr/bin/pmset -b displaysleep $v"
+	done
+}
+
+write_conf() {
+	mkdir -p "$CONF_DIR"
+	cat > "$CONF" <<EOF
+HOME_DISPLAYS="$HOME_DISPLAYS"
+HOME_MIN=$HOME_MIN
+AC_MIN=$AC_MIN
+BATT_MIN=$BATT_MIN
+EOF
+}
+
+case "${1:-check}" in
+	check) check ;;
+	add-current)
+		found=0
+		while IFS=$'\t' read -r key name; do
+			found=1
+			case " $HOME_DISPLAYS " in *" $key "*) echo "登録済み: $name ($key)"; continue ;; esac
+			HOME_DISPLAYS="${HOME_DISPLAYS:+$HOME_DISPLAYS }$key"
+			echo "追加: $name ($key)"
+		done < <(external_displays)
+		[ "$found" = 1 ] || { echo "外部モニターがつながっていません" >&2; exit 1; }
+		write_conf
+		echo "設定: $CONF" ;;
+	install)
+		[ -f "$CONF" ] || write_conf
+		mkdir -p "$(dirname "$PLIST")" "$CONF_DIR"
+		cat > "$PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key><string>$LABEL</string>
+	<key>ProgramArguments</key><array><string>$SELF</string><string>check</string></array>
+	<key>StartInterval</key><integer>60</integer>
+	<key>RunAtLoad</key><true/>
+	<key>StandardErrorPath</key><string>$LOG</string>
+</dict>
+</plist>
+EOF
+		launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+		launchctl bootstrap "gui/$(id -u)" "$PLIST"
+		echo "launchd に登録: ${PLIST}（1分ごと）"
+		echo
+		echo "pmset をパスワード無しで流すため、次を実行して下の行を貼ってください:"
+		echo "  sudo visudo -f /etc/sudoers.d/displaysleep-home"
+		echo "----"
+		sudoers_lines
+		echo "----"
+		echo "（分数を変えたら install をやり直し、sudoers の行も差し替える）" ;;
+	uninstall)
+		launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+		rm -f "$PLIST"
+		apply -c "$AC_MIN" || true; apply -b "$BATT_MIN" || true
+		echo "外しました。sudoers の行は sudo rm /etc/sudoers.d/displaysleep-home で消せます" ;;
+	status)
+		if at_home; then echo "判定: 家（${HOME_MIN}分にする）"; else echo "判定: 外（電源 ${AC_MIN}分・バッテリー ${BATT_MIN}分にする）"; fi
+		echo "いま: 電源 $(current AC)分・バッテリー $(current Battery)分"
+		echo "外部モニター:"; external_displays | sed 's/^/  /'
+		launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && echo "launchd: 登録あり" || echo "launchd: 登録なし"
+		[ -f "$LOG" ] && { echo "直近の記録:"; tail -3 "$LOG" | sed 's/^/  /'; } ;;
+	*) sed -n '2,10p' "$0"; exit 2 ;;
+esac
