@@ -1893,6 +1893,8 @@ function cmdClose(argv) {
   // 作業セッションが受け箱の下にフォルダ（スクリーンショット等）を作ることがある＝丸ごと写す。
   if (existsSync(mbox)) cpSync(mbox, archive, { recursive: true });
 
+  // エージェントを止める前に見張りの対象から外す。止めてから closed を書くまでの間に cos watch が gone を拾い、誤って急ぎの知らせを鳴らしていた
+  setWorker(ctx, id, { state: 'closing' });
   stopAgent(w);
   if (hasOwnWorktree(w)) {
     if (workspaceExists(w.workspace)) {
