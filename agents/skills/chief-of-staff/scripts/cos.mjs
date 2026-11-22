@@ -331,24 +331,31 @@ export function localDay(ms) {
 }
 
 // TODO の行の期日（YYYY-MM-DD）。未完了の行（`- [ ]`）の頭の太字が日付で始まるときだけ読む。
-// 「2026-11-22」「11/22」「11/22 16:30 以降」「11/21(金) 以降」など。年が無ければ year とみなす。読めなければ null。
+// 「2026-11-22」「11/22」「11/22 16:30 以降」「11/21(金) 以降」など。読めなければ null。
+// 年が無ければ today の年とみなす。ただし年の境目では、today から半年より先なら去年、300 日より前なら来年とみなす
+// （1月に読む「12/30」は去年の約束＝期日が来ている。12月に読む「1/5」は来年＝まだ先）。来年とみなす側を狭くするのは、
+// 期日を大きく過ぎた古い約束を「まだ先」と取り違えて黙って消すより、出しすぎる方がましだから。
 // 太字の途中の日付（「…は 11/4 本番済み」のような経緯）は期日でないので読まない。
-export function todoDueDay(line, year) {
+export function todoDueDay(line, today) {
   const m = String(line).match(/^\s*[-*+]\s+\[ \]\s+\*\*\s*(?:(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})\/(\d{1,2}))(?![\d/])/);
   if (!m) return null;
-  const [y, mo, d] = m[1] ? [Number(m[1]), Number(m[2]), Number(m[3])] : [year, Number(m[4]), Number(m[5])];
+  let [y, mo, d] = m[1] ? [Number(m[1]), Number(m[2]), Number(m[3])] : [Number(today.slice(0, 4)), Number(m[4]), Number(m[5])];
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  if (!m[1]) {
+    const diffDays = (Date.UTC(y, mo - 1, d) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS;
+    if (diffDays > 183) y -= 1;
+    else if (diffDays < -300) y += 1;
+  }
   return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 // TODO の本文から、期日が today（YYYY-MM-DD）か過去の未完了の行を返す（行の頭から最大 width 文字）。
 // 今日が期日のものを先に、そのあと過ぎたものを、それぞれファイルの順で。
 export function dueTodos(text, today, width = 200) {
-  const year = Number(today.slice(0, 4));
   const now = [];
   const past = [];
   for (const line of String(text).split(/\r?\n/)) {
-    const due = todoDueDay(line, year);
+    const due = todoDueDay(line, today);
     if (!due || due > today) continue;
     const t = line.trim();
     (due === today ? now : past).push(t.length > width ? `${t.slice(0, width)}…` : t);
@@ -2004,14 +2011,18 @@ function cmdReorient(argv = []) {
 // cos.json の todoFiles から、期日が今日か過去の未完了の確認を文脈に戻す行。設定が無ければ空。
 // 要約で会話から抜けた「今日 16:30 に確かめる」を忘れないため（要約のあとに TODO を読み直さないと抜けたままになる）。
 function dueTodoNotes(ctx, nowMs = Date.now()) {
-  const files = ctx?.cfg.todoFiles;
+  if (!ctx) return [];
+  return dueTodoNotesFrom(ctx.cfg.todoFiles, { root: ctx.root, home: homedir(), today: localDay(nowMs), read: (f) => readFileSync(f, 'utf8') });
+}
+
+// dueTodoNotes の中身（読み込みを引数で受ける純関数）。files が無い・空なら空。読めないファイルは1行で知らせる。
+export function dueTodoNotesFrom(files, { root, home, today, read }) {
   if (!Array.isArray(files) || files.length === 0) return [];
-  const today = localDay(nowMs);
   const lines = [];
   for (const f of files) {
-    const abs = resolveTodoPath(String(f), ctx.root, homedir());
+    const abs = resolveTodoPath(String(f), root, home);
     try {
-      lines.push(...dueTodos(readFileSync(abs, 'utf8'), today).map((t) => `  ${t}（${abs}）`));
+      lines.push(...dueTodos(read(abs), today).map((t) => `  ${t}（${abs}）`));
     } catch (e) {
       lines.push(`  （TODO が読めません: ${abs}: ${e.code || e.message}）`);
     }
@@ -3083,21 +3094,21 @@ function selfTest() {
   }
   // 期日の来た確認（todoFiles）
   {
-    assert(todoDueDay('- [ ] **11/22 16:30 以降: 定時実行を確かめる**: 本文', 2026) === '2026-11-22', 'todo: 時刻付き');
-    assert(todoDueDay('- [ ] **2026-11-22 の確認**', 2025) === '2026-11-22', 'todo: 年付きは年を使う');
-    assert(todoDueDay('- [ ] **11/21(金) 以降**: x', 2026) === '2026-11-21', 'todo: 曜日付き');
-    assert(todoDueDay('- [ ] **11/6〜 リリース後**: x', 2026) === '2026-11-06', 'todo: 一桁と〜');
-    assert(todoDueDay('- [ ] **PR #1 の残り**: 11/22 に見る', 2026) === null, 'todo: 太字の外の日付は読まない');
-    assert(todoDueDay('- [ ] **問い合わせ: 本番化は 11/4 済み**', 2026) === null, 'todo: 太字の途中の日付（経緯）は読まない');
-    assert(todoDueDay('- [ ] ** 11/22: 空白から**', 2026) === '2026-11-22', 'todo: 太字の頭の空白は飛ばす');
-    assert(todoDueDay('- [ ] **10/29〜11/5 の平日**', 2026) === '2026-10-29', 'todo: 範囲は始まりの日');
-    assert(todoDueDay('- [ ] **12:30 に見る**', 2026) === null, 'todo: 時刻だけは日付にしない');
-    assert(todoDueDay('- [x] **11/22: 済み**', 2026) === null, 'todo: 完了の行は出さない');
-    assert(todoDueDay('- [ ] 11/22 の確認（太字なし）', 2026) === null, 'todo: 頭に太字が無ければ読まない');
-    assert(todoDueDay('- [ ] **11月初め: 請求を見る**', 2026) === null, 'todo: 読めない日付は出さない');
-    assert(todoDueDay('- [ ] **13/40 の何か**', 2026) === null, 'todo: ありえない日付は出さない');
-    assert(todoDueDay('- [ ] **1/2/3 の比率**', 2026) === null, 'todo: 分数の並びは日付にしない');
-    assert(todoDueDay('  - [ ] **12/1: 子の行**', 2026) === '2026-12-01', 'todo: 字下げした行も読む');
+    assert(todoDueDay('- [ ] **11/22 16:30 以降: 定時実行を確かめる**: 本文', '2026-11-22') === '2026-11-22', 'todo: 時刻付き');
+    assert(todoDueDay('- [ ] **2026-11-22 の確認**', '2025-06-01') === '2026-11-22', 'todo: 年付きは年を使う');
+    assert(todoDueDay('- [ ] **11/21(金) 以降**: x', '2026-11-22') === '2026-11-21', 'todo: 曜日付き');
+    assert(todoDueDay('- [ ] **11/6〜 リリース後**: x', '2026-11-22') === '2026-11-06', 'todo: 一桁と〜');
+    assert(todoDueDay('- [ ] **PR #1 の残り**: 11/22 に見る', '2026-11-22') === null, 'todo: 太字の外の日付は読まない');
+    assert(todoDueDay('- [ ] **問い合わせ: 本番化は 11/4 済み**', '2026-11-22') === null, 'todo: 太字の途中の日付（経緯）は読まない');
+    assert(todoDueDay('- [ ] ** 11/22: 空白から**', '2026-11-22') === '2026-11-22', 'todo: 太字の頭の空白は飛ばす');
+    assert(todoDueDay('- [ ] **10/29〜11/5 の平日**', '2026-11-22') === '2026-10-29', 'todo: 範囲は始まりの日');
+    assert(todoDueDay('- [ ] **12:30 に見る**', '2026-11-22') === null, 'todo: 時刻だけは日付にしない');
+    assert(todoDueDay('- [x] **11/22: 済み**', '2026-11-22') === null, 'todo: 完了の行は出さない');
+    assert(todoDueDay('- [ ] 11/22 の確認（太字なし）', '2026-11-22') === null, 'todo: 頭に太字が無ければ読まない');
+    assert(todoDueDay('- [ ] **11月初め: 請求を見る**', '2026-11-22') === null, 'todo: 読めない日付は出さない');
+    assert(todoDueDay('- [ ] **13/40 の何か**', '2026-11-22') === null, 'todo: ありえない日付は出さない');
+    assert(todoDueDay('- [ ] **1/2/3 の比率**', '2026-11-22') === null, 'todo: 分数の並びは日付にしない');
+    assert(todoDueDay('  - [ ] **12/1: 子の行**', '2026-11-22') === '2026-12-01', 'todo: 字下げした行も読む');
     const text = [
       '# TODO',
       '- [ ] **11/22 16:30 以降: 今日の確認**: 本文',
@@ -3109,6 +3120,24 @@ function selfTest() {
     ].join('\n');
     const due = dueTodos(text, '2026-11-22');
     assert(due.length === 3 && due[0].includes('今日') && due[1].includes('きのう') && due[2].includes('去年'), `todo: 今日と過去だけ ${JSON.stringify(due)}`);
+    // 年の境目
+    assert(todoDueDay('- [ ] **12/30: 年末の確認**', '2027-01-02') === '2026-12-30', 'todo: 1月に読む12月は去年');
+    assert(todoDueDay('- [ ] **1/5: 年明けの確認**', '2026-12-20') === '2027-01-05', 'todo: 12月に読む1月は来年');
+    assert(todoDueDay('- [ ] **5/1: 春の確認**', '2026-11-22') === '2026-05-01' && todoDueDay('- [ ] **2/1: x**', '2026-11-22') === '2026-02-01', 'todo: 期日を大きく過ぎた古い約束も今年（消さない）');
+    assert(dueTodos('- [ ] **12/30: 年末**\n- [ ] **1/5: 年明け**', '2027-01-02').join() === '- [ ] **12/30: 年末**', 'todo: 年をまたいでも過ぎたものは出し、先のものは出さない');
+    assert(dueTodos('- [ ] **1/5: 年明け**', '2026-12-20').length === 0, 'todo: 12月に来年1月の確認は出さない');
+    // 文脈に戻す行（設定・読めないファイル・件数の上限）
+    const files = { '/r/a.md': '- [ ] **11/22: 今日**\n- [ ] **11/30: 先**', '/h/b.md': Array.from({ length: 25 }, (_, i) => `- [ ] **11/${i + 1}: 確認${i + 1}**`).join('\n') };
+    const read = (f) => { if (!(f in files)) { const e = new Error('nope'); e.code = 'ENOENT'; throw e; } return files[f]; };
+    const N = (fs) => dueTodoNotesFrom(fs, { root: '/r', home: '/h', today: '2026-11-22', read });
+    assert(N(undefined).length === 0 && N([]).length === 0 && N('a.md').length === 0, 'todo: 設定が無い・空なら出さない');
+    const n1 = N(['a.md', 'x.md']);
+    assert(n1.length === 3 && n1[0].startsWith('期日の来た確認') && n1[1].includes('今日') && n1[1].includes('/r/a.md') && n1[2].includes('TODO が読めません') && n1[2].includes('ENOENT'), `todo: 読めないファイルは知らせる ${JSON.stringify(n1)}`);
+    assert(N(['x.md'])[1]?.includes('TODO が読めません'), 'todo: 読めないファイルだけでも知らせる');
+    assert(N(['a.md'].slice(0, 0).concat(['/r/a.md'])).length === 2, 'todo: 絶対パス');
+    const n2 = N(['~/b.md']);
+    assert(n2.length === 22 && n2[21] === '  ほか 2 件（ファイルを読む）' && n2[1].includes('確認22'), `todo: 20 件を超えたら切る ${n2.length}`);
+    assert(N(['/r/none.md'].slice(1)).length === 0, 'todo: 空');
     const order = dueTodos('- [ ] **11/1: 古い**\n- [ ] **11/22: 今日**', '2026-11-22');
     assert(order[0].includes('今日') && order[1].includes('古い'), 'todo: 今日が期日のものを先に');
     assert(dueTodos(`- [ ] **11/22: ${'あ'.repeat(300)}**`, '2026-11-22')[0].length === 201, 'todo: 長い行は切る');
