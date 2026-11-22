@@ -2432,10 +2432,28 @@ export function stopHookReason(...reasons) {
   return r.length ? r.join('\n\n') : null;
 }
 
+// 「進めているもの」の検査をするセッションか。`cos chief` で起動した CoS だけ（作業セッション・普通のセッションは止めない）。
+export function progressCheckApplies(env) {
+  return env.COS_CHIEF === '1' && !env.COS_WORKER_ID;
+}
+
+// Stop フックの判定（配線ごと純関数）。止めるなら block の理由の文、通すなら null。
+// texts はターンの assistant の文を記録ごとに並べたもの。未確認の回答はターン全体の文から、「進めているもの」は
+// 最後の文から探す。pending・isLiveBg・workers は読めなかったら null（その検査だけ飛ばす）。
+export function stopHookDecision({ env, input, texts, pending, isLiveBg, workers }) {
+  if (input.stop_hook_active) return null; // このフックで止めた続きの Stop＝1ターンに1回まで
+  const answerReason = pending?.length ? answerHookDecision(texts.join('\n'), pending) : null;
+  const progressReason = progressCheckApplies(env) && texts.length && isLiveBg && workers
+    ? progressHookDecision(texts[texts.length - 1], isLiveBg, workers)
+    : null;
+  const reason = stopHookReason(answerReason, progressReason);
+  return reason ? `${reason}\n（この Stop フックは同じターンで1回だけ止めます）` : null;
+}
+
 // 裏のコマンドの出力の置き場所（<tmp>/claude-<uid>/<project>/<session>/tasks）。
 // 会話ログの置き場所と tmp 側のプロジェクト名が違うことがあるので、見つからなければセッションで探す。
-function bgTasksDirs(transcript, session, env = process.env) {
-  const root = join(env.CLAUDE_CODE_TMPDIR || '/tmp', `claude-${process.getuid?.() ?? 0}`);
+export function bgTasksDirs(transcript, session, env = process.env, uid = process.getuid?.() ?? 0) {
+  const root = join(env.CLAUDE_CODE_TMPDIR || '/tmp', `claude-${uid}`);
   const first = join(root, basename(dirname(transcript)), session, 'tasks');
   if (existsSync(first)) return [first];
   try {
@@ -2445,27 +2463,52 @@ function bgTasksDirs(transcript, session, env = process.env) {
   }
 }
 
-// 裏のコマンドがまだ動いているか。終わると「[exited with code N]」、止める（KillShell）と最後の行が「[killed]」になる。
-export function liveBgIn(dirs) {
+// 裏のコマンドがまだ動いているか。終わると最後の行が「[exited with code N]」、止める（KillShell）と「[killed]」になる。
+// sinceMs（今の Claude Code のプロセスが起動した時刻）より前に作られた出力は、動いていないとみなす。
+// `claude --resume` は同じセッション ID を使うので、前のプロセスと一緒に死んで終わりの印を残さなかった
+// 出力が同じ tasks に残り、印が無いまま「動いている」に見えるため。sinceMs が null なら作られた時刻は見ない。
+export function liveBgIn(dirs, sinceMs = null) {
   return (id) => {
     for (const d of dirs) {
       const p = join(d, `${id}.output`);
       if (!existsSync(p)) continue;
+      if (sinceMs != null) {
+        const st = statSync(p);
+        if ((st.birthtimeMs || st.mtimeMs) < sinceMs) return false;
+      }
       const out = readFileSync(p, 'utf8');
-      return !out.includes('exited with code') && out.trimEnd().split('\n').pop() !== '[killed]';
+      // 最後の行だけを見る（動き続けるコマンドが途中に子の「exited with code」を書いても死んだことにしない）
+      const last = out.trimEnd().split('\n').pop();
+      return !/^\[exited with code -?\d+\]$/.test(last) && last !== '[killed]';
     }
     return false;
   };
 }
 
-function liveWorkerIds(ctx) {
+// このフックを呼んだ Claude Code のプロセスが起動した時刻（ミリ秒）。親をたどって claude を探す。分からなければ null。
+// ps の lstart は秒までなので、同じ秒に作られた出力を落とさないよう秒の頭に切り下げたまま使う。
+function claudeStartMs() {
   try {
-    return Object.entries(readLedger(ctx).workers || {})
-      .filter(([, w]) => (w || {}).state !== 'closed')
-      .map(([k, w]) => w?.id || k);
-  } catch {
-    return [];
-  }
+    let pid = process.ppid;
+    for (let i = 0; i < 8 && pid > 1; i++) {
+      const line = execFileSync('ps', ['-o', 'ppid=,lstart=,comm=', '-p', String(pid)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 }).trim();
+      const m = line.match(/^(\d+)\s+(\S+\s+\S+\s+\d+\s+[\d:]+\s+\d{4})\s+(.*)$/);
+      if (!m) return null;
+      if (/(^|\/)claude$/.test(m[3].trim())) {
+        const t = Date.parse(m[2]);
+        return Number.isFinite(t) ? t : null;
+      }
+      pid = Number(m[1]);
+    }
+  } catch { /* 分からなければ作られた時刻は見ない */ }
+  return null;
+}
+
+// 台帳のうち閉じていない作業セッションの ID。
+export function openWorkerIds(ledger) {
+  return Object.entries(ledger?.workers || {})
+    .filter(([, w]) => (w || {}).state !== 'closed')
+    .map(([k, w]) => w?.id || k);
 }
 
 function cmdAnswer(argv) {
@@ -2522,22 +2565,19 @@ function answerHook() {
     if (!input.transcript_path || !existsSync(input.transcript_path)) return;
     let ctx;
     try { ctx = repoCtx(input.cwd || startDir()); } catch { return; }
+    const env = process.env;
     const texts = lastTurnAssistantTexts(readFileSync(input.transcript_path, 'utf8').split('\n'));
-    let answerReason = null;
-    try {
-      const pending = pendingAnswers(ctx);
-      if (pending.length) answerReason = answerHookDecision(texts.join('\n'), pending);
-    } catch { /* 片方が壊れても、もう片方は見る */ }
-    let progressReason = null;
-    try {
-      // `cos chief` で起動した CoS だけ（ユーザー全体の設定から呼ばれても普通のセッションは止めない）
-      if (process.env.COS_CHIEF === '1' && !process.env.COS_WORKER_ID && texts.length) {
-        const dirs = bgTasksDirs(input.transcript_path, input.session_id || 'unknown');
-        progressReason = progressHookDecision(texts[texts.length - 1], liveBgIn(dirs), liveWorkerIds(ctx));
-      }
-    } catch { /* 同上 */ }
-    const reason = stopHookReason(answerReason, progressReason);
-    if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason: `${reason}\n（この Stop フックは同じターンで1回だけ止めます）` }));
+    // 片方の材料が読めなくても、もう片方は見る
+    let pending = null;
+    try { pending = pendingAnswers(ctx); } catch { /* 回答の検査だけ飛ばす */ }
+    let isLiveBg = null;
+    let workers = null;
+    if (progressCheckApplies(env)) {
+      try { isLiveBg = liveBgIn(bgTasksDirs(input.transcript_path, input.session_id || 'unknown', env), claudeStartMs()); } catch { /* 印の検査だけ飛ばす */ }
+      try { workers = openWorkerIds(readLedger(ctx)); } catch { workers = []; }
+    }
+    const reason = stopHookDecision({ env, input, texts, pending, isLiveBg, workers });
+    if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason }));
   } catch {
     // 壊れていても CoS を止めない
   }
@@ -2880,17 +2920,17 @@ function selfTest() {
     const isLive = (id) => live.has(id);
     const W = ['dep-fix'];
     const D = (t) => progressHookDecision(t, isLive, W);
-    const failed = '- **app@2026-11-22.3:** 申請一覧（新しい方）が4列で出ているかを、これから確かめます。';
-    const r = D(`PR をマージしました。\n\n## 進めているもの\n\n${failed}\n- **PR #2132:** CI が走っています。\n\n## 返事を待っているもの\n\n**86. 設計**`);
-    assert(r && r.includes('申請一覧') && !r.includes('PR #2132') && r.includes('返事を待っているものに移す') && r.includes('誤解'), `progress: 印の無い項目だけを引用し、直し方と理由を書く: ${r}`);
+    const failed = '- **app@2026-01-01.1:** 一覧画面の表示を、これから確かめます。';
+    const r = D(`PR をマージしました。\n\n## 進めているもの\n\n${failed}\n- **PR #123:** CI が走っています。\n\n## 返事を待っているもの\n\n**86. 設計**`);
+    assert(r && r.includes('一覧画面') && !r.includes('PR #123') && r.includes('返事を待っているものに移す') && r.includes('誤解'), `progress: 印の無い項目だけを引用し、直し方と理由を書く: ${r}`);
     for (const good of [
       '- **端末の見守り:** 5分ごとに確認しています（bd20j5n0z）。',
       '- **Dependabot（dep-fix）:** 作業セッションが直しています。',
       '- **dep-fix**: 作業セッションが直しています。',
-      '- **PR #2132:** CI が走っています。',
+      '- **PR #123:** CI が走っています。',
       '- **nightly-job:** ユーザーが流すのを待っています。',
       '- **先方への依頼:** 〇〇さんから先方に頼んでいただいています。',
-      '- **確認:** 佐々木さんの返事を待っています。',
+      '- **確認:** 甲々さんの返事を待っています。',
     ]) assert(D(`## 進めているもの\n\n${good}`) === null, `progress: 印があれば通る: ${good}`);
     for (const bad of [
       '- **端末の見守り:** 確認しています（b0b8dj5bs）。',
@@ -2900,11 +2940,11 @@ function selfTest() {
       '- **画面:** ユーザーに見せる画面を確かめます。',
       '- **cos-chief.md の PR:** まだ作っていません。',
     ]) assert(D(`## 進めているもの\n\n${bad}`) !== null, `progress: 印にならないものは止める: ${bad}`);
-    assert(D('**進めているもの**\n- **PR #2132:** CI が走っています。\n  - 子の行: 通ったらマージを聞きます\n- **リリースの確認**\n  - 子の行: 見守りは bd20j5n0z で動いています') === null, 'progress: 太字の見出しでも読み、子の行の印も数える');
-    assert(D('## 進めているもの\n\n- **PR #2132:** CI が走っています。\n次の段落: これは項目ではありません。\n- 段落のあとの箇条書きは別の一覧') === null, 'progress: 箇条書きでない段落で一覧は終わる');
-    assert(D('## 進めているもの（2件）\n\n- **PR #2132:** CI が走っています。\n- **申請:** これから確かめます。') !== null, 'progress: 見出しに件数が付いていても読む');
-    assert(D(`## 進めているもの\n\n- **PR #2132:** CI が走っています。\n\n## 進めているもの\n\n${failed}`) !== null, 'progress: 見出しが2回あれば2つ目も読む');
-    assert(D('PR をマージしました。申請一覧はこれから確かめます。') === null, 'progress: 見出しが無ければ通る');
+    assert(D('**進めているもの**\n- **PR #123:** CI が走っています。\n  - 子の行: 通ったらマージを聞きます\n- **リリースの確認**\n  - 子の行: 見守りは bd20j5n0z で動いています') === null, 'progress: 太字の見出しでも読み、子の行の印も数える');
+    assert(D('## 進めているもの\n\n- **PR #123:** CI が走っています。\n次の段落: これは項目ではありません。\n- 段落のあとの箇条書きは別の一覧') === null, 'progress: 箇条書きでない段落で一覧は終わる');
+    assert(D('## 進めているもの（2件）\n\n- **PR #123:** CI が走っています。\n- **一覧:** これから確かめます。') !== null, 'progress: 見出しに件数が付いていても読む');
+    assert(D(`## 進めているもの\n\n- **PR #123:** CI が走っています。\n\n## 進めているもの\n\n${failed}`) !== null, 'progress: 見出しが2回あれば2つ目も読む');
+    assert(D('PR をマージしました。一覧画面はこれから確かめます。') === null, 'progress: 見出しが無ければ通る');
     assert(D('1. 進めているもの は下のとおり') === null, 'progress: 見出しでない行の「進めているもの」は読まない');
     assert(progressItems('### 進めているもの：\n1. a #1\n2) b').length === 2, 'progress: 番号付きの箇条書きと「：」付きの見出し');
     // 裏のコマンドの出力の読み方（動いている／終わった／止めた／無い）
@@ -2916,6 +2956,8 @@ function selfTest() {
       writeFileSync(join(tmp, 'tasks', 'bk1lled00.output'), 'watching...\n[killed]\n');
       const lb = liveBgIn([join(tmp, 'nope'), join(tmp, 'tasks')]);
       assert(lb('bd20j5n0z') && !lb('b0b8dj5bs') && !lb('bk1lled00') && !lb('bzzzzzzzz'), 'progress: 裏のコマンドの生死');
+      assert(liveBgIn([join(tmp, 'tasks')], 0)('bd20j5n0z'), 'progress: 今のプロセスの起動より後に作られた出力は動いている');
+      assert(!liveBgIn([join(tmp, 'tasks')], Date.now() + 60_000)('bd20j5n0z'), 'progress: 今のプロセスの起動より前に作られた出力は（resume の前に死んだもの）動いていない');
       assert(progressHookDecision('## 進めているもの\n- 見守り（bk1lled00）', lb, []) !== null, 'progress: 止めた裏の ID は印にならない');
     } finally {
       rmSync(tmp, { recursive: true, force: true });
@@ -2933,6 +2975,50 @@ function selfTest() {
     ];
     const ts = lastTurnAssistantTexts(lines);
     assert(ts.length === 2 && ts[1] === '最後の報告', `progress: ターンの最後の文: ${JSON.stringify(ts)}`);
+    // 生死は最後の行だけで見る（途中に子の「exited with code」があっても動いている）
+    {
+      const tmp2 = join(homedir(), '.cache', `cos-selftest-b-${process.pid}`);
+      try {
+        mkdirSync(join(tmp2, 'tasks'), { recursive: true });
+        writeFileSync(join(tmp2, 'tasks', 'bloop0001.output'), 'child [exited with code 1]\n[exited with code 1]\nretrying...\n');
+        writeFileSync(join(tmp2, 'tasks', 'bneg00001.output'), 'x\n[exited with code -1]\n');
+        const lb2 = liveBgIn([join(tmp2, 'tasks')]);
+        assert(lb2('bloop0001') && !lb2('bneg00001'), 'progress: 生死は最後の行だけで見る');
+        // 出力の置き場所: <CLAUDE_CODE_TMPDIR>/claude-<uid>/<会話ログの親ディレクトリ名>/<session>/tasks、無ければセッションで探す
+        const env = { CLAUDE_CODE_TMPDIR: tmp2 };
+        mkdirSync(join(tmp2, 'claude-7', 'proj', 's1', 'tasks'), { recursive: true });
+        mkdirSync(join(tmp2, 'claude-7', 'other', 's2', 'tasks'), { recursive: true });
+        const d1 = bgTasksDirs('/x/projects/proj/s1.jsonl', 's1', env, 7);
+        assert(d1.length === 1 && d1[0] === join(tmp2, 'claude-7', 'proj', 's1', 'tasks'), `progress: tasks の置き場所 ${d1}`);
+        const d2 = bgTasksDirs('/x/projects/proj/s2.jsonl', 's2', env, 7);
+        assert(d2.length === 1 && d2[0] === join(tmp2, 'claude-7', 'other', 's2', 'tasks'), `progress: プロジェクト名が違ってもセッションで探す ${d2}`);
+        assert(bgTasksDirs('/x/p/s9.jsonl', 's9', env, 7).length === 0 && bgTasksDirs('/x/p/s1.jsonl', 's1', env, 8).length === 0, 'progress: 無ければ空');
+      } finally {
+        rmSync(tmp2, { recursive: true, force: true });
+      }
+    }
+    // 台帳のうち閉じていないものだけ
+    const ow = openWorkerIds({ workers: { a: { id: 'a', state: 'running' }, b: { id: 'b', state: 'closed' }, c: { state: 'idle' }, d: null } });
+    assert(JSON.stringify(ow) === '["a","c","d"]', `progress: 閉じた作業セッションは外す ${ow}`);
+    assert(openWorkerIds(null).length === 0 && openWorkerIds({}).length === 0, 'progress: 台帳が空');
+    // Stop フックの配線
+    {
+      const CHIEF = { COS_CHIEF: '1' };
+      const T = ['途中', '## 進めているもの\n- **確認:** これから。'];
+      const base = { env: CHIEF, input: {}, texts: T, pending: [], isLiveBg: () => false, workers: [] };
+      const S = (o) => stopHookDecision({ ...base, ...o });
+      assert(S({})?.includes('印が無い'), 'stop: CoS では印の検査をする');
+      assert(S({ env: {} }) === null, 'stop: COS_CHIEF が無ければ印の検査はしない');
+      assert(S({ env: { COS_CHIEF: '1', COS_WORKER_ID: 'x' } }) === null, 'stop: 作業セッションでは印の検査はしない');
+      assert(S({ input: { stop_hook_active: true } }) === null, 'stop: stop_hook_active なら止めない');
+      assert(S({ texts: ['## 進めているもの\n- **確認:** これから。', '最後の報告（一覧なし）'] }) === null, 'stop: 印の検査は最後の文だけ');
+      assert(S({ isLiveBg: null }) === null && S({ workers: null }) === null, 'stop: 材料が読めなければ印の検査は飛ばす');
+      const P = [{ id: 'A1', question: 'q1' }];
+      const both = S({ texts: ['[A1] 本文で触れた', '## 進めているもの\n- **確認:** これから。\n\n## 返事を待っているもの\n- なし'], pending: P });
+      assert(both && both.includes('[A1] q1') && both.includes('印が無い') && both.split('1回だけ止めます').length === 2, `stop: 2つの理由は1つにまとめる ${both}`);
+      assert(S({ env: {}, pending: P, texts: ['返事を待っているもの\n- なし'] })?.includes('[A1]'), 'stop: 回答の検査は COS_CHIEF に関係なく今までどおり');
+      assert(S({ env: {}, pending: null, texts: ['返事を待っているもの'] }) === null, 'stop: 回答が読めなければ回答の検査は飛ばす');
+    }
     // 2つの検査の理由は1つにまとめる
     assert(stopHookReason(null, null) === null, 'stop: どちらも無ければ通す');
     assert(stopHookReason('A', null) === 'A' && stopHookReason(null, 'B') === 'B', 'stop: 片方だけ');
