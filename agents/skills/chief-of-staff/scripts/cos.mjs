@@ -636,6 +636,7 @@ function repoCtx(cwd = startDir()) {
     retrosDir: join(dir, 'retros'),
     chiefFile: join(dir, 'chief.json'),
     deploysFile: join(dir, 'deploys.json'),
+    answersFile: join(dir, 'answers.json'),
   };
 }
 
@@ -1531,6 +1532,7 @@ function cmdStatus(argv) {
     }
   }
   console.log(retroLine(ctx));
+  { const al = answersLine(ctx); if (al) console.log(al); }
 }
 
 function cmdRename(argv) {
@@ -2117,6 +2119,135 @@ function retroDone(argv) {
 
 // `cos root`: この場所の CoS のディレクトリ（cos.json のあるディレクトリ・無ければ git の最上位）を出す。
 // --sub は最上位からの相対（最上位の CoS なら空行）。chief.sh が起動する場所と名前を決めるのに使う。
+// ---- ユーザーの質問への回答を、読んだと確かめるまで追う（cos answer）----
+// 途中で答えた回答は、そのあとの報告に押し流されてユーザーの目に入らないことがある。
+// CoS が答えたら `cos answer add` で登録し、ユーザーが読んだと言うまで「返事を待っているもの」に並べる。
+// Stop フック（`cos answer hook`）が、「返事を待っているもの」を出した報告に未確認の回答の ID が
+// 載っていなければ1回だけ止める＝文章の決まりでなく機械で忘れを止める。
+function readAnswers(ctx) {
+  if (!existsSync(ctx.answersFile)) return { version: 1, next: 1, items: [] };
+  return JSON.parse(readFileSync(ctx.answersFile, 'utf8'));
+}
+
+function updateAnswers(ctx, fn) {
+  return withLock(ctx, () => {
+    const a = readAnswers(ctx);
+    const out = fn(a);
+    writeAtomic(ctx.answersFile, `${JSON.stringify(a, null, 2)}\n`);
+    return out;
+  });
+}
+
+function pendingAnswers(ctx) {
+  return readAnswers(ctx).items.filter((x) => !x.readAt);
+}
+
+function answersLine(ctx) {
+  const p = pendingAnswers(ctx);
+  if (p.length === 0) return null;
+  return `読んだか確かめていない回答: ${p.length} 件（${p.map((x) => `[${x.id}] ${x.question}`).join('／')}）＝報告の「返事を待っているもの」に並べ、読んだと言われたら cos answer read <ID>`;
+}
+
+// 最後のユーザーの発言（ツールの結果・差し込みを除く）より後の、assistant の文を全部つなぐ。
+function lastTurnAssistantText(lines) {
+  let texts = [];
+  for (const line of lines) {
+    let rec;
+    try { rec = JSON.parse(line); } catch { continue; }
+    if (rec.isSidechain) continue;
+    const content = rec.message?.content;
+    if (rec.type === 'user' && !rec.isMeta) {
+      const isHuman = typeof content === 'string'
+        ? !content.startsWith('<')
+        : Array.isArray(content) && !content.some((c) => c?.type === 'tool_result')
+          && content.some((c) => c?.type === 'text' && !String(c.text).startsWith('<'));
+      if (isHuman) texts = [];
+      continue;
+    }
+    if (rec.type === 'assistant' && Array.isArray(content)) {
+      for (const c of content) if (c?.type === 'text' && c.text) texts.push(c.text);
+    }
+  }
+  return texts.join('\n');
+}
+
+// 判定だけの純関数（自己テスト用）。止めるなら理由の文、通すなら null。
+function answerHookDecision(text, pending, marker = '返事を待っているもの') {
+  if (pending.length === 0) return null;
+  if (!text.includes(marker)) return null; // 報告でないターン（張り直しだけ等）は止めない
+  const idx = text.lastIndexOf(marker);
+  const tail = text.slice(idx);
+  const missing = pending.filter((x) => !tail.includes(`[${x.id}]`));
+  if (missing.length === 0) return null;
+  return [
+    'ユーザーが読んだと確かめていない回答があります。「返事を待っているもの」の中に、次の回答を ID 付きで並べ直してください（答えの要点を1〜2行・「読んだら教えてください」）。',
+    ...missing.map((x) => `- [${x.id}] ${x.question}${x.answer ? `（答え: ${x.answer}）` : ''}`),
+    'ユーザーが読んだと言ったら `cos answer read <ID>`。もう要らない回答なら `cos answer read <ID> --note 理由`。',
+  ].join('\n');
+}
+
+function cmdAnswer(argv) {
+  const [sub, ...rest] = argv;
+  if (sub === 'hook') return answerHook();
+  const ctx = repoCtx();
+  if (sub === 'add') {
+    const { pos, opt } = parseArgs(rest);
+    const question = pos.join(' ').trim();
+    if (!question) throw new UsageError('cos answer add "<質問の要約>" [--answer "<答えの要点>"]');
+    const id = updateAnswers(ctx, (s) => {
+      const id = `A${s.next++}`;
+      s.items.push({ id, question, answer: opt.answer ?? null, answeredAt: now(), readAt: null });
+      return id;
+    });
+    console.log(`登録しました: [${id}] ${question}＝読んだと言われるまで報告の「返事を待っているもの」に [${id}] 付きで並べる（Stop フックが確かめる）`);
+    return;
+  }
+  if (sub === 'read') {
+    const { pos, opt } = parseArgs(rest, ['all']);
+    const ids = opt.all ? pendingAnswers(ctx).map((x) => x.id) : pos;
+    if (ids.length === 0) throw new UsageError('cos answer read <ID...> | --all [--note 理由]');
+    const done = updateAnswers(ctx, (s) => {
+      const hit = [];
+      for (const id of ids) {
+        const x = s.items.find((y) => y.id === id);
+        if (!x) die(`回答 ${id} がありません（cos answer list）`);
+        if (!x.readAt) { x.readAt = now(); if (opt.note) x.note = opt.note; hit.push(id); }
+      }
+      return hit;
+    });
+    console.log(done.length ? `読んだことにしました: ${done.join(' ')}` : '変わったものはありません');
+    return;
+  }
+  if (sub === 'list' || sub === undefined) {
+    const { opt } = parseArgs(rest, ['all', 'json']);
+    const items = opt.all ? readAnswers(ctx).items : pendingAnswers(ctx);
+    if (opt.json) { console.log(JSON.stringify(items, null, 2)); return; }
+    if (items.length === 0) { console.log('読んだか確かめていない回答はありません'); return; }
+    for (const x of items) console.log(`[${x.id}] ${x.readAt ? '読んだ' : '未確認'}  ${x.question}${x.answer ? `\n      答え: ${x.answer}` : ''}  （${ago(x.answeredAt)}）`);
+    return;
+  }
+  throw new UsageError('cos answer (add|read|list|hook)');
+}
+
+// Stop フック。壊れていても止めない（例外は通す）。stop_hook_active なら止めない（1回だけ）。
+function answerHook() {
+  try {
+    let input = {};
+    try { input = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { input = {}; }
+    if (input.stop_hook_active) return;
+    if (!process.env.COS_CHIEF && !input.transcript_path) return;
+    let ctx;
+    try { ctx = repoCtx(input.cwd || startDir()); } catch { return; }
+    const pending = pendingAnswers(ctx);
+    if (pending.length === 0 || !input.transcript_path || !existsSync(input.transcript_path)) return;
+    const text = lastTurnAssistantText(readFileSync(input.transcript_path, 'utf8').split('\n'));
+    const reason = answerHookDecision(text, pending);
+    if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+  } catch {
+    // 壊れていても CoS を止めない
+  }
+}
+
 function cmdRoot(argv) {
   const { opt } = parseArgs(argv, ['sub']);
   const ctx = repoCtx();
@@ -2388,6 +2519,24 @@ function selfTest() {
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
+  // cos answer の判定
+  {
+    const P = [{ id: 'A1', question: 'q1' }, { id: 'A2', question: 'q2' }];
+    assert(answerHookDecision('ただの張り直し', P) === null, 'answer: 報告でないターンは止めない');
+    assert(answerHookDecision('x\n**返事を待っているもの**\n1. [A1] q1\n2. [A2] q2', P) === null, 'answer: 全部あれば通す');
+    const r = answerHookDecision('[A2] 本文で触れた\n**返事を待っているもの**\n1. [A1] q1', P);
+    assert(r && r.includes('[A2]') && !r.includes('[A1] q1'), 'answer: 一覧に無いものだけ挙げる');
+    assert(answerHookDecision('返事を待っているもの', []) === null, 'answer: 未確認0件は止めない');
+    const lines = [
+      JSON.stringify({ type: 'user', message: { content: '前の質問' } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '古い' }] } }),
+      JSON.stringify({ type: 'user', message: { content: '新しい質問' } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'A' }] } }),
+      JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', content: 'x' }] } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'B' }] } }),
+    ];
+    assert(lastTurnAssistantText(lines) === 'A\nB', 'answer: 最後のターンの文だけ');
+  }
   console.log('cos self-test: ok');
 }
 
@@ -2413,6 +2562,10 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos reorient [--hook]                     （フック用）起動時・要約や /clear のあとに文脈を戻す
   cos reorient --hook --known-only          （ユーザー全体の設定のフック用）記録済みの CoS を cos chief 無しで再開したときだけ戻す
   cos chief [claude への引数]                CoS のセッションをいまのペインで起動する（60% で自動要約）
+  cos answer add "<質問の要約>" [--answer "<答えの要点>"]   ユーザーの質問に答えたら登録（読んだと言われるまで報告に並べる）
+  cos answer read <ID...> | --all [--note 理由]   ユーザーが読んだ
+  cos answer list [--all] [--json]
+  cos answer hook                           （CoS の Stop フック用）報告に未確認の回答が載っていなければ1回止める
   cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
   cos self-test`;
 
@@ -2421,7 +2574,7 @@ if (isMain) {
   const [cmd, ...rest] = process.argv.slice(2);
   const table = {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, 'deploy-watch': cmdDeployWatch, status: cmdStatus, ls: cmdStatus,
-    report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot,
+    report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot, answer: cmdAnswer,
     'self-test': selfTest,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {

@@ -10,6 +10,16 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.agents/skills/chief-of-staff/scripts/cos.mjs\" answer hook"
+          }
+        ]
+      }
     ]
   }
 }
