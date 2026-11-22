@@ -2319,6 +2319,11 @@ function answersLine(ctx) {
 
 // 最後のユーザーの発言（ツールの結果・差し込みを除く）より後の、assistant の文を全部つなぐ。
 function lastTurnAssistantText(lines) {
+  return lastTurnAssistantTexts(lines).join('\n');
+}
+
+// 同じく、assistant の記録ごとの文の並び（空の記録は除く）。最後の要素が、そのターンで最後に出した文。
+function lastTurnAssistantTexts(lines) {
   let texts = [];
   for (const line of lines) {
     let rec;
@@ -2334,10 +2339,11 @@ function lastTurnAssistantText(lines) {
       continue;
     }
     if (rec.type === 'assistant' && Array.isArray(content)) {
-      for (const c of content) if (c?.type === 'text' && c.text) texts.push(c.text);
+      const t = content.filter((c) => c?.type === 'text' && c.text).map((c) => c.text);
+      if (t.some((x) => x.trim())) texts.push(t.join('\n'));
     }
   }
-  return texts.join('\n');
+  return texts;
 }
 
 // 判定だけの純関数（自己テスト用）。止めるなら理由の文、通すなら null。
@@ -2353,6 +2359,113 @@ function answerHookDecision(text, pending, marker = '返事を待っているも
     ...missing.map((x) => `- [${x.id}] ${x.question}${x.answer ? `（答え: ${x.answer}）` : ''}`),
     'ユーザーが読んだと言ったら `cos answer read <ID>`。もう要らない回答なら `cos answer read <ID> --note 理由`。',
   ].join('\n');
+}
+
+// ---- 「進めているもの」の各項目に、実際に動いているものの印を求める（同じ Stop フックで見る）----
+// ある CoS が一度も始めていない確認を、報告のたびに3時間「進めているもの」に書き写し続けた。誰も動いていない
+// 項目を、ユーザーは進んでいると受け取る。報告の最後の文に「進めているもの」の見出しがあれば、その下の箇条書きを
+// 1項目ずつ見て、次の印のどれも無い項目があれば止める。
+// - 動いている裏のコマンドの ID（b＋英数字8文字。tasks/<ID>.output があり、終わっても止められてもいない）
+// - 台帳にある、閉じていない作業セッションの ID
+// - #番号（PR / Issue。CI 待ちなどは GitHub と見張りが動いているので、ここまでは確かめない）
+// - ほかの人が動いている印（「ユーザーが」「〇〇さんから」「…の返事」「…待ち」）。名前が出るだけでは通さない
+const PROGRESS_HEADING = /^\s*(?:#{1,6}\s*|\*\*)?進めているもの(?:[（(][^）)]*[）)])?\s*(?:\*\*)?\s*[:：]?\s*$/;
+const PROGRESS_BULLET = /^(?:[-*+・]|\d+[.)])\s+/;
+const BG_ID_RE = /(?<![0-9A-Za-z])(b[0-9a-z]{8})(?![0-9A-Za-z])/g;
+const ISSUE_RE = /(?<![0-9A-Za-z&])#\d+(?![0-9A-Za-z])/;
+const PERSON_RE = /(?:ユーザー|ご自身|[\u3005\u3007\u4e00-\u9fa5\u30a1-\u30f6\u30fc]{1,8}さん)(?:が|から|の返事|の作業|の確認|待ち)/;
+
+// 「進めているもの」の見出しの下の箇条書きを、子の行も含めて1項目ずつ返す。
+// 次の見出しか、箇条書きでない段落で終わる。続けて別の「進めているもの」があれば読み直す。
+export function progressItems(text) {
+  const items = [];
+  let cur = null;
+  let inside = false;
+  for (const line of String(text).split(/\r?\n/)) {
+    if (!inside) {
+      if (PROGRESS_HEADING.test(line)) inside = true;
+      continue;
+    }
+    if (!line.trim()) continue;
+    if (PROGRESS_BULLET.test(line)) {
+      cur = [line.trim()];
+      items.push(cur);
+    } else if ((line[0] === ' ' || line[0] === '\t') && cur) {
+      cur.push(line.trim());
+    } else {
+      inside = PROGRESS_HEADING.test(line);
+      cur = null;
+    }
+  }
+  return items.map((i) => i.join('\n'));
+}
+
+// 項目に印があるか。isLiveBg(ID) は裏のコマンドがまだ動いているか、workers は閉じていない作業セッションの ID。
+export function hasProgressAnchor(item, isLiveBg, workers) {
+  if (ISSUE_RE.test(item) || PERSON_RE.test(item)) return true;
+  for (const m of item.matchAll(BG_ID_RE)) if (isLiveBg(m[1])) return true;
+  for (const w of workers) {
+    if (!w) continue;
+    const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(?<![0-9A-Za-z_-])${esc}(?![0-9A-Za-z_-])`).test(item)) return true;
+  }
+  return false;
+}
+
+// 判定だけの純関数。止めるなら理由の文、通すなら null。
+export function progressHookDecision(text, isLiveBg, workers) {
+  const bad = progressItems(text).filter((i) => !hasProgressAnchor(i, isLiveBg, workers));
+  if (bad.length === 0) return null;
+  return [
+    '「進めているもの」に、実際に動いているものの印が無い項目があります。',
+    ...bad.map((i) => `- 「${i.split('\n')[0].slice(0, 200)}」`),
+    '各項目は、実際に始めて裏のコマンドの ID を書く・作業セッションを立てる・返事を待っているものに移す・消す、のどれかにしてください。'
+      + '印として認めるのは、動いている裏のコマンドの ID（b＋英数字8文字）・台帳にある閉じていない作業セッションの ID・#番号・'
+      + '「ユーザーが」「〇〇さんから」のようにほかの人が動いている書き方です。',
+    'なぜ駄目か: 書き写しているだけで誰も動いていない項目を、ユーザーが進んでいると誤解します（一度も始めていない確認を、3時間載せ続けたことがある）。',
+  ].join('\n');
+}
+
+// 2つの検査の理由を1つにまとめる（両方 null なら null）。
+export function stopHookReason(...reasons) {
+  const r = reasons.filter(Boolean);
+  return r.length ? r.join('\n\n') : null;
+}
+
+// 裏のコマンドの出力の置き場所（<tmp>/claude-<uid>/<project>/<session>/tasks）。
+// 会話ログの置き場所と tmp 側のプロジェクト名が違うことがあるので、見つからなければセッションで探す。
+function bgTasksDirs(transcript, session, env = process.env) {
+  const root = join(env.CLAUDE_CODE_TMPDIR || '/tmp', `claude-${process.getuid?.() ?? 0}`);
+  const first = join(root, basename(dirname(transcript)), session, 'tasks');
+  if (existsSync(first)) return [first];
+  try {
+    return readdirSync(root).map((p) => join(root, p, session, 'tasks')).filter((d) => existsSync(d));
+  } catch {
+    return [];
+  }
+}
+
+// 裏のコマンドがまだ動いているか。終わると「[exited with code N]」、止める（KillShell）と最後の行が「[killed]」になる。
+export function liveBgIn(dirs) {
+  return (id) => {
+    for (const d of dirs) {
+      const p = join(d, `${id}.output`);
+      if (!existsSync(p)) continue;
+      const out = readFileSync(p, 'utf8');
+      return !out.includes('exited with code') && out.trimEnd().split('\n').pop() !== '[killed]';
+    }
+    return false;
+  };
+}
+
+function liveWorkerIds(ctx) {
+  try {
+    return Object.entries(readLedger(ctx).workers || {})
+      .filter(([, w]) => (w || {}).state !== 'closed')
+      .map(([k, w]) => w?.id || k);
+  } catch {
+    return [];
+  }
 }
 
 function cmdAnswer(argv) {
@@ -2398,20 +2511,33 @@ function cmdAnswer(argv) {
   throw new UsageError('cos answer (add|read|list|hook)');
 }
 
-// Stop フック。壊れていても止めない（例外は通す）。stop_hook_active なら止めない（1回だけ）。
+// CoS の Stop フック（`cos answer hook`）。未確認の回答の検査と「進めているもの」の印の検査を両方見て、
+// 止めたい理由があれば1つにまとめて1回だけ止める。壊れていても止めない（例外は通す）。
+// stop_hook_active（このフックで止めた続きの Stop）なら止めない＝1ターンに1回まで。
 function answerHook() {
   try {
     let input = {};
     try { input = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { input = {}; }
     if (input.stop_hook_active) return;
-    if (!process.env.COS_CHIEF && !input.transcript_path) return;
+    if (!input.transcript_path || !existsSync(input.transcript_path)) return;
     let ctx;
     try { ctx = repoCtx(input.cwd || startDir()); } catch { return; }
-    const pending = pendingAnswers(ctx);
-    if (pending.length === 0 || !input.transcript_path || !existsSync(input.transcript_path)) return;
-    const text = lastTurnAssistantText(readFileSync(input.transcript_path, 'utf8').split('\n'));
-    const reason = answerHookDecision(text, pending);
-    if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+    const texts = lastTurnAssistantTexts(readFileSync(input.transcript_path, 'utf8').split('\n'));
+    let answerReason = null;
+    try {
+      const pending = pendingAnswers(ctx);
+      if (pending.length) answerReason = answerHookDecision(texts.join('\n'), pending);
+    } catch { /* 片方が壊れても、もう片方は見る */ }
+    let progressReason = null;
+    try {
+      // `cos chief` で起動した CoS だけ（ユーザー全体の設定から呼ばれても普通のセッションは止めない）
+      if (process.env.COS_CHIEF === '1' && !process.env.COS_WORKER_ID && texts.length) {
+        const dirs = bgTasksDirs(input.transcript_path, input.session_id || 'unknown');
+        progressReason = progressHookDecision(texts[texts.length - 1], liveBgIn(dirs), liveWorkerIds(ctx));
+      }
+    } catch { /* 同上 */ }
+    const reason = stopHookReason(answerReason, progressReason);
+    if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason: `${reason}\n（この Stop フックは同じターンで1回だけ止めます）` }));
   } catch {
     // 壊れていても CoS を止めない
   }
@@ -2748,6 +2874,70 @@ function selfTest() {
     ];
     assert(lastTurnAssistantText(lines) === 'A\nB', 'answer: 最後のターンの文だけ');
   }
+  // 「進めているもの」の印の判定
+  {
+    const live = new Set(['bd20j5n0z', 'bk3m9q2xa']);
+    const isLive = (id) => live.has(id);
+    const W = ['dep-fix'];
+    const D = (t) => progressHookDecision(t, isLive, W);
+    const failed = '- **app@2026-11-22.3:** 申請一覧（新しい方）が4列で出ているかを、これから確かめます。';
+    const r = D(`PR をマージしました。\n\n## 進めているもの\n\n${failed}\n- **PR #2132:** CI が走っています。\n\n## 返事を待っているもの\n\n**86. 設計**`);
+    assert(r && r.includes('申請一覧') && !r.includes('PR #2132') && r.includes('返事を待っているものに移す') && r.includes('誤解'), `progress: 印の無い項目だけを引用し、直し方と理由を書く: ${r}`);
+    for (const good of [
+      '- **端末の見守り:** 5分ごとに確認しています（bd20j5n0z）。',
+      '- **Dependabot（dep-fix）:** 作業セッションが直しています。',
+      '- **dep-fix**: 作業セッションが直しています。',
+      '- **PR #2132:** CI が走っています。',
+      '- **nightly-job:** ユーザーが流すのを待っています。',
+      '- **先方への依頼:** 〇〇さんから先方に頼んでいただいています。',
+      '- **確認:** 佐々木さんの返事を待っています。',
+    ]) assert(D(`## 進めているもの\n\n${good}`) === null, `progress: 印があれば通る: ${good}`);
+    for (const bad of [
+      '- **端末の見守り:** 確認しています（b0b8dj5bs）。',
+      '- **端末の見守り:** 確認しています（bzzzzzzzz）。',
+      '- **old-work:** 作業セッションが直しています。',
+      '- **dep-fixer:** 作業セッションが直しています。',
+      '- **画面:** ユーザーに見せる画面を確かめます。',
+      '- **cos-chief.md の PR:** まだ作っていません。',
+    ]) assert(D(`## 進めているもの\n\n${bad}`) !== null, `progress: 印にならないものは止める: ${bad}`);
+    assert(D('**進めているもの**\n- **PR #2132:** CI が走っています。\n  - 子の行: 通ったらマージを聞きます\n- **リリースの確認**\n  - 子の行: 見守りは bd20j5n0z で動いています') === null, 'progress: 太字の見出しでも読み、子の行の印も数える');
+    assert(D('## 進めているもの\n\n- **PR #2132:** CI が走っています。\n次の段落: これは項目ではありません。\n- 段落のあとの箇条書きは別の一覧') === null, 'progress: 箇条書きでない段落で一覧は終わる');
+    assert(D('## 進めているもの（2件）\n\n- **PR #2132:** CI が走っています。\n- **申請:** これから確かめます。') !== null, 'progress: 見出しに件数が付いていても読む');
+    assert(D(`## 進めているもの\n\n- **PR #2132:** CI が走っています。\n\n## 進めているもの\n\n${failed}`) !== null, 'progress: 見出しが2回あれば2つ目も読む');
+    assert(D('PR をマージしました。申請一覧はこれから確かめます。') === null, 'progress: 見出しが無ければ通る');
+    assert(D('1. 進めているもの は下のとおり') === null, 'progress: 見出しでない行の「進めているもの」は読まない');
+    assert(progressItems('### 進めているもの：\n1. a #1\n2) b').length === 2, 'progress: 番号付きの箇条書きと「：」付きの見出し');
+    // 裏のコマンドの出力の読み方（動いている／終わった／止めた／無い）
+    const tmp = join(homedir(), '.cache', `cos-selftest-${process.pid}`);
+    try {
+      mkdirSync(join(tmp, 'tasks'), { recursive: true });
+      writeFileSync(join(tmp, 'tasks', 'bd20j5n0z.output'), 'watching...\n');
+      writeFileSync(join(tmp, 'tasks', 'b0b8dj5bs.output'), 'done\n[exited with code 0]\n');
+      writeFileSync(join(tmp, 'tasks', 'bk1lled00.output'), 'watching...\n[killed]\n');
+      const lb = liveBgIn([join(tmp, 'nope'), join(tmp, 'tasks')]);
+      assert(lb('bd20j5n0z') && !lb('b0b8dj5bs') && !lb('bk1lled00') && !lb('bzzzzzzzz'), 'progress: 裏のコマンドの生死');
+      assert(progressHookDecision('## 進めているもの\n- 見守り（bk1lled00）', lb, []) !== null, 'progress: 止めた裏の ID は印にならない');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+    // 会話ログから、ターンの最後の文だけを読む（途中の文・前のターンの一覧は見ない）
+    const lines = [
+      JSON.stringify({ type: 'user', message: { content: '前のターン' } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '## 進めているもの\n\n- 前のターンの印の無い項目' }] } }),
+      JSON.stringify({ type: 'user', message: { content: 'もう3時間くらいやってませんか？' } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '途中のテキスト' }, { type: 'tool_use', id: 't1', name: 'Bash', input: {} }] } }),
+      JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] } }),
+      JSON.stringify({ type: 'user', message: { content: '<system-reminder>差し込み</system-reminder>' } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: {} }] } }),
+      JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '最後の報告' }] } }),
+    ];
+    const ts = lastTurnAssistantTexts(lines);
+    assert(ts.length === 2 && ts[1] === '最後の報告', `progress: ターンの最後の文: ${JSON.stringify(ts)}`);
+    // 2つの検査の理由は1つにまとめる
+    assert(stopHookReason(null, null) === null, 'stop: どちらも無ければ通す');
+    assert(stopHookReason('A', null) === 'A' && stopHookReason(null, 'B') === 'B', 'stop: 片方だけ');
+    assert(stopHookReason('A', 'B') === 'A\n\nB', 'stop: 両方は1つにまとめる');
+  }
   console.log('cos self-test: ok');
 }
 
@@ -2776,7 +2966,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos answer add "<質問の要約>" [--answer "<答えの要点>"]   ユーザーの質問に答えたら登録（読んだと言われるまで報告に並べる）
   cos answer read <ID...> | --all [--note 理由]   ユーザーが読んだ
   cos answer list [--all] [--json]
-  cos answer hook                           （CoS の Stop フック用）報告に未確認の回答が載っていなければ1回止める
+  cos answer hook                           （CoS の Stop フック用）報告に未確認の回答が載っていない・「進めているもの」に印の無い項目があれば1回止める
   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
                                             ユーザーの手が要る急ぎの件を音と通知で知らせる（同じ件は既定 10 分に1回・失敗しても終了コード 0）
   cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
