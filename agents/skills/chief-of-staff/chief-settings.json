@@ -20,6 +20,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.agents/skills/chief-of-staff/scripts/guard-watch.mjs\""
+          }
+        ]
+      }
     ]
   }
 }
