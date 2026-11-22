@@ -494,11 +494,19 @@ function settledLine(line, term) {
 }
 
 // 報告書の検査。返すのは警告（1件1行）。code はブランチを持つ依頼（コードを変える依頼）か＝検証の記録まで見るか。
-export function checkReportText(text, cfg, { code = true } = {}) {
+// 依頼書にユーザーの言葉の見出し（「## ユーザーの言葉」など）があるか。
+export function briefQuotesUser(brief) {
+  return typeof brief === 'string' && /^#{1,6}\s*ユーザーの(言葉|発言|問い)/m.test(brief);
+}
+
+export function checkReportText(text, cfg, { code = true, brief = null } = {}) {
   if (text === null) return ['報告書が読めません'];
   const warns = [];
   const state = reportState(text);
   if (state !== '完了') warns.push(`報告書の状態が「${state ?? 'なし'}」（完了ではない）`);
+  if (briefQuotesUser(brief) && !recordSection(text, '依頼の言葉への対応')) {
+    warns.push('依頼書にユーザーの言葉があるのに、報告書の「## 依頼の言葉への対応」が空です（言葉の一つ一つに 済／未（理由）／別項目（ID）で答える）');
+  }
   if (!code) return warns;
   const v = recordSection(text, '検証');
   if (!v) return [...warns, '報告書の「## 検証」が空です'];
@@ -1104,6 +1112,9 @@ function reportTemplate(id) {
 ## 要約
 
 ## 質問
+
+## 依頼の言葉への対応
+<!-- 依頼書の「ユーザーの言葉」の一つ一つに、1行ずつ「済」「未（理由）」「別項目（ID）」で答える。 -->
 
 ## 進捗
 
@@ -1858,7 +1869,9 @@ function workerSessions(w) {
 // cos check の本体。返すのは { warns, info }。台帳・作業ツリーは変えない（defaultBase の fetch だけする）。
 function runCheck(ctx, w) {
   const code = w.where === 'worktree';
-  const warns = checkReportText(readReport(w).text, ctx.cfg, { code });
+  const briefFile = w.state === 'closed' && w.archive ? join(w.archive, 'brief.md') : w.brief;
+  const brief = briefFile && existsSync(briefFile) ? readFileSync(briefFile, 'utf8') : null;
+  const warns = checkReportText(readReport(w).text, ctx.cfg, { code, brief });
   const info = [];
   if (!code) return { warns, info: ['ブランチの無い依頼（コミットと土台は見ていません）'] };
   const gdir = gitDirOf(ctx, w);
@@ -2879,6 +2892,14 @@ function selfTest() {
   assert(cw.length === 2 && /決裁書/.test(cw[0]) && /コマンド/.test(cw[1]), `check 決裁書とコマンドが無い: ${cw.join('|')}`);
   assert(/空/.test(checkReportText(rpt('完了', '<!-- 書き方 -->'), ckCfg)[0]), 'check 検証が空');
   assert(checkReportText(rpt('完了', ''), ckCfg, { code: false }).length === 0, 'check ブランチの無い依頼は状態だけ');
+  {
+    const qb = '# 依頼\n\n## ユーザーの言葉（2026-11-22）\n「〜してほしい」\n';
+    const qw = checkReportText(rpt('完了', ''), ckCfg, { code: false, brief: qb });
+    assert(qw.length === 1 && /依頼の言葉への対応/.test(qw[0]), 'check 依頼書にユーザーの言葉があり対応が空なら警告');
+    const ok = rpt('完了', '').replace('## 検証', '## 依頼の言葉への対応\n- 「〜してほしい」→ 済\n\n## 検証');
+    assert(checkReportText(ok, ckCfg, { code: false, brief: qb }).length === 0, 'check 対応が書いてあれば警告なし');
+    assert(checkReportText(rpt('完了', ''), ckCfg, { code: false, brief: '# 依頼\n## 目的\n' }).length === 0, 'check ユーザーの言葉が無い依頼書は見ない');
+  }
   assert(checkReportText(null, ckCfg).length === 1, 'check 報告書が読めない');
   // cos check: コミットの Claude-Session
   assert(sessionKey('https://claude.ai/code/session_01AbC') === 'session_01AbC' && sessionKey(' x ') === 'x', 'sessionKey');
