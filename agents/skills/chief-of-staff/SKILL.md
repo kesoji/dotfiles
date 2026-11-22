@@ -101,10 +101,24 @@ cos chief            # claude を CoS として起動する（/chief-of-staff �
 | `deploy-missing`（登録から `deployMissingSec` 秒 run が無い・gh に問い合わせられない） | push が届いているか（`git ls-remote`）・workflow の path のフィルタで走らなかったのではないかを確かめ、ユーザーに伝える。走るはずのない push なら知らせるだけでよい。 |
 | `timeout` | 張り直すだけ。**ユーザーには知らせない**（何も起きていないことを報告しない。返事の文も書かない）。 |
 
+**音と通知（自動）**: `cos watch` は、ユーザーの手が要る出来事を出すとき、自分で `cos alert` と同じ音と通知を鳴らす（出力の最後に「音と通知: …」と出る）。その件で CoS が `cos alert` を打ち直さなくてよい。種類は cos.json の `alertOn` で絞れる（`[]` で鳴らさない）。同じ件（件名）は `alertWindowMin` 分（既定 10）に1回。
+
+| 種類（`alertOn` の値） | 鳴るとき | 音 |
+| --- | --- | --- |
+| `blocked` | 承認・質問の画面で止まった | urgent |
+| `start-blocked` | 起動時に承認・質問の画面で止まった | urgent |
+| `deploy-failed` | デプロイの run が失敗・取り消し | urgent |
+| `stalled` | 止まった疑いで、画面に API のエラーがある | urgent |
+| `gone` | エージェントがいなくなり、報告書が「完了」以外 | urgent |
+| `question` | ターンが終わり、報告書が「質問」 | info |
+
+`timeout`・`deploy-done`・`deploy-missing`・`retro-due`・完了・「進行中」のままのターン終わり・API のエラーの無い `stalled` は鳴らさない。
+
 - 出来事が来ても、状態が前と変わっていない（すでに伝えた質問の待機中・待ち時間の要約だけ・途中経過の「進行中」・時間切れ）ときは、ユーザーに知らせず張り直す。知らせるのは、新しい質問・完了・承認待ち・止まった理由など、ユーザーに伝える中身があるときだけ。**知らせないターンでは「返事を待っているもの」も並べない**（出すのは張り直した事実の1行まで）。空のターンに一覧だけを出すと、直前にユーザーが読んでいた回答を押し流し、問い直させる。
 - **ユーザーの質問に答えたら `cos answer add "<質問の要約>" --answer "<答えの要点>"` で登録する。** 答えはそのあとの報告に押し流されて読まれないことがある。登録した回答は、ユーザーが読んだと言うまで「返事を待っているもの」に `[A<n>]` 付きで並べる（答えの要点を1〜2行・「読んだら教えてください」）。読んだと言われたら `cos answer read <ID>`。`cos status` に未確認の件数が出る。CoS の Stop フック（`cos answer hook`・`cos chief` で起動したとき）が、「返事を待っているもの」を出した報告に未確認の ID が無ければ1回止める。
 - **ユーザーの返事を待っている項目は、ユーザーへの報告のたびに最後に全部を全文で並べる**（「返事を待っているもの」）。新しく増えた分や変わった分だけにしない。各項目に、何の件か・質問の中身・選択肢と推奨を、前の報告を見なくても答えられる形で書く。返事をもらった項目は消す。理由: 差分だけだと、増えたり消えたりした項目をユーザーが追えない。
-- ユーザーの手が要るときは、ユーザーが CoS の画面を見ていなくても気づけるように知らせる: `herdr notification show "<ID>" --body "<一言>" --sound request`。
+- 見張りの出来事以外でユーザーの手が要る急ぎの件（1Password の解錠待ち・`aws login` 切れ・本番作業中の異常など）は、ユーザーが CoS の画面を見ていなくても気づけるように `cos alert "<件>" "<一言>"` で鳴らす（既定 urgent。判断を待つだけなら `--level info`）。画面の文字だけで伝えない。herdr が無い・失敗しても終了コード 0 で、macOS なら通知センターに出す。同じ件は10分に1回まで（`--window 分` で変える）。鳴らしたことは出来事の記録に `kind: "alert"` で残る（振り返りで数えられる）。
+- ユーザーが席を離れていそうでスマホに届けたいときは、`cos alert` に加えて PushNotification ツールも使う（ツールはスクリプトから呼べないので CoS が呼ぶ）。
 - 追加の指示が長いときは `cos send <ID> --file <file>`（作業セッションの受け箱に置いて短い一文で読ませる）。直しを頼むときも、**同じ作業セッションに返す**（文脈が残っている）。
 
 ## 取り込みと片付け
@@ -177,6 +191,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos answer add "<質問の要約>" [--answer "<答えの要点>"]` | ユーザーの質問に答えたら登録する。読んだと言われるまで報告に並べる |
 | `cos answer read <ID...> \| --all [--note 理由]` / `cos answer list [--all]` | 読んだことにする／一覧 |
 | `cos answer hook` | （CoS の Stop フック用）未確認の回答が「返事を待っているもの」に無ければ1回止める |
+| `cos alert "<件>" "<一言>" [--level urgent\|info] [--window 分]` | ユーザーの手が要る急ぎの件を音と通知で知らせる。urgent（既定）は herdr の `request` の音・info は `done` の音。herdr が無い・失敗したら macOS の通知センター。どれも出せなくても終了コード 0（標準エラーに1行）。同じ件は `--window`（既定 cos.json の `alertWindowMin`＝10）分に1回。記録は `<git-common-dir>/cos/alerts.json` と出来事（`kind: "alert"`） |
 | `cos self-test` | 判定の自己テスト |
 
 ## リポジトリ側の設定（`.claude/cos.json`・任意）
@@ -200,6 +215,8 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
   "baseLagWarn": 30,
   "deployPollSec": 20,
   "deployMissingSec": 300,
+  "alertOn": ["blocked", "start-blocked", "deploy-failed", "stalled", "gone", "question"],
+  "alertWindowMin": 10,
   "repos": {}
 }
 ```
@@ -214,6 +231,8 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `baseLagWarn`: ブランチの土台が `defaultBase` の最新からこのコミット数以上遅れていたら `cos check` が警告する。
 - `deployPollSec`: `cos deploy-watch` で登録したデプロイを gh に問い合わせる間隔（秒）。`cos watch --interval` の方が長ければそちら。1件につき1回の `gh run list` なので、20 秒なら1時間に 180 回（GitHub API の上限は1時間 5000 回）。
 - `deployMissingSec`: 登録してからこの秒数 run が1つも無ければ（または gh に問い合わせられないままなら）`deploy-missing` を出して見張りをやめる。
+- `alertOn`: `cos watch` が音と通知で知らせる出来事の種類（上の「見張りと対応」の表）。`[]` なら鳴らさない。
+- `alertWindowMin`: 同じ件（件名）を二度鳴らさない分数（`cos watch` の自動の知らせと `cos alert` の既定）。
 - `labelWidth`: サイドバーで読める幅（半角1・全角2）。`--label` をこの幅に収める。
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
 - `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。

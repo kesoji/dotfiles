@@ -16,6 +16,7 @@
 //   cos retro status | collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force] | done [--file F]
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
 //   cos reorient --hook --known-only   （ユーザー全体の設定のフック用）chief.json にあるセッションを `cos chief` 無しで再開したときだけ戻す
+//   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
 //   cos self-test
 //   cos chief               CoS のセッションを起動する（bin/cos が scripts/chief.sh へ渡す）
 //   cos root [--sub]        この場所の CoS のディレクトリ（chief.sh 用）
@@ -27,6 +28,7 @@
 //   <git-common-dir>/cos/retro.json     週1回の振り返りの期限（since＝今の期間の始まり・知らせた日・履歴）
 //   <git-common-dir>/cos/retros/        振り返りの記録（材料の下書き＋CoS の判断＋改善案の採否）
 //   <git-common-dir>/cos/chief.json     CoS だったセッションの記録（振り返りで会話ログを読むため）
+//   <git-common-dir>/cos/alerts.json    急ぎの知らせを最後に鳴らした時刻（同じ件を短い間に二度鳴らさない）
 //   <git-common-dir>/cos/deploys.json   見張り中のデプロイ（cos deploy-watch で登録・cos watch が出来事を出したら消す）
 // 依頼書と報告書は作業セッションの作業ツリーの `.cos/<slug>/` に置く（info/exclude で git から外す）。
 // 環境変数 COS_DIR で状態の置き場所を差し替えられる（試験用＝本物の台帳を触らずに watch などを試す）。
@@ -59,6 +61,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const ALERT_KINDS_DEFAULT = ['blocked', 'start-blocked', 'deploy-failed', 'stalled', 'gone', 'question'];
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SETTLED = new Set(['idle', 'done', 'blocked']);
 // 見張りの対象にする台帳の状態。setup-failed / start-failed は人が見るまで動かないので見張らない。
@@ -91,6 +94,9 @@ const DEFAULT_CFG = {
   // cos watch: ターンが終わったのに報告書が「進行中」のまま、この分数動かない作業セッションを stalled として出す
   // （API の接続切れなどで応答の途中で止まり、入力待ちのまま放置されるのを拾うため）。
   stallMin: 20,
+  // cos watch: 音と通知で知らせる出来事の種類（ALERT_KINDS のうち。[] で鳴らさない）と、同じ件を二度鳴らさない分数。
+  alertOn: ALERT_KINDS_DEFAULT,
+  alertWindowMin: 10,
 };
 const DAY_MS = 86_400_000;
 
@@ -193,6 +199,62 @@ export function detectStalled(workers, nowMs, stallMs, reportStateOf) {
     out.push({ id: w.id, agent: w.agent, status: 'stalled', seq: ls.seq });
   }
   return out;
+}
+
+// ───── 急ぎの知らせ（cos alert） ─────
+
+// 見張りの出来事のうち、ユーザーの手が要るので音と通知で知らせる種類（cos.json の alertOn の既定）。
+// start-blocked＝起動時の承認・質問の画面。stalled は画面に API のエラーがあるときだけ・gone は報告書が完了以外のときだけ・
+// question は done/idle で報告書が「質問」になったとき（info の音）。timeout・deploy-done・完了は鳴らさない。
+export const ALERT_KINDS = ALERT_KINDS_DEFAULT;
+
+// 見張りの出来事1つ → 鳴らす知らせ（{ kind, level, title, body }）か null。
+// title は通知の件名で、重複の抑え（alertThrottle）の鍵にもなる。ev は cmdWatch が report・startBlocked・apiError を足したもの。
+export function alertFor(ev, alertOn = ALERT_KINDS) {
+  const on = new Set(alertOn ?? []);
+  const who = `${ev.id}${ev.agent && ev.agent !== ev.id ? `（${ev.agent}）` : ''}`;
+  let a = null;
+  if (ev.event === 'deploy-failed') {
+    const wf = (ev.failed ?? []).map((r) => r.workflow).join('・');
+    a = { kind: 'deploy-failed', level: 'urgent', title: `デプロイ失敗 ${ev.id}`, body: `${ev.repo ?? ''} ${String(ev.sha ?? '').slice(0, 7)}${wf ? `: ${wf}` : ''}`.trim() };
+  } else if (ev.event) {
+    return null; // deploy-done・deploy-missing・retro-due・timeout
+  } else if (ev.status === 'blocked') {
+    a = ev.startBlocked
+      ? { kind: 'start-blocked', level: 'urgent', title: `${ev.id} 起動時に承認待ち`, body: `${who}が起動の画面で止まっています（片付けたら cos send --first）` }
+      : { kind: 'blocked', level: 'urgent', title: `${ev.id} 承認待ち`, body: `${who}が承認・質問の画面で止まっています` };
+  } else if (ev.status === 'stalled') {
+    if (ev.apiError) a = { kind: 'stalled', level: 'urgent', title: `${ev.id} API エラーで停止`, body: `${who}が API のエラーで止まったままです` };
+  } else if (ev.status === 'gone') {
+    if (ev.report !== '完了') a = { kind: 'gone', level: 'urgent', title: `${ev.id} 途中で終了`, body: `${who}がいなくなりました（報告書「${ev.report ?? '読めない'}」）` };
+  } else if (ev.status === 'idle' || ev.status === 'done') {
+    if (ev.report === '質問') a = { kind: 'question', level: 'info', title: `${ev.id} 質問`, body: `${who}の報告書が「質問」です` };
+  }
+  return a && on.has(a.kind) ? a : null;
+}
+
+// 同じ件（title）を windowMs のうちに二度鳴らさない。last は { [title]: 最後に鳴らした ISO }。
+// 返す next は窓を過ぎた古い記録を捨てたもの（鳴らすなら title を今に更新済み）。
+export function alertThrottle(last, title, nowMs, windowMs) {
+  const next = {};
+  for (const [k, at] of Object.entries(last ?? {})) {
+    const t = Date.parse(at);
+    if (Number.isFinite(t) && nowMs - t < windowMs) next[k] = at;
+  }
+  const fire = !Object.hasOwn(next, title);
+  if (fire) next[title] = new Date(nowMs).toISOString();
+  return { fire, next };
+}
+
+// 知らせの出し方。urgent は request の音・info は done の音。herdr が無いときの予備に macOS の通知。
+export function alertCommands(level, title, body, platform) {
+  const sound = level === 'info' ? 'done' : 'request';
+  const cmds = [['herdr', ['notification', 'show', title, '--body', body, '--sound', sound]]];
+  if (platform === 'darwin') {
+    const q = (s) => `"${String(s).replace(/[\\"]/g, '\\$&')}"`;
+    cmds.push(['osascript', ['-e', `display notification ${q(body)} with title ${q(title)} sound name ${q(level === 'info' ? 'Glass' : 'Sosumi')}`]]);
+  }
+  return cmds;
 }
 
 export function renderTemplate(tpl, vars) {
@@ -637,6 +699,7 @@ function repoCtx(cwd = startDir()) {
     chiefFile: join(dir, 'chief.json'),
     deploysFile: join(dir, 'deploys.json'),
     answersFile: join(dir, 'answers.json'),
+    alertsFile: join(dir, 'alerts.json'),
   };
 }
 
@@ -1352,6 +1415,15 @@ function cmdWatch(argv) {
         console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}${ev.apiError ? `・画面に API のエラー（応答の途中で切れて止まった。cos send ${ev.id} --seen で続きを促す）` : ''}`);
       }
       for (const ev of deployEvents) console.log(deployLine(ev));
+      // 急ぐ種類は音と通知で知らせる（ユーザーが CoS の画面を見ていなくても気づけるように）
+      const rang = [];
+      for (const ev of [...events, ...deployEvents]) {
+        const a = alertFor(ev, ctx.cfg.alertOn);
+        if (!a) continue;
+        const r = sendAlert(ctx, { title: a.title, body: a.body, level: a.level, source: 'watch', windowMs: ctx.cfg.alertWindowMin * 60_000 });
+        rang.push(`${a.title}（${r.suppressed ? '同じ件を鳴らし済み' : r.fired ? a.level : '鳴らせなかった'}）`);
+      }
+      if (rang.length) console.log(`\n音と通知: ${rang.join('・')}。同じ件で cos alert を打ち直さなくてよい`);
       console.log('\n対応したら cos watch を張り直してください。');
       return;
     }
@@ -1362,6 +1434,98 @@ function cmdWatch(argv) {
     }
     sleep(intervalMs);
   }
+}
+
+// 急ぎの知らせを鳴らす。失敗しても投げない（見張りや監視のスクリプトを止めない）。
+// ctx が null（git の外）なら重複の抑えと記録は飛ばす。返すのは { fired, via, suppressed }。
+function sendAlert(ctx, { title, body = '', level = 'urgent', source = 'cli', windowMs }) {
+  let fire = true;
+  if (ctx) {
+    try {
+      fire = withLock(ctx, () => {
+        let last = {};
+        try {
+          if (existsSync(ctx.alertsFile)) last = JSON.parse(readFileSync(ctx.alertsFile, 'utf8')).last ?? {};
+        } catch {
+          // 壊れた記録は捨てて鳴らす（鳴らし損ねる方が悪い）
+        }
+        const r = alertThrottle(last, title, Date.now(), windowMs);
+        writeAtomic(ctx.alertsFile, `${JSON.stringify({ version: 1, last: r.next }, null, 2)}\n`);
+        return r.fire;
+      });
+    } catch (e) {
+      console.error(`cos alert: 重複の記録を読めないまま鳴らします（${e.message}）`);
+    }
+  }
+  let via = null;
+  const errs = [];
+  if (fire) {
+    for (const [bin, args] of alertCommands(level, title, body, process.platform)) {
+      try {
+        execFileSync(bin, args, { stdio: ['ignore', 'ignore', 'pipe'], timeout: 10_000 });
+        via = bin;
+        break;
+      } catch (e) {
+        const msg = e.code === 'ENOENT' ? '見つかりません' : String(e.stderr ?? '').trim().split('\n')[0] || `終了コード ${e.status ?? e.signal ?? '?'}`;
+        errs.push(`${bin}: ${msg}`);
+      }
+    }
+    if (!via) {
+      console.error(`cos alert: 知らせを出せませんでした（${errs.join(' / ')}）`);
+      // 鳴らせなかった件は重複の記録から外す（次に打ったときは鳴らす）
+      if (ctx) {
+        try {
+          withLock(ctx, () => {
+            const j = JSON.parse(readFileSync(ctx.alertsFile, 'utf8'));
+            delete j.last?.[title];
+            writeAtomic(ctx.alertsFile, `${JSON.stringify(j, null, 2)}\n`);
+          });
+        } catch {
+          // 外せなくても止めない
+        }
+      }
+    }
+  }
+  if (ctx) {
+    try {
+      logEvent(ctx, { kind: 'alert', title, body, level, source, via: via ?? undefined, suppressed: fire ? undefined : true, failed: fire && !via ? true : undefined });
+    } catch {
+      // 記録できなくても止めない
+    }
+  }
+  return { fired: Boolean(via), via, suppressed: !fire };
+}
+
+function cmdAlert(argv) {
+  const { pos, opt } = parseArgs(argv, []);
+  const [title, body = ''] = pos;
+  if (!title) throw new UsageError('cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]');
+  const level = opt.level ?? 'urgent';
+  if (level !== 'urgent' && level !== 'info') throw new UsageError(`--level は urgent か info です: ${level}`);
+  let ctx = null;
+  try {
+    ctx = repoCtxSoft();
+  } catch (e) {
+    console.error(`cos alert: CoS の状態の置き場所が分からないので、重複の抑えと記録をしません（${String(e.message).split('\n').find((l) => l.startsWith('fatal:')) ?? String(e.message).split('\n')[0]}）`);
+  }
+  const min = Number(opt.window ?? ctx?.cfg.alertWindowMin ?? 10);
+  const r = sendAlert(ctx, { title, body, level, source: 'cli', windowMs: (Number.isFinite(min) ? min : 10) * 60_000 });
+  if (r.suppressed) console.log(`鳴らしませんでした（同じ件「${title}」を ${min} 分のうちに鳴らし済み）`);
+  else if (r.fired) console.log(`知らせました（${r.via}・${level}）: ${title}`);
+}
+
+// repoCtx の die しない版（cos alert は git の外や cos.json が壊れていても鳴らす）。
+function repoCtxSoft() {
+  const cwd = process.env.COS_ROOT && existsSync(process.env.COS_ROOT) ? process.env.COS_ROOT : process.cwd();
+  const { root, dir } = locate(cwd, process.env.COS_DIR);
+  let user = {};
+  try {
+    const f = join(root, '.claude', 'cos.json');
+    if (existsSync(f)) user = JSON.parse(readFileSync(f, 'utf8'));
+  } catch {
+    // 設定が読めなくても既定値で鳴らす
+  }
+  return { cfg: { ...DEFAULT_CFG, ...user }, dir, eventsFile: join(dir, 'events.jsonl'), alertsFile: join(dir, 'alerts.json') };
 }
 
 function cmdDeployWatch(argv) {
@@ -2269,11 +2433,53 @@ function selfTestStall(assert) {
   assert(!screenShowsApiError('ラベルをつなぎました'), '普通の画面は API エラーでない');
 }
 
+function selfTestAlert(assert) {
+  const kind = (ev, on) => alertFor(ev, on)?.kind ?? null;
+  const lvl = (ev) => alertFor(ev)?.level ?? null;
+  // 鳴らす
+  assert(kind({ id: 'A', status: 'blocked' }) === 'blocked' && lvl({ id: 'A', status: 'blocked' }) === 'urgent', 'alert: 承認待ちは urgent');
+  assert(kind({ id: 'A', status: 'blocked', startBlocked: true }) === 'start-blocked', 'alert: 起動時の承認待ち');
+  assert(kind({ event: 'deploy-failed', id: 'app@1', repo: 'o/r', sha: 'abcdef123', failed: [{ workflow: 'deploy' }] }) === 'deploy-failed', 'alert: デプロイ失敗');
+  assert(kind({ id: 'A', status: 'stalled', apiError: true }) === 'stalled', 'alert: API エラーで止まった');
+  assert(kind({ id: 'A', status: 'gone', report: '進行中' }) === 'gone', 'alert: 途中でいなくなった');
+  assert(kind({ id: 'A', status: 'gone', report: null }) === 'gone', 'alert: 報告書が読めずいなくなった');
+  assert(lvl({ id: 'A', status: 'done', report: '質問' }) === 'info' && lvl({ id: 'A', status: 'idle', report: '質問' }) === 'info', 'alert: 質問は info');
+  // 鳴らさない
+  assert(kind({ id: 'A', status: 'stalled' }) === null, 'alert: API エラーの無い stalled は鳴らさない');
+  assert(kind({ id: 'A', status: 'gone', report: '完了' }) === null, 'alert: 完了していなくなったのは鳴らさない');
+  assert(kind({ id: 'A', status: 'done', report: '完了' }) === null && kind({ id: 'A', status: 'idle', report: '進行中' }) === null, 'alert: 完了・進行中のターン終わりは鳴らさない');
+  assert(kind({ event: 'deploy-done', id: 'x', repo: 'o/r', sha: 'a', runs: [] }) === null, 'alert: deploy-done は鳴らさない');
+  assert(kind({ event: 'deploy-missing', id: 'x', repo: 'o/r', sha: 'a' }) === null && kind({ event: 'timeout' }) === null && kind({ event: 'retro-due' }) === null, 'alert: missing・timeout・retro-due は鳴らさない');
+  // alertOn で切る
+  assert(kind({ id: 'A', status: 'blocked' }, ['deploy-failed']) === null, 'alert: alertOn に無い種類は鳴らさない');
+  assert(kind({ id: 'A', status: 'blocked' }, []) === null, 'alert: alertOn が空なら鳴らさない');
+  assert(kind({ id: 'A', status: 'blocked' }, ['blocked']) === 'blocked', 'alert: alertOn にあれば鳴らす');
+  // 重複の抑え
+  const T = Date.parse('2026-11-22T10:00:00Z');
+  const W = 10 * 60_000;
+  let r = alertThrottle({}, 'X', T, W);
+  assert(r.fire && r.next.X === new Date(T).toISOString(), 'alert: 初めては鳴らす');
+  r = alertThrottle(r.next, 'X', T + 5 * 60_000, W);
+  assert(!r.fire && r.next.X === new Date(T).toISOString(), 'alert: 10 分のうちの同じ件は鳴らさない（時刻も延ばさない）');
+  assert(alertThrottle(r.next, 'Y', T + 5 * 60_000, W).fire, 'alert: 別の件は鳴らす');
+  r = alertThrottle(r.next, 'X', T + 11 * 60_000, W);
+  assert(r.fire, 'alert: 10 分を過ぎたらまた鳴らす');
+  assert(!Object.hasOwn(alertThrottle({ Z: new Date(T - 60 * 60_000).toISOString() }, 'X', T, W).next, 'Z'), 'alert: 古い記録は捨てる');
+  assert(alertThrottle({ X: 'こわれた' }, 'X', T, W).fire, 'alert: 読めない時刻は鳴らす');
+  // 出し方
+  const c = alertCommands('urgent', 'T', 'B', 'darwin');
+  assert(c[0][0] === 'herdr' && c[0][1].join(' ') === 'notification show T --body B --sound request', 'alert: urgent は request の音');
+  assert(alertCommands('info', 'T', 'B', 'linux')[0][1].at(-1) === 'done' && alertCommands('info', 'T', 'B', 'linux').length === 1, 'alert: info は done の音・macOS 以外は予備なし');
+  assert(c[1][0] === 'osascript' && c[1][1][1].includes('with title "T"'), 'alert: macOS の予備');
+  assert(alertCommands('urgent', 'a"b', 'c\\d', 'darwin')[1][1][1].startsWith('display notification "c\\\\d" with title "a\\"b"'), 'alert: osascript の引用');
+}
+
 function selfTest() {
   const assert = (c, m) => {
     if (!c) throw new Error(`self-test 失敗: ${m}`);
   };
   selfTestStall(assert);
+  selfTestAlert(assert);
   assert(slug('T-42') === 't-42', 'slug');
   assert(agentName('', 't-42') === 't-42', 'agentName 素');
   assert(agentName('ab-', 't-42') === 'ab-t-42', 'agentName 接頭辞');
@@ -2566,6 +2772,8 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos answer read <ID...> | --all [--note 理由]   ユーザーが読んだ
   cos answer list [--all] [--json]
   cos answer hook                           （CoS の Stop フック用）報告に未確認の回答が載っていなければ1回止める
+  cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
+                                            ユーザーの手が要る急ぎの件を音と通知で知らせる（同じ件は既定 10 分に1回・失敗しても終了コード 0）
   cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
   cos self-test`;
 
@@ -2575,7 +2783,7 @@ if (isMain) {
   const table = {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, 'deploy-watch': cmdDeployWatch, status: cmdStatus, ls: cmdStatus,
     report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot, answer: cmdAnswer,
-    'self-test': selfTest,
+    'self-test': selfTest, alert: cmdAlert,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
     console.log(HELP);
