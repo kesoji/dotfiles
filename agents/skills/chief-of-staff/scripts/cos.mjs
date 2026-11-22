@@ -1417,7 +1417,10 @@ function cmdWatch(argv) {
       for (const ev of deployEvents) console.log(deployLine(ev));
       // 急ぐ種類は音と通知で知らせる（ユーザーが CoS の画面を見ていなくても気づけるように）
       const rang = [];
+      // cos close で片付けた直後の作業セッションは gone として拾われるが、CoS が自分で終わらせたので鳴らさない
+      const closedNow = new Set(Object.values(readLedger(ctx).workers).filter((w) => !WATCHED.has(w.state)).map((w) => w.id));
       for (const ev of [...events, ...deployEvents]) {
+        if (ev.status === 'gone' && closedNow.has(ev.id)) continue;
         const a = alertFor(ev, ctx.cfg.alertOn);
         if (!a) continue;
         const r = sendAlert(ctx, { title: a.title, body: a.body, level: a.level, source: 'watch', windowMs: ctx.cfg.alertWindowMin * 60_000 });
