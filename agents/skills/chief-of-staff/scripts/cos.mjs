@@ -97,6 +97,8 @@ const DEFAULT_CFG = {
   // cos watch: 音と通知で知らせる出来事の種類（ALERT_KINDS のうち。[] で鳴らさない）と、同じ件を二度鳴らさない分数。
   alertOn: ALERT_KINDS_DEFAULT,
   alertWindowMin: 10,
+  // cos reorient: 期日の来た確認を文脈に戻す TODO のファイル（`~` 可・相対なら cos.json のあるディレクトリから）。
+  todoFiles: [],
 };
 const DAY_MS = 86_400_000;
 
@@ -326,6 +328,39 @@ export function setupFor(where, opt, cfgSetup) {
 export function localDay(ms) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// TODO の行の期日（YYYY-MM-DD）。未完了の行（`- [ ]`）の頭の太字が日付で始まるときだけ読む。
+// 「2026-11-22」「11/22」「11/22 16:30 以降」「11/21(金) 以降」など。年が無ければ year とみなす。読めなければ null。
+// 太字の途中の日付（「…は 11/4 本番済み」のような経緯）は期日でないので読まない。
+export function todoDueDay(line, year) {
+  const m = String(line).match(/^\s*[-*+]\s+\[ \]\s+\*\*\s*(?:(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})\/(\d{1,2}))(?![\d/])/);
+  if (!m) return null;
+  const [y, mo, d] = m[1] ? [Number(m[1]), Number(m[2]), Number(m[3])] : [year, Number(m[4]), Number(m[5])];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+// TODO の本文から、期日が today（YYYY-MM-DD）か過去の未完了の行を返す（行の頭から最大 width 文字）。
+// 今日が期日のものを先に、そのあと過ぎたものを、それぞれファイルの順で。
+export function dueTodos(text, today, width = 200) {
+  const year = Number(today.slice(0, 4));
+  const now = [];
+  const past = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const due = todoDueDay(line, year);
+    if (!due || due > today) continue;
+    const t = line.trim();
+    (due === today ? now : past).push(t.length > width ? `${t.slice(0, width)}…` : t);
+  }
+  return [...now, ...past];
+}
+
+// cos.json の todoFiles の1つを絶対パスにする（`~` は家・相対は base から）。
+export function resolveTodoPath(p, base, home) {
+  if (p === '~') return home;
+  if (p.startsWith('~/')) return join(home, p.slice(2));
+  return isAbsolute(p) ? p : join(base, p);
 }
 
 // 振り返りの期限。since（今の期間の始まり＝前回の振り返りを終えた時）から intervalDays 日。
@@ -1956,7 +1991,7 @@ function cmdReorient(argv = []) {
   }
   const { retro, retroIsDue } = retroInfo(ctx);
   if (source === 'startup' || source === 'resume') {
-    emitHookContext([`[chief of staff] ${retro}`, inputErr ? `（フックの入力が読めませんでした: ${inputErr}）` : ''].filter(Boolean).join('\n'));
+    emitHookContext([`[chief of staff] ${retro}`, ...dueTodoNotes(ctx), inputErr ? `（フックの入力が読めませんでした: ${inputErr}）` : ''].filter(Boolean).join('\n'));
     return;
   }
   emitHookContext(reorientText(ctx, {
@@ -1964,6 +1999,27 @@ function cmdReorient(argv = []) {
     retroIsDue,
     inputErr,
   }));
+}
+
+// cos.json の todoFiles から、期日が今日か過去の未完了の確認を文脈に戻す行。設定が無ければ空。
+// 要約で会話から抜けた「今日 16:30 に確かめる」を忘れないため（要約のあとに TODO を読み直さないと抜けたままになる）。
+function dueTodoNotes(ctx, nowMs = Date.now()) {
+  const files = ctx?.cfg.todoFiles;
+  if (!Array.isArray(files) || files.length === 0) return [];
+  const today = localDay(nowMs);
+  const lines = [];
+  for (const f of files) {
+    const abs = resolveTodoPath(String(f), ctx.root, homedir());
+    try {
+      lines.push(...dueTodos(readFileSync(abs, 'utf8'), today).map((t) => `  ${t}（${abs}）`));
+    } catch (e) {
+      lines.push(`  （TODO が読めません: ${abs}: ${e.code || e.message}）`);
+    }
+  }
+  if (lines.length === 0) return [];
+  const MAX = 20;
+  if (lines.length > MAX) lines.splice(MAX, lines.length, `  ほか ${lines.length - MAX} 件（ファイルを読む）`);
+  return [`期日の来た確認（${today} まで・cos.json の todoFiles の未完了の行）。ユーザーとの話の区切りで手を付けるか声をかける:`, ...lines];
 }
 
 function emitHookContext(text) {
@@ -1997,6 +2053,7 @@ function reorientText(ctx, { header, notes = [], retroIsDue, inputErr }) {
   return [
     header,
     ...notes,
+    ...dueTodoNotes(ctx),
     '1. chief-of-staff スキル（~/.claude/skills/chief-of-staff/SKILL.md）を読み直す。',
     rules ? `2. このリポジトリの CoS の決まり（${rules}）を読み直す。` : '2. リポジトリに .claude/cos.json の chiefRules があれば読み直す。',
     '3. 下の一覧で依頼中の作業セッションを確かめ、`cos watch` が裏で動いていなければ run_in_background で張り直す（作業セッションが0本でも張る＝振り返りの期限も見張っている）。',
@@ -3023,6 +3080,41 @@ function selfTest() {
     assert(stopHookReason(null, null) === null, 'stop: どちらも無ければ通す');
     assert(stopHookReason('A', null) === 'A' && stopHookReason(null, 'B') === 'B', 'stop: 片方だけ');
     assert(stopHookReason('A', 'B') === 'A\n\nB', 'stop: 両方は1つにまとめる');
+  }
+  // 期日の来た確認（todoFiles）
+  {
+    assert(todoDueDay('- [ ] **11/22 16:30 以降: 定時実行を確かめる**: 本文', 2026) === '2026-11-22', 'todo: 時刻付き');
+    assert(todoDueDay('- [ ] **2026-11-22 の確認**', 2025) === '2026-11-22', 'todo: 年付きは年を使う');
+    assert(todoDueDay('- [ ] **11/21(金) 以降**: x', 2026) === '2026-11-21', 'todo: 曜日付き');
+    assert(todoDueDay('- [ ] **11/6〜 リリース後**: x', 2026) === '2026-11-06', 'todo: 一桁と〜');
+    assert(todoDueDay('- [ ] **PR #1 の残り**: 11/22 に見る', 2026) === null, 'todo: 太字の外の日付は読まない');
+    assert(todoDueDay('- [ ] **問い合わせ: 本番化は 11/4 済み**', 2026) === null, 'todo: 太字の途中の日付（経緯）は読まない');
+    assert(todoDueDay('- [ ] ** 11/22: 空白から**', 2026) === '2026-11-22', 'todo: 太字の頭の空白は飛ばす');
+    assert(todoDueDay('- [ ] **10/29〜11/5 の平日**', 2026) === '2026-10-29', 'todo: 範囲は始まりの日');
+    assert(todoDueDay('- [ ] **12:30 に見る**', 2026) === null, 'todo: 時刻だけは日付にしない');
+    assert(todoDueDay('- [x] **11/22: 済み**', 2026) === null, 'todo: 完了の行は出さない');
+    assert(todoDueDay('- [ ] 11/22 の確認（太字なし）', 2026) === null, 'todo: 頭に太字が無ければ読まない');
+    assert(todoDueDay('- [ ] **11月初め: 請求を見る**', 2026) === null, 'todo: 読めない日付は出さない');
+    assert(todoDueDay('- [ ] **13/40 の何か**', 2026) === null, 'todo: ありえない日付は出さない');
+    assert(todoDueDay('- [ ] **1/2/3 の比率**', 2026) === null, 'todo: 分数の並びは日付にしない');
+    assert(todoDueDay('  - [ ] **12/1: 子の行**', 2026) === '2026-12-01', 'todo: 字下げした行も読む');
+    const text = [
+      '# TODO',
+      '- [ ] **11/22 16:30 以降: 今日の確認**: 本文',
+      '- [ ] **11/21: きのうの確認**',
+      '- [ ] **11/23: あしたの確認**',
+      '- [ ] **2025-12-31: 去年の確認**',
+      '- [x] **11/22: 済んだ確認**',
+      '- [ ] 期日の無い作業',
+    ].join('\n');
+    const due = dueTodos(text, '2026-11-22');
+    assert(due.length === 3 && due[0].includes('今日') && due[1].includes('きのう') && due[2].includes('去年'), `todo: 今日と過去だけ ${JSON.stringify(due)}`);
+    const order = dueTodos('- [ ] **11/1: 古い**\n- [ ] **11/22: 今日**', '2026-11-22');
+    assert(order[0].includes('今日') && order[1].includes('古い'), 'todo: 今日が期日のものを先に');
+    assert(dueTodos(`- [ ] **11/22: ${'あ'.repeat(300)}**`, '2026-11-22')[0].length === 201, 'todo: 長い行は切る');
+    assert(dueTodos('', '2026-11-22').length === 0, 'todo: 空');
+    assert(resolveTodoPath('~/m/todo.md', '/r', '/h') === '/h/m/todo.md' && resolveTodoPath('/a/t.md', '/r', '/h') === '/a/t.md'
+      && resolveTodoPath('memo/t.md', '/r', '/h') === '/r/memo/t.md', 'todo: パスの解決');
   }
   console.log('cos self-test: ok');
 }
