@@ -132,7 +132,7 @@ macOS では、動いている作業セッションがいるあいだ `cos watch
 - マージ・タスク台帳の更新など、取り込みの手順はリポジトリの `chiefRules` に従う。
 - マージは `cos land <ID>` でできる（`chiefRules` が別の取り込み方を決めていなければ）。作業セッションのターンが終わっている・報告書が「完了」・worktree に未コミットが無い、のときだけ動き、先に `cos check` の結果を出す（警告があっても止めない）。ブランチが HEAD を含んでいればそのまま `merge --ff-only`、含んでいなければ（main が進んだ）作業セッションの worktree で HEAD の上に `git rebase` してから ff。衝突したら `rebase --abort` で戻して終了コード 1＝作業セッションに載せ直しを頼む。載せ直したときは作業セッションの受け箱に `msg-NN.md` で「履歴が書き換わった」と知らせを置く（続きを頼むときに読ませる）。出力の「取り込んだ範囲 <old>..<new>」で範囲を確かめ、マージの後の検証は `chiefRules` に従う。`--repo` の依頼は対象のリポジトリの HEAD に取り込む。
 - push したら（CoS がユーザーの指示で push したとき・ユーザーから push したと聞いたとき）、**デプロイの完了を前面で待たない**（`gh run watch` などを前で走らせると、その間ユーザーに返事ができない）。`cos deploy-watch <リポジトリ> <コミット>` を打って返り、結果は `cos watch` の `deploy-done` / `deploy-failed` / `deploy-missing` で受ける。リポジトリは `owner/name`・cos.json の `repos` の名前・手元のパスのどれでもよく、手元のパスならコミットは `HEAD` やブランチ名でもよい。workflow を絞るなら `--workflow deploy.yml`。数える run は既定で event が `push`・`workflow_run` のもの（タグや手動起動のデプロイは `--event release,workflow_dispatch` のように足す）。
-- 終わったら `cos close <ID>`（先に `cos check` の結果を出す。警告があっても止めない）。マージされていないブランチ・未コミットの変更があると断られる（捨てるなら `--force`＝ユーザーに確かめてから）。マージ済みで未コミットが無ければ、worktree の削除にだけ自動で `--force` を付ける（サブモジュールを持つ worktree は git が `--force` 無しでは消さないため。台帳の `forced` はユーザーが `--force` を付けたときだけ）。依頼書・報告書・追加の指示は `<git-common-dir>/cos/archive/` に控えが残る。
+- 終わったら `cos close <ID>`（先に `cos check` の結果を出す。警告があっても止めない）。マージされておらず push もされていないブランチ・未コミットの変更があると断られる（捨てるなら `--force`＝ユーザーに確かめてから）。HEAD にマージされていなくても、直前に `git fetch --all` して、ブランチの先頭のコミットがリモートのどれかのブランチに含まれていれば（`git branch -r --contains`）マージ済みと同じに片付け、「push 済み（<リモートのブランチ>）なので片付けました」と出す（GitHub でマージする PR は `cos land` を通らないので、push 済みなら `--force` を要らなくするため。ローカルのブランチも消す＝中身はリモートにある。`--keep-branch` で残す。台帳には `pushed` を残す）。マージ済みか push 済みで未コミットが無ければ、worktree の削除にだけ自動で `--force` を付ける（サブモジュールを持つ worktree は git が `--force` 無しでは消さないため。台帳の `forced` はユーザーが `--force` を付けたときだけ）。依頼書・報告書・追加の指示は `<git-common-dir>/cos/archive/` に控えが残る。
 
 ## 週1回の振り返り
 
@@ -176,18 +176,18 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 
 | コマンド | 内容 |
 | --- | --- |
-| `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は cos.json の `defaultBase`、無ければ CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える |
+| `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は cos.json の `defaultBase`、無ければ CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える。上限で止まるときは、取り込み待ち（下の `cos status`）の作業セッションを「片付けの候補: a, b」として出す |
 | `cos rename <ID> <名前>` | サイドバーの名前を付け直す |
 | `cos send <ID> (<text> \| --file <file> \| --first) [--seen]` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す。相手が作業中なら画面の最後を出して止まる（報告書より先に進んでいることがある）。画面を見て、それでも送るなら `--seen` |
 | `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった・デプロイの終わり）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ。デプロイは張り直さなくても、走っている見張りが次の問い合わせから拾う。macOS では動いている作業セッションがいるあいだ `caffeinate -i -w <watch の pid>` を抱えてスリープを止める（`keepAwake`） |
 | `cos deploy-watch <repo> <sha> [--workflow W] [--label 名前] [--event E,...]` | push のあとに打つ。デプロイを見張りの台帳（`<git-common-dir>/cos/deploys.json`）に足してすぐ返る。`cos watch` が `deployPollSec` ごとに `gh run list --commit` でそのコミットの run を見て、全部終わったら `deploy-done`（成功）／`deploy-failed`（失敗した workflow と run の URL）、`deployMissingSec` 秒 run が無ければ `deploy-missing` を出し、台帳から消す。全部終わってももう1回同じ顔ぶれで終わっているのを見てから出す（`workflow_run` で続く workflow を待つ）。登録のときに1回 gh を呼んで、リポジトリ・workflow の名前の誤りをその場で知らせる |
 | `cos deploy-watch --cancel <ID>` | デプロイの見張りをやめる（ID は `cos status` に出る。例 `app@1a2b3c4`） |
-| `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数・見張り中のデプロイ） |
+| `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数・見張り中のデプロイ）。報告書が「完了」になってから `staleDoneHours` 以上たっても台帳に残っている作業セッションには「← 取り込み待ち（完了から N 時間／N 日）」を添える（2日未満は時間。`--json` では `staleDone`＝経過のミリ秒）。「完了」になった時刻は、`cos watch` が記録したターンの終わり（events.jsonl）のうち最後まで「完了」が続いている最初のもの。記録が無ければ（見張りを張っていなかった・最後の記録が「完了」でない）報告書の更新時刻 |
 | `cos report <ID>` | 報告書を出す（片付け済みなら控えから） |
 | `cos read <ID> [--lines N]` | 作業セッションの画面を読む（止まった理由を見るときだけ） |
 | `cos check <ID>` | 取り込み前の機械検査。報告書の状態（完了か）・「検証」の `requireInReport`／`forbidInReport` の語と実行したコマンドの行（`reportCommands`）・`<defaultBase>..<branch>` のコミットの `Claude-Session`（作業セッション自身の値は `~/.claude/sessions/*.json` と作業ツリーの会話ログから引く。マージのコミットは見ない）・土台の遅れ（`baseLagWarn` 以上で警告）。結果は「OK／警告 n 件」の1行と中身。警告があると終了コード 1。ブランチの無い依頼は報告書の状態だけ |
 | `cos land <ID>` | 完了した作業セッションのブランチを CoS のツリー（`--repo` なら対象）の HEAD に取り込む。ターンが終わっている・報告書が「完了」・未コミット無しのときだけ動き、先に `cos check` の結果を出す。HEAD を含めば ff、含まなければ作業セッションの worktree で載せ直してから ff（受け箱に知らせを置く）。衝突したら戻して終了コード 1。最後に「取り込んだ範囲 <old>..<new>」 |
-| `cos close <ID> [--force] [--keep-branch]` | 控えを取り、エージェントを終わらせ、ワークスペース・worktree・ブランチを片付ける（マージ済み・未コミット無しなら worktree の削除に自動で `--force`。`--no-worktree` の依頼は worktree まで消す。ブランチが無いのでマージの判定はしない。未コミットの変更があれば止まる。前の版で本体を共有して立てた依頼はワークスペースだけ、CoS のワークスペースのタブに立てた依頼はそのタブを閉じる） |
+| `cos close <ID> [--force] [--keep-branch]` | 控えを取り、エージェントを終わらせ、ワークスペース・worktree・ブランチを片付ける（マージされていなければ fetch して push 済みかを見る。マージ済みか push 済みでなければ止まる。マージ済みか push 済みで未コミット無しなら worktree の削除に自動で `--force`。`--no-worktree` の依頼は worktree まで消す。ブランチが無いのでマージの判定はしない。未コミットの変更があれば止まる。前の版で本体を共有して立てた依頼はワークスペースだけ、CoS のワークスペースのタブに立てた依頼はそのタブを閉じる） |
 | `cos retro status` | 振り返りの期限・前回・書きかけの記録 |
 | `cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]` | 期間の材料を集めて記録の下書きを作る。`--session` で CoS の会話を足せる（記録の前のセッションなど） |
 | `cos retro done [--file F]` | 振り返りを締めて期限を進める |
@@ -225,6 +225,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
   "alertWindowMin": 10,
   "todoFiles": [],
   "keepAwake": true,
+  "staleDoneHours": 24,
   "repos": {}
 }
 ```
@@ -243,6 +244,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 - `alertOn`: `cos watch` が音と通知で知らせる出来事の種類（上の「見張りと対応」の表）。`[]` なら鳴らさない。
 - `alertWindowMin`: 同じ件（件名）を二度鳴らさない分数（`cos watch` の自動の知らせと `cos alert` の既定）。
 - `keepAwake`: macOS で `cos watch` が、動いている作業セッションが1本以上いるあいだ `caffeinate -i -w <watch の pid>` を子で起こし、0本になったら止める（Mac のスリープで作業セッションが止まらないように。watch が終われば一緒に終わる）。`false` で切る。macOS 以外は何もしない。
+- `staleDoneHours`: 報告書が「完了」になってからこの時間たっても片付いていない作業セッションを、`cos status` が「取り込み待ち」として目立たせ、`cos spawn` が同時実行数の上限で止まるときに片付けの候補として出す（既定 24）。`cos watch` は知らせない（知らせが増えすぎるため）。
 - `labelWidth`: サイドバーで読める幅（半角1・全角2）。`--label` をこの幅に収める。
 - `agentPrefix`: herdr のエージェント名の接頭辞（複数のリポジトリで同じ ID の体系を使うときの衝突よけ）。
 - `repos`: `--repo` で使う名前 → 対象のリポジトリ。値はパス（`~` 可）か `{"path": …, "setup": …}`。`setup` は対象の worktree で流す準備（無ければ対象の `.claude/cos.json` の `setup`）。

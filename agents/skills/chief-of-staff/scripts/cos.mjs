@@ -102,6 +102,8 @@ const DEFAULT_CFG = {
   todoFiles: [],
   // cos watch: macOS で動いている作業セッションがいるあいだ `caffeinate -i -w <watch の pid>` を抱えてスリープを止める。
   keepAwake: true,
+  // cos status・cos spawn: 報告書が「完了」になってからこの時間（h）たっても片付いていない作業セッションを「取り込み待ち」として目立たせる。
+  staleDoneHours: 24,
 };
 const DAY_MS = 86_400_000;
 
@@ -326,8 +328,43 @@ export function hasOwnWorktree(w) {
 // cos close で worktree を消すときに --force を付けるか。ユーザーの --force に加え、マージ済みで未コミットが無い
 // （dirty が '' ＝確かめて空だった）なら付ける＝サブモジュールを持つ worktree は git が --force 無しでは消さないため。
 // dirty が null（作業ツリーが無く確かめられない）なら付けない。
-export function worktreeRemoveForce({ userForce, merged, dirty }) {
-  return Boolean(userForce) || (merged === true && dirty === '');
+export function worktreeRemoveForce({ userForce, merged, pushed = null, dirty }) {
+  return Boolean(userForce) || ((merged === true || Boolean(pushed)) && dirty === '');
+}
+
+// `git branch -r --contains <sha>` の出力から、そのコミットを含むリモートのブランチ名を返す（`origin/HEAD -> origin/main` の行は除く）。
+// 1つ以上あれば、ブランチの中身は push 済み＝cos close はマージ済みと同じに片付けてよい。
+export function remoteBranchesContaining(out) {
+  return String(out ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.includes(' -> '));
+}
+
+// 報告書が「完了」になった時刻（ms）。見張りの出来事（events.jsonl の kind 'event'＝ターンの終わりと報告書の状態）のうち、
+// 立ててから（createdAt）のこの依頼のもので、最後まで「完了」が続いている並びの最初のターンの終わり。
+// 見張りが記録していない（最後の出来事が「完了」でない・出来事が無い）なら報告書の更新時刻（reportMtimeMs）。
+export function doneSinceMs({ id, createdAt, events, reportMtimeMs }) {
+  const t0 = createdAt ? Date.parse(createdAt) - 1000 : -Infinity;
+  let start = null;
+  for (const e of events) {
+    if (e.kind !== 'event' || e.id !== id || !(Date.parse(e.at) >= t0)) continue;
+    start = e.report === '完了' ? (start ?? Date.parse(e.at)) : null;
+  }
+  return start ?? reportMtimeMs ?? null;
+}
+
+// 取り込み待ち＝報告書が「完了」になってから hours 時間以上たち、まだ片付いていない。たっていれば経過（ms）、でなければ null。
+export function staleDoneMs({ report, doneMs, nowMs, hours }) {
+  if (report !== '完了' || doneMs === null || doneMs === undefined || !(hours >= 0)) return null;
+  const ms = nowMs - doneMs;
+  return ms >= hours * 3_600_000 ? ms : null;
+}
+
+// 取り込み待ちの経過の書き方。2日未満は時間、それ以上は日（切り捨て）。
+export function staleLabel(ms) {
+  const h = Math.floor(ms / 3_600_000);
+  return `← 取り込み待ち（完了から ${h < 48 ? `${h} 時間` : `${Math.floor(h / 24)} 日`}）`;
 }
 
 // cos land の判断。止まる理由（reason）か、すること（action: 'ff'＝そのまま ff・'rebase'＝載せ直してから ff・'already'＝取り込み済み）。
@@ -1229,7 +1266,8 @@ function cmdSpawn(argv) {
   if (prev && prev.state !== 'closed') die(`${id} はすでに台帳にあります（状態 ${prev.state}）。cos status で確かめてください`);
   const active = Object.values(led.workers).filter((w) => w.state !== 'closed');
   if (active.length >= ctx.cfg.maxWorkers && !opt.force) {
-    die(`同時に動かす作業セッションは ${ctx.cfg.maxWorkers} 本まで（いま ${active.length} 本）。超えるなら --force`);
+    const stale = staleWorkers(ctx, active).map((x) => x.id);
+    die(`同時に動かす作業セッションは ${ctx.cfg.maxWorkers} 本まで（いま ${active.length} 本）。超えるなら --force${stale.length ? `\n片付けの候補: ${stale.join(', ')}（報告書が「完了」のまま ${ctx.cfg.staleDoneHours} 時間以上。取り込んで cos close）` : ''}`);
   }
   if (herdr(['agent', 'list']).result.agents.some((a) => a.name === agent)) {
     die(`herdr にすでに ${agent} という名前のエージェントがいます（別のリポジトリの作業セッションかもしれません。cos.json の agentPrefix で分けられます）`);
@@ -1705,8 +1743,35 @@ function cmdDeployWatch(argv) {
   console.log(`終わったら cos watch が deploy-done / deploy-failed を出します（${ctx.cfg.deployMissingSec} 秒 run が無ければ deploy-missing）。cos watch が裏で動いていなければ張ってください。`);
 }
 
+// 片付いていない依頼のうち、取り込み待ち（報告書が「完了」になってから staleDoneHours 以上）のもの。古い順。
+function staleWorkers(ctx, workers, events = readEventsSoft(ctx)) {
+  const nowMs = Date.now();
+  return workers
+    .filter((w) => w.state !== 'closed')
+    .map((w) => {
+      const rep = readReport(w);
+      const doneMs = rep.state === '完了'
+        ? doneSinceMs({ id: w.id, createdAt: w.createdAt, events, reportMtimeMs: rep.mtime ? Date.parse(rep.mtime) : null })
+        : null;
+      return { id: w.id, ms: staleDoneMs({ report: rep.state, doneMs, nowMs, hours: ctx.cfg.staleDoneHours }) };
+    })
+    .filter((x) => x.ms !== null)
+    .sort((a, b) => b.ms - a.ms);
+}
+
+// 出来事を読む（壊れた行があっても status・spawn を止めない＝報告書の更新時刻で判定する）。
+function readEventsSoft(ctx) {
+  try {
+    return readEvents(ctx);
+  } catch {
+    return [];
+  }
+}
+
 // 台帳の依頼を cos status の行にする。ctx は台帳を持つ CoS のリポジトリ（top＝--repo の無い依頼の git 操作をするツリー）。
-function statusRows(ctx, led, agents, all, headOf) {
+// events・staleHours があれば取り込み待ち（staleDone＝完了からの経過 ms）も出す（無ければ報告書の更新時刻で判定）。
+function statusRows(ctx, led, agents, all, headOf, { events = [], staleHours = DEFAULT_CFG.staleDoneHours } = {}) {
+  const nowMs = Date.now();
   return Object.values(led.workers)
     .filter((w) => all || w.state !== 'closed')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -1719,6 +1784,10 @@ function statusRows(ctx, led, agents, all, headOf) {
         report: rep.state, reportUpdated: rep.mtime, workspace: w.workspace, pane: w.pane,
         branch: w.branch, cwd: w.cwd, repo: w.repo ?? null,
       };
+      if (w.state !== 'closed' && rep.state === '完了') {
+        const doneMs = doneSinceMs({ id: w.id, createdAt: w.createdAt, events, reportMtimeMs: rep.mtime ? Date.parse(rep.mtime) : null });
+        row.staleDone = staleDoneMs({ report: rep.state, doneMs, nowMs, hours: staleHours });
+      }
       if (w.where === 'detached' && w.state !== 'closed' && existsSync(w.cwd)) {
         row.dirty = git(['status', '--porcelain'], w.cwd).split('\n').filter(Boolean).length;
       }
@@ -1753,7 +1822,10 @@ function otherLedgers(ctx, agents, all, headOf) {
       const main = git(['worktree', 'list', '--porcelain'], abs).split('\n').find((l) => l.startsWith('worktree ')).slice('worktree '.length);
       r.ledger = join(loc.dir, 'ledger.json');
       if (!existsSync(r.ledger)) continue;
-      r.workers = statusRows({ top: main }, JSON.parse(readFileSync(r.ledger, 'utf8')), agents, all, headOf);
+      const evFile = join(loc.dir, 'events.jsonl');
+      r.workers = statusRows({ top: main }, JSON.parse(readFileSync(r.ledger, 'utf8')), agents, all, headOf, {
+        events: readEventsSoft({ eventsFile: evFile }), staleHours: ctx.cfg.staleDoneHours,
+      });
     } catch (e) {
       r.error = String(e.stderr || e.message).trim().split('\n')[0];
     }
@@ -1767,7 +1839,8 @@ function printRows(rows) {
   for (const r of rows) {
     const rep = r.report ? `報告「${r.report}」${r.reportUpdated ? `（${ago(r.reportUpdated)}）` : ''}` : '報告なし';
     const st = r.state === 'running' ? r.status : `${r.state}${r.status !== '-' ? `／${r.status}` : ''}`;
-    console.log(`  ${r.id}「${r.label ?? '-'}」${r.repo ? ` [${basename(r.repo)}]` : ''}  ${r.agent}  ${st}  ${rep}  ${r.title !== r.id ? r.title : ''}`);
+    const stale = r.staleDone != null ? `  ${staleLabel(r.staleDone)}` : '';
+    console.log(`  ${r.id}「${r.label ?? '-'}」${r.repo ? ` [${basename(r.repo)}]` : ''}  ${r.agent}  ${st}  ${rep}  ${r.title !== r.id ? r.title : ''}${stale}`);
     if (r.where === 'worktree' && r.commits !== undefined) {
       console.log(`      ${r.branch}  コミット ${r.commits}${r.commits ? (r.merged ? '（マージ済み）' : '（未マージ）') : ''}・未コミット ${r.dirty}  ワークスペース ${r.workspace}・ペイン ${r.pane}`);
     } else if (r.where === 'detached' && r.dirty !== undefined) {
@@ -1795,7 +1868,7 @@ function cmdStatus(argv) {
     if (!heads.has(dir)) heads.set(dir, git(['rev-parse', 'HEAD'], dir));
     return heads.get(dir);
   };
-  const rows = statusRows(ctx, led, agents, opt.all, headOf);
+  const rows = statusRows(ctx, led, agents, opt.all, headOf, { events: readEventsSoft(ctx), staleHours: ctx.cfg.staleDoneHours });
   const repos = otherLedgers(ctx, agents, opt.all, headOf);
   if (opt.json) {
     const r = peekRetro(ctx);
@@ -2003,6 +2076,7 @@ function cmdClose(argv) {
   }
 
   let merged = true;
+  let pushed = null; // マージされていないが中身が push 済みなら、それを含むリモートのブランチ名
   let dirty = null;
   if (hasOwnWorktree(w) && existsSync(w.cwd)) {
     dirty = git(['status', '--porcelain'], w.cwd);
@@ -2012,7 +2086,15 @@ function cmdClose(argv) {
   if (w.where === 'worktree') {
     const hasBranch = gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir);
     merged = !hasBranch || gitOk(['merge-base', '--is-ancestor', w.branch, 'HEAD'], gdir);
-    if (!merged && !opt.force) die(`${w.branch} は${w.repo ? ` ${w.repo} の` : 'このツリーの'} HEAD にマージされていません（捨ててよければ --force）`);
+    if (!merged) {
+      // GitHub でマージする PR（cos land で取り込まないもの）は、中身がリモートにあればマージ済みと同じに片付けてよい。
+      const f = gitTry(['fetch', '--all', '--quiet'], gdir);
+      if (!f.ok) console.log(`git fetch できませんでした（手元のリモートの記録で判定します）: ${f.out.split('\n')[0]}`);
+      const sha = git(['rev-parse', w.branch], gdir);
+      const r = gitTry(['branch', '-r', '--contains', sha], gdir);
+      pushed = r.ok ? (remoteBranchesContaining(r.out)[0] ?? null) : null;
+    }
+    if (!merged && !pushed && !opt.force) die(`${w.branch} は${w.repo ? ` ${w.repo} の` : 'このツリーの'} HEAD にマージされておらず、push もされていません（捨ててよければ --force）`);
   }
 
   // 控えを先に取る（worktree を消すと依頼書・報告書も消える）。
@@ -2028,7 +2110,7 @@ function cmdClose(argv) {
   if (hasOwnWorktree(w)) {
     // マージ済み・未コミット無しなら worktree の削除にだけ --force を付ける（サブモジュールを持つ worktree は git が消さない）。
     // 台帳の forced はユーザーが --force を付けたときだけ（振り返りの数字を濁さない）。
-    const rmForce = worktreeRemoveForce({ userForce: opt.force, merged, dirty }) ? ['--force'] : [];
+    const rmForce = worktreeRemoveForce({ userForce: opt.force, merged, pushed, dirty }) ? ['--force'] : [];
     if (workspaceExists(w.workspace)) {
       herdr(['worktree', 'remove', '--workspace', w.workspace, ...rmForce]);
     } else if (existsSync(w.cwd)) {
@@ -2036,6 +2118,7 @@ function cmdClose(argv) {
       git(['worktree', 'remove', ...rmForce, w.cwd], gdir);
     }
     if (w.where === 'worktree' && !opt['keep-branch'] && gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir)) {
+      // push 済みで片付けるときは -D（HEAD にマージされていないので -d は断る。中身はリモートにある）。
       git(['branch', merged ? '-d' : '-D', w.branch], gdir);
     }
   } else {
@@ -2049,9 +2132,11 @@ function cmdClose(argv) {
   setWorker(ctx, id, {
     state: 'closed', closedAt: now(), archive,
     forced: Boolean(opt.force), merged: w.where === 'worktree' ? merged : null,
+    ...(pushed ? { pushed } : {}),
   });
   logEvent(ctx, { id, kind: 'closed', forced: Boolean(opt.force) });
   noteChiefSession(ctx, chiefSessionFromEnv(), 'close');
+  if (pushed) console.log(`push 済み（${pushed}）なので片付けました`);
   console.log(`片付けました: ${id}（控え ${archive}）`);
 }
 
@@ -2992,6 +3077,31 @@ function selfTestLand(assert) {
   assert(!worktreeRemoveForce({ userForce: false, merged: false, dirty: '' }), 'close: マージされていなければ付けない');
   assert(!worktreeRemoveForce({ userForce: false, merged: true, dirty: ' M a' }), 'close: 未コミットがあれば付けない');
   assert(worktreeRemoveForce({ userForce: true, merged: false, dirty: ' M a' }), 'close: ユーザーの --force はそのまま');
+  assert(worktreeRemoveForce({ userForce: false, merged: false, pushed: 'origin/cos/x', dirty: '' }), 'close: push 済み・未コミット無しなら --force');
+  assert(!worktreeRemoveForce({ userForce: false, merged: false, pushed: 'origin/cos/x', dirty: ' M a' }), 'close: push 済みでも未コミットがあれば付けない');
+  // cos close の push 済みの判定（git branch -r --contains の出力）
+  assert(remoteBranchesContaining('').length === 0 && remoteBranchesContaining(null).length === 0, 'close: どのリモートにも無ければ push されていない');
+  assert(remoteBranchesContaining('  origin/cos/x\n').join() === 'origin/cos/x', 'close: 1行あれば push 済み');
+  assert(remoteBranchesContaining('  origin/HEAD -> origin/main\n  origin/main\n  up/feat\n').join() === 'origin/main,up/feat', 'close: HEAD の別名は除く');
+  // 取り込み待ちの判定
+  const H = 3_600_000;
+  const T = Date.parse('2026-11-23T12:00:00Z');
+  const ev = (at, report, id = 'A') => ({ at, id, kind: 'event', status: 'idle', report });
+  const D = (events, o = {}) => doneSinceMs({ id: 'A', createdAt: '2026-11-20T00:00:00Z', events, reportMtimeMs: T - H, ...o });
+  assert(D([]) === T - H, 'stale: 出来事が無ければ報告書の更新時刻');
+  assert(D([ev('2026-11-21T00:00:00Z', '完了'), ev('2026-11-21T05:00:00Z', '完了')]) === Date.parse('2026-11-21T00:00:00Z'), 'stale: 続いている「完了」の最初のターン');
+  assert(D([ev('2026-11-21T00:00:00Z', '完了'), ev('2026-11-21T03:00:00Z', '進行中'), ev('2026-11-22T00:00:00Z', '完了')]) === Date.parse('2026-11-22T00:00:00Z'), 'stale: 途中で戻ったら戻った後の「完了」から');
+  assert(D([ev('2026-11-21T00:00:00Z', '完了'), ev('2026-11-21T03:00:00Z', '進行中')]) === T - H, 'stale: 最後の出来事が「完了」でなければ報告書の更新時刻');
+  assert(D([ev('2026-11-19T00:00:00Z', '完了'), ev('2026-11-21T00:00:00Z', '完了', 'B'), { ...ev('2026-11-21T00:00:00Z', '完了'), kind: 'sent' }]) === T - H, 'stale: 立てる前・別の依頼・ターン以外は見ない');
+  assert(D([], { reportMtimeMs: null }) === null, 'stale: 何も無ければ null');
+  const S = (o) => staleDoneMs({ report: '完了', doneMs: T - 24 * H, nowMs: T, hours: 24, ...o });
+  assert(S({}) === 24 * H, 'stale: ちょうど staleDoneHours で取り込み待ち');
+  assert(S({ doneMs: T - 23 * H }) === null, 'stale: 足りなければ出さない');
+  assert(S({ report: '進行中' }) === null && S({ report: '質問' }) === null, 'stale: 完了でなければ出さない');
+  assert(S({ doneMs: null }) === null, 'stale: 完了の時刻が取れなければ出さない');
+  assert(S({ hours: 0, doneMs: T }) === 0, 'stale: 0 時間ならすぐ出す');
+  assert(staleLabel(30 * H + 59 * 60_000) === '← 取り込み待ち（完了から 30 時間）', 'stale: 2日未満は時間');
+  assert(staleLabel(73 * H) === '← 取り込み待ち（完了から 3 日）', 'stale: 2日以上は日');
   // cos land の判断
   const P = (o) => landPlan({ where: 'worktree', agentStatus: 'idle', reportState: '完了', dirty: '', headInBranch: true, branchInHead: false, ...o });
   assert(P({}).action === 'ff', 'land: HEAD を含めば ff');
@@ -3517,12 +3627,12 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
                                             push のあとに打つ（--event の既定は push,workflow_run）。そのコミットの workflow run を cos watch が見て deploy-done / deploy-failed / deploy-missing を出す
                                             repo は owner/name・cos.json の repos の名前・手元のパス。sha は手元のパスならブランチ名・HEAD も可
   cos deploy-watch --cancel <ID>            デプロイの見張りをやめる（ID は cos status に出る）
-  cos status [--all] [--json]
+  cos status [--all] [--json]               一覧（報告書が「完了」のまま staleDoneHours 以上の作業セッションに「取り込み待ち」を添える）
   cos report <ID>
   cos read <ID> [--lines N]
   cos check <ID>                            取り込み前の機械検査（報告書の状態と検証の記録・他のセッションのコミット・土台の遅れ）。PR を作る前に打つ
   cos land <ID>                             完了した作業セッションのブランチを HEAD に取り込む（HEAD を含まなければ作業セッションの worktree で載せ直してから ff。衝突したら戻して終了コード 1）
-  cos close <ID> [--force] [--keep-branch]  （先に cos check の結果を出す。警告があっても止めない。マージ済み・未コミット無しなら worktree の削除に --force を自動で付ける）
+  cos close <ID> [--force] [--keep-branch]  （先に cos check の結果を出す。警告があっても止めない。HEAD にマージされていなくても push 済みなら片付ける。マージ済みか push 済みで未コミット無しなら worktree の削除に --force を自動で付ける）
   cos retro status                          週1回の振り返りの期限・前回
   cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]
                                             期間の材料（依頼ごとの数字・CoS の会話のユーザーの発言）を集めて記録の下書きを作る
