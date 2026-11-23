@@ -186,8 +186,9 @@ export function screenShowsApiError(text) {
   return API_ERROR_RE.test(text ?? '');
 }
 
-// ターンが終わった（idle/done）のに報告書が「進行中」のまま stallMs 以上動かない作業セッション＝止まった疑い。
-// 終わった直後の idle は detectEvents が出すが、CoS が「途中経過」と読んで張り直すと、そのまま誰も気づかない。
+// ターンが終わった（idle/done）まま stallMs 以上動かない作業セッション＝止まった疑い。次の2つを拾う。
+// - 報告書が「進行中」のまま（CoS が「途中経過」と読んで張り直すと、そのまま誰も気づかない）
+// - 報告書が「質問」のまま、止まってから CoS が cos send していない（質問を誰も拾わずに放置した）
 // 同じ止まり（lastSeen.seq）では一度だけ出す。lastSeenAt が無い（前の版の台帳）ときは startedAt から数える。
 export function detectStalled(workers, nowMs, stallMs, reportStateOf) {
   const out = [];
@@ -197,8 +198,10 @@ export function detectStalled(workers, nowMs, stallMs, reportStateOf) {
     const since = Date.parse(w.lastSeenAt ?? w.startedAt ?? '');
     if (!Number.isFinite(since) || nowMs - since < stallMs) continue;
     if (w.stallNotified === String(ls.seq)) continue;
-    if (reportStateOf(w) !== '進行中') continue;
-    out.push({ id: w.id, agent: w.agent, status: 'stalled', seq: ls.seq });
+    const state = reportStateOf(w);
+    const unanswered = state === '質問' && !(Date.parse(w.lastSendAt ?? '') >= since);
+    if (state !== '進行中' && !unanswered) continue;
+    out.push({ id: w.id, agent: w.agent, status: 'stalled', seq: ls.seq, report: state });
   }
   return out;
 }
@@ -206,7 +209,7 @@ export function detectStalled(workers, nowMs, stallMs, reportStateOf) {
 // ───── 急ぎの知らせ（cos alert） ─────
 
 // 見張りの出来事のうち、ユーザーの手が要るので音と通知で知らせる種類（cos.json の alertOn の既定）。
-// start-blocked＝起動時の承認・質問の画面。stalled は画面に API のエラーがあるときだけ・gone は報告書が完了以外のときだけ・
+// start-blocked＝起動時の承認・質問の画面。stalled は画面に API のエラーがあれば urgent・無ければ info・gone は報告書が完了以外のときだけ・
 // question は done/idle で報告書が「質問」になったとき（info の音）。timeout・deploy-done・完了は鳴らさない。
 export const ALERT_KINDS = ALERT_KINDS_DEFAULT;
 
@@ -226,7 +229,11 @@ export function alertFor(ev, alertOn = ALERT_KINDS) {
       ? { kind: 'start-blocked', level: 'urgent', title: `${ev.id} 起動時に承認待ち`, body: `${who}が起動の画面で止まっています（片付けたら cos send --first）` }
       : { kind: 'blocked', level: 'urgent', title: `${ev.id} 承認待ち`, body: `${who}が承認・質問の画面で止まっています` };
   } else if (ev.status === 'stalled') {
-    if (ev.apiError) a = { kind: 'stalled', level: 'urgent', title: `${ev.id} API エラーで停止`, body: `${who}が API のエラーで止まったままです` };
+    a = ev.apiError
+      ? { kind: 'stalled', level: 'urgent', title: `${ev.id} API エラーで停止`, body: `${who}が API のエラーで止まったままです` }
+      : ev.report === '質問'
+        ? { kind: 'stalled', level: 'info', title: `${ev.id} 質問が放置`, body: `${who}の質問に誰も答えないまま止まっています` }
+        : { kind: 'stalled', level: 'info', title: `${ev.id} 止まった疑い`, body: `${who}が報告書「${ev.report ?? '読めない'}」のまま動いていません` };
   } else if (ev.status === 'gone') {
     if (ev.report !== '完了') a = { kind: 'gone', level: 'urgent', title: `${ev.id} 途中で終了`, body: `${who}がいなくなりました（報告書「${ev.report ?? '読めない'}」）` };
   } else if (ev.status === 'idle' || ev.status === 'done') {
@@ -1378,6 +1385,8 @@ function cmdSend(argv) {
     throw e;
   }
   logEvent(ctx, { id, kind: 'sent', file: opt.file ? text : undefined });
+  // 「質問」のまま放置された作業セッションの検出（detectStalled）が、答えを送ったかを見る
+  setWorker(ctx, id, { lastSendAt: now() });
   noteChiefSession(ctx, chiefSessionFromEnv(), 'send');
   console.log(`${id}（${w.agent}）に送りました`);
 }
@@ -1404,7 +1413,7 @@ function cmdWatch(argv) {
         for (const [id, st] of Object.entries(seen)) if (l.workers[id]) Object.assign(l.workers[id], { lastSeen: st, lastSeenAt: now() });
       });
     }
-    // 終わったまま「進行中」で動かない作業セッション（同じ周で出来事が出ている作業セッションは除く）
+    // 終わったまま「進行中」で動かない・「質問」が放置された作業セッション（同じ周で出来事が出ている作業セッションは除く）
     for (const ev of detectStalled(ws, Date.now(), ctx.cfg.stallMin * 60_000, (w) => readReport(w).state)) {
       if (!seen[ev.id]) events.push(ev);
     }
@@ -1463,7 +1472,9 @@ function cmdWatch(argv) {
           done: 'ターンが終わった',
           blocked: '承認や質問の画面で止まっている',
           gone: 'エージェントがいなくなった',
-          stalled: `ターンが終わったまま ${ctx.cfg.stallMin} 分以上動いていない（止まった疑い。cos read で画面を見る）`,
+          stalled: ev.report === '質問'
+            ? `報告書が「質問」のまま ${ctx.cfg.stallMin} 分以上、誰も答えていない（ユーザーに伝えたか確かめ、答えが出ていれば cos send で渡す）`
+            : `ターンが終わったまま ${ctx.cfg.stallMin} 分以上動いていない（止まった疑い。cos read で画面を見る）`,
         }[ev.status];
         console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}${ev.apiError ? `・画面に API のエラー（応答の途中で切れて止まった。cos send ${ev.id} --seen で続きを促す）` : ''}`);
       }
@@ -2371,8 +2382,8 @@ function retroDone(argv) {
 // --sub は最上位からの相対（最上位の CoS なら空行）。chief.sh が起動する場所と名前を決めるのに使う。
 // ---- ユーザーの質問への回答を、読んだと確かめるまで追う（cos answer）----
 // 途中で答えた回答は、そのあとの報告に押し流されてユーザーの目に入らないことがある。
-// CoS が答えたら `cos answer add` で登録し、ユーザーが読んだと言うまで「返事を待っているもの」に並べる。
-// Stop フック（`cos answer hook`）が、「返事を待っているもの」を出した報告に未確認の回答の ID が
+// CoS が答えたら `cos answer add` で登録し、ユーザーが読んだと言うまで「読んでほしい回答」に並べる。
+// Stop フック（`cos answer hook`）が、報告（「読んでほしい回答」か「返事を待っているもの」の見出しがある）の「読んでほしい回答」に未確認の回答の ID が
 // 載っていなければ1回だけ止める＝文章の決まりでなく機械で忘れを止める。
 function readAnswers(ctx) {
   if (!existsSync(ctx.answersFile)) return { version: 1, next: 1, items: [] };
@@ -2395,7 +2406,7 @@ function pendingAnswers(ctx) {
 function answersLine(ctx) {
   const p = pendingAnswers(ctx);
   if (p.length === 0) return null;
-  return `読んだか確かめていない回答: ${p.length} 件（${p.map((x) => `[${x.id}] ${x.question}`).join('／')}）＝報告の「返事を待っているもの」に並べ、読んだと言われたら cos answer read <ID>`;
+  return `読んだか確かめていない回答: ${p.length} 件（${p.map((x) => `[${x.id}] ${x.question}`).join('／')}）＝報告の「読んでほしい回答」に並べ、読んだと言われたら cos answer read <ID>`;
 }
 
 // 最後のユーザーの発言（ツールの結果・差し込みを除く）より後の、assistant の文を全部つなぐ。
@@ -2427,21 +2438,6 @@ function lastTurnAssistantTexts(lines) {
   return texts;
 }
 
-// 判定だけの純関数（自己テスト用）。止めるなら理由の文、通すなら null。
-function answerHookDecision(text, pending, marker = '返事を待っているもの') {
-  if (pending.length === 0) return null;
-  if (!text.includes(marker)) return null; // 報告でないターン（張り直しだけ等）は止めない
-  const idx = text.lastIndexOf(marker);
-  const tail = text.slice(idx);
-  const missing = pending.filter((x) => !tail.includes(`[${x.id}]`));
-  if (missing.length === 0) return null;
-  return [
-    'ユーザーが読んだと確かめていない回答があります。「返事を待っているもの」の中に、次の回答を ID 付きで並べ直してください（答えの要点を1〜2行・「読んだら教えてください」）。',
-    ...missing.map((x) => `- [${x.id}] ${x.question}${x.answer ? `（答え: ${x.answer}）` : ''}`),
-    'ユーザーが読んだと言ったら `cos answer read <ID>`。もう要らない回答なら `cos answer read <ID> --note 理由`。',
-  ].join('\n');
-}
-
 // ---- 「進めているもの」の各項目に、実際に動いているものの印を求める（同じ Stop フックで見る）----
 // ある CoS が一度も始めていない確認を、報告のたびに3時間「進めているもの」に書き写し続けた。誰も動いていない
 // 項目を、ユーザーは進んでいると受け取る。報告の最後の文に「進めているもの」の見出しがあれば、その下の箇条書きを
@@ -2450,7 +2446,12 @@ function answerHookDecision(text, pending, marker = '返事を待っているも
 // - 台帳にある、閉じていない作業セッションの ID
 // - #番号（PR / Issue。CI 待ちなどは GitHub と見張りが動いているので、ここまでは確かめない）
 // - ほかの人が動いている印（「ユーザーが」「〇〇さんから」「…の返事」「…待ち」）。名前が出るだけでは通さない
-const PROGRESS_HEADING = /^\s*(?:#{1,6}\s*|\*\*)?進めているもの(?:[（(][^）)]*[）)])?\s*(?:\*\*)?\s*[:：]?\s*$/;
+// 報告の見出しの行（「## 〇〇」「**〇〇**」「〇〇（2件）：」など）。見出しでない行の中の語は読まない。
+const headingRe = (word) => new RegExp(`^\\s*(?:#{1,6}\\s*|\\*\\*)?${word}(?:[（(][^）)]*[）)])?\\s*(?:\\*\\*)?\\s*[:：]?\\s*$`);
+const PROGRESS_HEADING = headingRe('進めているもの');
+const PENDING_HEADING = headingRe('返事を待っているもの');
+const ANSWER_HEADING = headingRe('読んでほしい回答');
+const REPORT_HEADINGS = [PROGRESS_HEADING, PENDING_HEADING, ANSWER_HEADING];
 const PROGRESS_BULLET = /^(?:[-*+・]|\d+[.)])\s+/;
 const BG_ID_RE = /(?<![0-9A-Za-z])(b[0-9a-z]{8})(?![0-9A-Za-z])/g;
 const ISSUE_RE = /(?<![0-9A-Za-z&])#\d+(?![0-9A-Za-z])/;
@@ -2485,12 +2486,7 @@ export function progressItems(text) {
 export function hasProgressAnchor(item, isLiveBg, workers) {
   if (ISSUE_RE.test(item) || PERSON_RE.test(item)) return true;
   for (const m of item.matchAll(BG_ID_RE)) if (isLiveBg(m[1])) return true;
-  for (const w of workers) {
-    if (!w) continue;
-    const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (new RegExp(`(?<![0-9A-Za-z_-])${esc}(?![0-9A-Za-z_-])`).test(item)) return true;
-  }
-  return false;
+  return workers.some((w) => w && idMentioned(item, w));
 }
 
 // 判定だけの純関数。止めるなら理由の文、通すなら null。
@@ -2507,27 +2503,106 @@ export function progressHookDecision(text, isLiveBg, workers) {
   ].join('\n');
 }
 
-// 2つの検査の理由を1つにまとめる（両方 null なら null）。
+// ---- 未確認の回答は「読んでほしい回答」に並べる（cos answer hook）----
+// 回答は、ユーザーの判断・作業が要る「返事を待っているもの」とは別の見出しに並べる。返事の要らない回答が
+// 返事待ちに混ざると、ユーザーは自分の番なのかどうかを読み分けられない（「返事を待ってるのか、待ってないのか」）。
+
+// 見出し（headingRe に合う行）の下の本文を、次の見出し（# の行か報告の見出し）まで返す。見出しが何度あれば全部つなぐ。
+export function sectionText(text, heading) {
+  const out = [];
+  let inside = false;
+  for (const line of String(text).split(/\r?\n/)) {
+    if (heading.test(line)) { inside = true; continue; }
+    if (/^\s*#{1,6}\s/.test(line) || REPORT_HEADINGS.some((h) => h.test(line))) { inside = false; continue; }
+    if (inside) out.push(line);
+  }
+  return out.join('\n');
+}
+
+// 判定だけの純関数（自己テスト用）。止めるなら理由の文、通すなら null。
+// 報告（「読んでほしい回答」か「返事を待っているもの」の見出しがあるターン）だけを見る。張り直しだけのターンは止めない。
+function answerHookDecision(text, pending) {
+  if (pending.length === 0) return null;
+  const lines = String(text).split(/\r?\n/);
+  if (!lines.some((l) => ANSWER_HEADING.test(l) || PENDING_HEADING.test(l))) return null;
+  const listed = sectionText(text, ANSWER_HEADING);
+  const missing = pending.filter((x) => !listed.includes(`[${x.id}]`));
+  if (missing.length === 0) return null;
+  return [
+    'ユーザーが読んだと確かめていない回答があります。「読んでほしい回答」の見出しの下に、次の回答を ID 付きで並べ直してください（答えの要点を1〜2行）。「返事を待っているもの」には入れません（ユーザーの判断・作業が要る項目だけの見出しです）。',
+    ...missing.map((x) => `- [${x.id}] ${x.question}${x.answer ? `（答え: ${x.answer}）` : ''}`),
+    'ユーザーが読んだと言ったら `cos answer read <ID>`。もう要らない回答なら `cos answer read <ID> --note 理由`。',
+  ].join('\n');
+}
+
+// ---- 「返事を待っているもの」に作業中の項目を並べない（同じ Stop フックで見る）----
+// 作業セッションや裏のコマンドが動いている項目を返事待ちに並べると、ユーザーは自分の番だと受け取る（2回あった）。
+// 項目は箇条書きか、行頭の太字（「**86. 設計**」）で始まり、次の項目・見出しまで続く。
+const PENDING_ITEM_START = /^(?:[-*+・]|\d+[.)])\s+|^\*\*/;
+export function pendingItems(text) {
+  const items = [];
+  let cur = null;
+  for (const line of sectionText(text, PENDING_HEADING).split('\n')) {
+    if (!line.trim()) continue;
+    if (PENDING_ITEM_START.test(line)) {
+      cur = [line.trim()];
+      items.push(cur);
+    } else if (cur) {
+      cur.push(line.trim());
+    }
+  }
+  return items.map((i) => i.join('\n'));
+}
+
+// 項目に、動いているものの印（動いている裏のコマンドの ID・作業中の作業セッションの ID）があれば、その印を返す。
+// moving は作業中の作業セッションの ID（報告書が「質問」「完了」「中断」のものは入れない＝その質問を返事待ちに載せるのは正しい）。
+export function liveAnchorIn(item, isLiveBg, moving) {
+  for (const m of item.matchAll(BG_ID_RE)) if (isLiveBg(m[1])) return m[1];
+  for (const w of moving) if (w && idMentioned(item, w)) return w;
+  return null;
+}
+
+function idMentioned(item, id) {
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![0-9A-Za-z_-])${esc}(?![0-9A-Za-z_-])`).test(item);
+}
+
+// 判定だけの純関数。止めるなら理由の文、通すなら null。
+export function pendingHookDecision(text, isLiveBg, moving) {
+  const bad = pendingItems(text).map((i) => [i, liveAnchorIn(i, isLiveBg, moving)]).filter(([, a]) => a);
+  if (bad.length === 0) return null;
+  return [
+    '「返事を待っているもの」に、作業中の項目があります。「進めているもの」へ移してください（ユーザーの判断・作業が要る項目だけを返事待ちに残す）。',
+    ...bad.map(([i, a]) => `- 「${i.split('\n')[0].slice(0, 200)}」（${a} が動いています）`),
+    'なぜ駄目か: 作業中の項目が返事待ちにあると、ユーザーは自分の番だと受け取り、返事を待っているのかいないのか読み分けられません（2回あった）。',
+  ].join('\n');
+}
+
+// 検査の理由を1つにまとめる（両方 null なら null）。
 export function stopHookReason(...reasons) {
   const r = reasons.filter(Boolean);
   return r.length ? r.join('\n\n') : null;
 }
 
-// 「進めているもの」の検査をするセッションか。`cos chief` で起動した CoS だけ（作業セッション・普通のセッションは止めない）。
+// 「進めているもの」「返事を待っているもの」の検査をするセッションか。`cos chief` で起動した CoS だけ（作業セッション・普通のセッションは止めない）。
 export function progressCheckApplies(env) {
   return env.COS_CHIEF === '1' && !env.COS_WORKER_ID;
 }
 
 // Stop フックの判定（配線ごと純関数）。止めるなら block の理由の文、通すなら null。
-// texts はターンの assistant の文を記録ごとに並べたもの。未確認の回答はターン全体の文から、「進めているもの」は
-// 最後の文から探す。pending・isLiveBg・workers は読めなかったら null（その検査だけ飛ばす）。
-export function stopHookDecision({ env, input, texts, pending, isLiveBg, workers }) {
+// texts はターンの assistant の文を記録ごとに並べたもの。未確認の回答はターン全体の文から、「進めているもの」
+// 「返事を待っているもの」は最後の文から探す。pending・isLiveBg・workers・moving は読めなかったら null（その検査だけ飛ばす）。
+// workers は閉じていない作業セッション、moving はそのうち作業中のもの（movingWorkerIds）。
+export function stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving }) {
   if (input.stop_hook_active) return null; // このフックで止めた続きの Stop＝1ターンに1回まで
   const answerReason = pending?.length ? answerHookDecision(texts.join('\n'), pending) : null;
   const progressReason = progressCheckApplies(env) && texts.length && isLiveBg && workers
     ? progressHookDecision(texts[texts.length - 1], isLiveBg, workers)
     : null;
-  const reason = stopHookReason(answerReason, progressReason);
+  const pendingReason = progressCheckApplies(env) && texts.length && isLiveBg && moving
+    ? pendingHookDecision(texts[texts.length - 1], isLiveBg, moving)
+    : null;
+  const reason = stopHookReason(answerReason, progressReason, pendingReason);
   return reason ? `${reason}\n（この Stop フックは同じターンで1回だけ止めます）` : null;
 }
 
@@ -2592,6 +2667,15 @@ export function openWorkerIds(ledger) {
     .map(([k, w]) => w?.id || k);
 }
 
+// 作業中の作業セッション（台帳で起動中・動いている、かつ報告書が「質問」「完了」「中断」でない）。
+// 起動の画面で止まった・起動に失敗した・片付け中のものは入れない。reportStateOf(w) は報告書の状態。
+export function movingWorkerIds(ledger, reportStateOf) {
+  return Object.entries(ledger?.workers || {})
+    .filter(([, w]) => w && (w.state === 'running' || w.state === 'starting'))
+    .filter(([, w]) => !['質問', '完了', '中断'].includes(reportStateOf(w)))
+    .map(([k, w]) => w.id || k);
+}
+
 function cmdAnswer(argv) {
   const [sub, ...rest] = argv;
   if (sub === 'hook') return answerHook();
@@ -2605,7 +2689,7 @@ function cmdAnswer(argv) {
       s.items.push({ id, question, answer: opt.answer ?? null, answeredAt: now(), readAt: null });
       return id;
     });
-    console.log(`登録しました: [${id}] ${question}＝読んだと言われるまで報告の「返事を待っているもの」に [${id}] 付きで並べる（Stop フックが確かめる）`);
+    console.log(`登録しました: [${id}] ${question}＝読んだと言われるまで報告の「読んでほしい回答」に [${id}] 付きで並べる（「返事を待っているもの」には入れない・Stop フックが確かめる）`);
     return;
   }
   if (sub === 'read') {
@@ -2635,7 +2719,7 @@ function cmdAnswer(argv) {
   throw new UsageError('cos answer (add|read|list|hook)');
 }
 
-// CoS の Stop フック（`cos answer hook`）。未確認の回答の検査と「進めているもの」の印の検査を両方見て、
+// CoS の Stop フック（`cos answer hook`）。未確認の回答・「進めているもの」の印・「返事を待っているもの」の作業中の項目を見て、
 // 止めたい理由があれば1つにまとめて1回だけ止める。壊れていても止めない（例外は通す）。
 // stop_hook_active（このフックで止めた続きの Stop）なら止めない＝1ターンに1回まで。
 function answerHook() {
@@ -2653,11 +2737,13 @@ function answerHook() {
     try { pending = pendingAnswers(ctx); } catch { /* 回答の検査だけ飛ばす */ }
     let isLiveBg = null;
     let workers = null;
+    let moving = null;
     if (progressCheckApplies(env)) {
       try { isLiveBg = liveBgIn(bgTasksDirs(input.transcript_path, input.session_id || 'unknown', env), claudeStartMs()); } catch { /* 印の検査だけ飛ばす */ }
       try { workers = openWorkerIds(readLedger(ctx)); } catch { workers = []; }
+      try { moving = movingWorkerIds(readLedger(ctx), (w) => readReport(w).state); } catch { moving = null; }
     }
-    const reason = stopHookDecision({ env, input, texts, pending, isLiveBg, workers });
+    const reason = stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving });
     if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason }));
   } catch {
     // 壊れていても CoS を止めない
@@ -2681,6 +2767,15 @@ function selfTestStall(assert) {
   assert(detectStalled([w({ stallNotified: '3' })], T, 20 * 60_000, prog).length === 0, '同じ止まりは一度だけ');
   assert(detectStalled([w({ stallNotified: '2' })], T, 20 * 60_000, prog).length === 1, '別の止まりはまた出す');
   assert(detectStalled([w({ lastSeenAt: undefined, startedAt: '2026-11-21T08:00:00Z' })], T, 20 * 60_000, prog).length === 1, 'lastSeenAt が無ければ startedAt');
+  // 「質問」のまま放置
+  const q = () => '質問';
+  const sq = detectStalled([w()], T, 20 * 60_000, q);
+  assert(sq.length === 1 && sq[0].report === '質問', '「質問」のまま 20 分を過ぎ cos send が無ければ stalled');
+  assert(detectStalled([w({ lastSendAt: '2026-11-21T08:30:00Z' })], T, 20 * 60_000, q).length === 1, '止まるより前の cos send は答えに数えない');
+  assert(detectStalled([w({ lastSendAt: '2026-11-21T09:30:00Z' })], T, 20 * 60_000, q).length === 0, '止まってから cos send していれば出さない');
+  assert(detectStalled([w({ lastSendAt: 'こわれた' })], T, 20 * 60_000, q).length === 1, '読めない lastSendAt は送っていないとみなす');
+  assert(detectStalled([w({ lastSeenAt: '2026-11-21T09:50:00Z' })], T, 20 * 60_000, q).length === 0, '「質問」でも 10 分なら出さない');
+  assert(detectStalled([w()], T, 20 * 60_000, () => '中断').length === 0 && detectStalled([w()], T, 20 * 60_000, () => null).length === 0, '中断・読めない報告書は出さない');
   assert(screenShowsApiError('⏺ API Error: Connection lost mid-response.'), 'API Error を見つける');
   assert(!screenShowsApiError('ラベルをつなぎました'), '普通の画面は API エラーでない');
 }
@@ -2692,12 +2787,16 @@ function selfTestAlert(assert) {
   assert(kind({ id: 'A', status: 'blocked' }) === 'blocked' && lvl({ id: 'A', status: 'blocked' }) === 'urgent', 'alert: 承認待ちは urgent');
   assert(kind({ id: 'A', status: 'blocked', startBlocked: true }) === 'start-blocked', 'alert: 起動時の承認待ち');
   assert(kind({ event: 'deploy-failed', id: 'app@1', repo: 'o/r', sha: 'abcdef123', failed: [{ workflow: 'deploy' }] }) === 'deploy-failed', 'alert: デプロイ失敗');
-  assert(kind({ id: 'A', status: 'stalled', apiError: true }) === 'stalled', 'alert: API エラーで止まった');
+  assert(kind({ id: 'A', status: 'stalled', apiError: true }) === 'stalled' && lvl({ id: 'A', status: 'stalled', apiError: true }) === 'urgent', 'alert: API エラーで止まったのは urgent');
+  assert(kind({ id: 'A', status: 'stalled', report: '進行中' }) === 'stalled' && lvl({ id: 'A', status: 'stalled', report: '進行中' }) === 'info', 'alert: API エラーの無い stalled は info');
+  const sq = alertFor({ id: 'A', status: 'stalled', report: '質問' });
+  assert(sq?.level === 'info' && sq.title === 'A 質問が放置', `alert: 「質問」の放置は info で別の件名: ${sq?.title}`);
+  assert(alertFor({ id: 'A', status: 'stalled', report: '進行中' }).title !== alertFor({ id: 'A', status: 'stalled', apiError: true }).title, 'alert: API エラーとそれ以外は件名を分ける（重複の抑えを別にする）');
   assert(kind({ id: 'A', status: 'gone', report: '進行中' }) === 'gone', 'alert: 途中でいなくなった');
   assert(kind({ id: 'A', status: 'gone', report: null }) === 'gone', 'alert: 報告書が読めずいなくなった');
   assert(lvl({ id: 'A', status: 'done', report: '質問' }) === 'info' && lvl({ id: 'A', status: 'idle', report: '質問' }) === 'info', 'alert: 質問は info');
   // 鳴らさない
-  assert(kind({ id: 'A', status: 'stalled' }) === null, 'alert: API エラーの無い stalled は鳴らさない');
+  assert(kind({ id: 'A', status: 'stalled', report: '進行中' }, ['blocked']) === null, 'alert: alertOn に stalled が無ければ info でも鳴らさない');
   assert(kind({ id: 'A', status: 'gone', report: '完了' }) === null, 'alert: 完了していなくなったのは鳴らさない');
   assert(kind({ id: 'A', status: 'done', report: '完了' }) === null && kind({ id: 'A', status: 'idle', report: '進行中' }) === null, 'alert: 完了・進行中のターン終わりは鳴らさない');
   assert(kind({ event: 'deploy-done', id: 'x', repo: 'o/r', sha: 'a', runs: [] }) === null, 'alert: deploy-done は鳴らさない');
@@ -2989,10 +3088,17 @@ function selfTest() {
   {
     const P = [{ id: 'A1', question: 'q1' }, { id: 'A2', question: 'q2' }];
     assert(answerHookDecision('ただの張り直し', P) === null, 'answer: 報告でないターンは止めない');
-    assert(answerHookDecision('x\n**返事を待っているもの**\n1. [A1] q1\n2. [A2] q2', P) === null, 'answer: 全部あれば通す');
-    const r = answerHookDecision('[A2] 本文で触れた\n**返事を待っているもの**\n1. [A1] q1', P);
+    assert(answerHookDecision('x\n**読んでほしい回答**\n1. [A1] q1\n2. [A2] q2', P) === null, 'answer: 「読んでほしい回答」に全部あれば通す');
+    const r = answerHookDecision('[A2] 本文で触れた\n**読んでほしい回答**\n1. [A1] q1', P);
     assert(r && r.includes('[A2]') && !r.includes('[A1] q1'), 'answer: 一覧に無いものだけ挙げる');
     assert(answerHookDecision('返事を待っているもの', []) === null, 'answer: 未確認0件は止めない');
+    const old = answerHookDecision('x\n## 返事を待っているもの\n1. [A1] q1\n2. [A2] q2', P);
+    assert(old && old.includes('[A1]') && old.includes('[A2]') && old.includes('読んでほしい回答') && old.includes('には入れません'), `answer: 返事待ちに並べただけでは通さない（読んでほしい回答へ）: ${old}`);
+    assert(answerHookDecision('## 読んでほしい回答\n- [A1] q1\n\n## 返事を待っているもの\n- [A2] q2', P)?.includes('[A2]'), 'answer: 読んでほしい回答の節は次の見出しで終わる');
+    assert(answerHookDecision('## 読んでほしい回答（2件）\n- [A1] q1\n- [A2] q2\n\n## 返事を待っているもの\n- なし', P) === null, 'answer: 件数付きの見出しも読む');
+    assert(answerHookDecision('## 返事を待っているもの\n- なし\n\n**読んでほしい回答**\n\n**[A1]** q1\n答え: x\n\n**[A2]** q2', P) === null, 'answer: 太字の段落で並べても数える');
+    assert(answerHookDecision('[A1] と [A2] は「読んでほしい回答」に載せました', P) === null, 'answer: 見出しの無いターンは止めない');
+    assert(sectionText('## 読んでほしい回答\n- a\n### 次\n- b\n**読んでほしい回答**\n- c', ANSWER_HEADING) === '- a\n- c', 'answer: 節は見出しごとに読み、つなぐ');
     const lines = [
       JSON.stringify({ type: 'user', message: { content: '前の質問' } }),
       JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '古い' }] } }),
@@ -3002,6 +3108,28 @@ function selfTest() {
       JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'B' }] } }),
     ];
     assert(lastTurnAssistantText(lines) === 'A\nB', 'answer: 最後のターンの文だけ');
+  }
+  // 「返事を待っているもの」の作業中の項目
+  {
+    const lb = (id) => id === 'blive0001';
+    const M = ['fix-login'];
+    const D = (t) => pendingHookDecision(t, lb, M);
+    const r = D('報告です。\n\n## 返事を待っているもの\n\n1. **ログイン直し:** fix-login で直しています。\n2. **設計:** A か B か（推奨 A）\n\n## 読んでほしい回答\n- [A1] fix-login の件');
+    assert(r && r.includes('ログイン直し') && r.includes('fix-login が動いています') && !r.includes('設計') && r.includes('進めているもの'), `pending: 作業中の作業セッションの ID がある項目だけ止める: ${r}`);
+    assert(D('## 返事を待っているもの\n\n**86. 確認**\n見守り（blive0001）が動いています。\n\n**87. 設計**\nA か B か') ?.includes('86. 確認'), 'pending: 太字で始まる項目の続きの行の、動いている裏の ID で止める');
+    assert(D('## 返事を待っているもの\n- 見守り（bdead0001）は終わりました。マージしてよいですか') === null, 'pending: 終わった裏の ID は止めない');
+    assert(D('## 返事を待っているもの\n- **設計:** A か B か\n- **PR #12:** マージしてよいですか') === null, 'pending: ユーザーへの質問だけなら通る');
+    assert(D('## 返事を待っているもの\n- **設計:** fix-login-2 の件') === null && D('## 返事を待っているもの\n- **設計:** prefix-login の件') === null, 'pending: ID の一部が重なるだけでは止めない');
+    assert(D('## 進めているもの\n- fix-login が直しています\n\n## 返事を待っているもの\n- **設計:** A か B か') === null, 'pending: 進めているものの節は見ない');
+    assert(D('fix-login は返事を待っているもので伝えます') === null, 'pending: 見出しの無い文は見ない');
+    assert(pendingHookDecision('## 返事を待っているもの\n- fix-login の質問: A か B か', lb, []) === null, 'pending: 質問中の作業セッション（moving に無い）の質問は返事待ちに載せてよい');
+    const led = { workers: {
+      run: { id: 'run', state: 'running' }, q: { id: 'q', state: 'running' }, done: { id: 'done', state: 'running' },
+      sb: { id: 'sb', state: 'start-blocked' }, st: { id: 'st', state: 'starting' }, cl: { id: 'cl', state: 'closed' }, x: null,
+    } };
+    const mv = movingWorkerIds(led, (w) => ({ q: '質問', done: '完了', st: '着手前' })[w.id] ?? '進行中');
+    assert(JSON.stringify(mv) === '["run","st"]', `pending: 作業中の作業セッションだけ ${mv}`);
+    assert(movingWorkerIds(null, () => null).length === 0, 'pending: 台帳が空');
   }
   // 「進めているもの」の印の判定
   {
@@ -3107,6 +3235,13 @@ function selfTest() {
       assert(both && both.includes('[A1] q1') && both.includes('印が無い') && both.split('1回だけ止めます').length === 2, `stop: 2つの理由は1つにまとめる ${both}`);
       assert(S({ env: {}, pending: P, texts: ['返事を待っているもの\n- なし'] })?.includes('[A1]'), 'stop: 回答の検査は COS_CHIEF に関係なく今までどおり');
       assert(S({ env: {}, pending: null, texts: ['返事を待っているもの'] }) === null, 'stop: 回答が読めなければ回答の検査は飛ばす');
+      const PT = ['## 返事を待っているもの\n- **直し:** w1 が作業中'];
+      assert(S({ texts: PT, moving: ['w1'] })?.includes('作業中の項目'), 'stop: CoS では返事待ちの作業中の項目を止める');
+      assert(S({ texts: PT, moving: ['w1'], env: {} }) === null && S({ texts: PT, moving: ['w1'], env: { COS_CHIEF: '1', COS_WORKER_ID: 'x' } }) === null, 'stop: CoS 以外では返事待ちの検査はしない');
+      assert(S({ texts: PT, moving: null }) === null && S({ texts: PT, moving: ['w1'], isLiveBg: null }) === null, 'stop: 材料が読めなければ返事待ちの検査は飛ばす');
+      assert(S({ texts: [PT[0], '最後の報告（一覧なし）'], moving: ['w1'] }) === null, 'stop: 返事待ちの検査は最後の文だけ');
+      const three = S({ texts: ['## 進めているもの\n- **確認:** これから。\n\n## 返事を待っているもの\n- **直し:** w1 が作業中'], moving: ['w1'], pending: P });
+      assert(three && three.includes('[A1] q1') && three.includes('印が無い') && three.includes('作業中の項目') && three.split('1回だけ止めます').length === 2, `stop: 3つの理由は1つにまとめる ${three}`);
     }
     // 2つの検査の理由は1つにまとめる
     assert(stopHookReason(null, null) === null, 'stop: どちらも無ければ通す');
