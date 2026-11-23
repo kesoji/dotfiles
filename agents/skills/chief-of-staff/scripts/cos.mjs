@@ -2446,8 +2446,8 @@ function lastTurnAssistantTexts(lines) {
 // - 台帳にある、閉じていない作業セッションの ID
 // - #番号（PR / Issue。CI 待ちなどは GitHub と見張りが動いているので、ここまでは確かめない）
 // - ほかの人が動いている印（「ユーザーが」「〇〇さんから」「…の返事」「…待ち」）。名前が出るだけでは通さない
-// 報告の見出しの行（「## 〇〇」「**〇〇**」「〇〇（2件）：」など）。見出しでない行の中の語は読まない。
-const headingRe = (word) => new RegExp(`^\\s*(?:#{1,6}\\s*|\\*\\*)?${word}(?:[（(][^）)]*[）)])?\\s*(?:\\*\\*)?\\s*[:：]?\\s*$`);
+// 報告の見出しの行（「## 〇〇」「**〇〇**」「**〇〇：**」「### 📌 〇〇」「〇〇（2件）：」など）。見出しでない行の中の語は読まない。
+const headingRe = (word) => new RegExp(`^\\s*(?:#{1,6}\\s*|\\*\\*)?(?:\\p{Extended_Pictographic}\\uFE0F?\\s*)?${word}(?:[（(][^）)]*[）)])?\\s*[:：]?\\s*(?:\\*\\*)?\\s*[:：]?\\s*$`, 'u');
 const PROGRESS_HEADING = headingRe('進めているもの');
 const PENDING_HEADING = headingRe('返事を待っているもの');
 const ANSWER_HEADING = headingRe('読んでほしい回答');
@@ -2507,25 +2507,36 @@ export function progressHookDecision(text, isLiveBg, workers) {
 // 回答は、ユーザーの判断・作業が要る「返事を待っているもの」とは別の見出しに並べる。返事の要らない回答が
 // 返事待ちに混ざると、ユーザーは自分の番なのかどうかを読み分けられない（「返事を待ってるのか、待ってないのか」）。
 
-// 見出し（headingRe に合う行）の下の本文を、次の見出し（# の行か報告の見出し）まで返す。見出しが何度あれば全部つなぐ。
+// 節を終える行か。# の見出し・報告の見出し・太字だけの行（「**補足**」）。ただし太字だけの行でも、
+// 番号か [ で始まるもの（「**86. 設計**」「**[A1] …**」）は項目とみなして節を終えない。
+function endsSection(line) {
+  if (/^\s*#{1,6}\s/.test(line) || REPORT_HEADINGS.some((h) => h.test(line))) return true;
+  const m = line.match(/^\s*\*\*([^*]+)\*\*\s*[:：]?\s*$/);
+  return Boolean(m) && !/^\s*(?:\d|\[)/.test(m[1]);
+}
+
+// 見出し（headingRe に合う行）の下の本文を、次の見出し（endsSection）まで返す。見出しが何度あれば全部つなぐ。
 export function sectionText(text, heading) {
   const out = [];
   let inside = false;
   for (const line of String(text).split(/\r?\n/)) {
     if (heading.test(line)) { inside = true; continue; }
-    if (/^\s*#{1,6}\s/.test(line) || REPORT_HEADINGS.some((h) => h.test(line))) { inside = false; continue; }
+    if (endsSection(line)) { inside = false; continue; }
     if (inside) out.push(line);
   }
   return out.join('\n');
 }
 
 // 判定だけの純関数（自己テスト用）。止めるなら理由の文、通すなら null。
-// 報告（「読んでほしい回答」か「返事を待っているもの」の見出しがあるターン）だけを見る。張り直しだけのターンは止めない。
-function answerHookDecision(text, pending) {
+// texts はターンの assistant の文を記録ごとに並べたもの（文字列1つでもよい）。報告（「読んでほしい回答」か
+// 「返事を待っているもの」の見出しがある文）のうち最後のものだけを見る＝前の文に並べても、最後の報告から落ちたら止める。
+// 報告の無いターン（張り直しだけ等）は止めない。
+const isReport = (t) => String(t).split(/\r?\n/).some((l) => ANSWER_HEADING.test(l) || PENDING_HEADING.test(l));
+function answerHookDecision(texts, pending) {
   if (pending.length === 0) return null;
-  const lines = String(text).split(/\r?\n/);
-  if (!lines.some((l) => ANSWER_HEADING.test(l) || PENDING_HEADING.test(l))) return null;
-  const listed = sectionText(text, ANSWER_HEADING);
+  const report = [].concat(texts).filter(isReport).at(-1);
+  if (report === undefined) return null;
+  const listed = sectionText(report, ANSWER_HEADING);
   const missing = pending.filter((x) => !listed.includes(`[${x.id}]`));
   if (missing.length === 0) return null;
   return [
@@ -2537,19 +2548,24 @@ function answerHookDecision(text, pending) {
 
 // ---- 「返事を待っているもの」に作業中の項目を並べない（同じ Stop フックで見る）----
 // 作業セッションや裏のコマンドが動いている項目を返事待ちに並べると、ユーザーは自分の番だと受け取る（2回あった）。
-// 項目は箇条書きか、行頭の太字（「**86. 設計**」）で始まり、次の項目・見出しまで続く。
+// 項目は箇条書きか、行頭の太字（「**86. 設計**」「**設計:** …」）で始まる。続きは、字下げした行か、空行を挟まずに続く行。
+// 空行のあとの、項目の始まりでも字下げでもない段落（「cos watch を張り直しました」）で一覧は終わる。
 const PENDING_ITEM_START = /^(?:[-*+・]|\d+[.)])\s+|^\*\*/;
 export function pendingItems(text) {
   const items = [];
   let cur = null;
+  let blank = false;
   for (const line of sectionText(text, PENDING_HEADING).split('\n')) {
-    if (!line.trim()) continue;
+    if (!line.trim()) { blank = true; continue; }
     if (PENDING_ITEM_START.test(line)) {
       cur = [line.trim()];
       items.push(cur);
-    } else if (cur) {
+    } else if (cur && (!blank || line[0] === ' ' || line[0] === '\t')) {
       cur.push(line.trim());
+    } else {
+      cur = null;
     }
+    blank = false;
   }
   return items.map((i) => i.join('\n'));
 }
@@ -2595,7 +2611,7 @@ export function progressCheckApplies(env) {
 // workers は閉じていない作業セッション、moving はそのうち作業中のもの（movingWorkerIds）。
 export function stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving }) {
   if (input.stop_hook_active) return null; // このフックで止めた続きの Stop＝1ターンに1回まで
-  const answerReason = pending?.length ? answerHookDecision(texts.join('\n'), pending) : null;
+  const answerReason = pending?.length ? answerHookDecision(texts, pending) : null;
   const progressReason = progressCheckApplies(env) && texts.length && isLiveBg && workers
     ? progressHookDecision(texts[texts.length - 1], isLiveBg, workers)
     : null;
@@ -2668,10 +2684,12 @@ export function openWorkerIds(ledger) {
 }
 
 // 作業中の作業セッション（台帳で起動中・動いている、かつ報告書が「質問」「完了」「中断」でない）。
-// 起動の画面で止まった・起動に失敗した・片付け中のものは入れない。reportStateOf(w) は報告書の状態。
+// 起動の画面で止まった・起動に失敗した・片付け中のもの、見張りが最後に承認・質問の画面（blocked）で見たものは入れない
+// （その承認を返事待ちに載せるのは正しい）。reportStateOf(w) は報告書の状態。
 export function movingWorkerIds(ledger, reportStateOf) {
   return Object.entries(ledger?.workers || {})
     .filter(([, w]) => w && (w.state === 'running' || w.state === 'starting'))
+    .filter(([, w]) => w.lastSeen?.status !== 'blocked')
     .filter(([, w]) => !['質問', '完了', '中断'].includes(reportStateOf(w)))
     .map(([k, w]) => w.id || k);
 }
@@ -3099,6 +3117,14 @@ function selfTest() {
     assert(answerHookDecision('## 返事を待っているもの\n- なし\n\n**読んでほしい回答**\n\n**[A1]** q1\n答え: x\n\n**[A2]** q2', P) === null, 'answer: 太字の段落で並べても数える');
     assert(answerHookDecision('[A1] と [A2] は「読んでほしい回答」に載せました', P) === null, 'answer: 見出しの無いターンは止めない');
     assert(sectionText('## 読んでほしい回答\n- a\n### 次\n- b\n**読んでほしい回答**\n- c', ANSWER_HEADING) === '- a\n- c', 'answer: 節は見出しごとに読み、つなぐ');
+    assert(answerHookDecision('**読んでほしい回答**\n- なし\n\n**メモ**\n[A1] [A2] は後で', P) !== null, 'answer: 太字だけの別の見出しで節は終わる');
+    assert(answerHookDecision('**読んでほしい回答**\n**[A1] q1**\n**2. [A2] q2**', P) === null, 'answer: 番号か [ で始まる太字の行は項目として読む');
+    for (const h of ['**返事を待っているもの：**', '### 📌 返事を待っているもの', '**返事を待っているもの**：']) {
+      assert(answerHookDecision(`${h}\n- 設計 A/B`, P) !== null, `answer: 見出しの書き方 ${h} でも報告とみなす`);
+    }
+    assert(answerHookDecision('## 返事を待っているもの\n- 設計\n\n**読んでほしい回答：**\n- [A1] q1\n- [A2] q2', P) === null, 'answer: 「：」を太字の中に入れた見出しも読む');
+    assert(answerHookDecision(['## 読んでほしい回答\n- [A1] q1\n- [A2] q2', '## 返事を待っているもの\n- 設計'], P) !== null, 'answer: 前の文に並べても、最後の報告から落ちたら止める');
+    assert(answerHookDecision(['## 読んでほしい回答\n- [A1] q1\n- [A2] q2', 'cos watch を張り直しました'], P) === null, 'answer: 最後の文が報告でなければ、最後の報告を見る');
     const lines = [
       JSON.stringify({ type: 'user', message: { content: '前の質問' } }),
       JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '古い' }] } }),
@@ -3123,9 +3149,13 @@ function selfTest() {
     assert(D('## 進めているもの\n- fix-login が直しています\n\n## 返事を待っているもの\n- **設計:** A か B か') === null, 'pending: 進めているものの節は見ない');
     assert(D('fix-login は返事を待っているもので伝えます') === null, 'pending: 見出しの無い文は見ない');
     assert(pendingHookDecision('## 返事を待っているもの\n- fix-login の質問: A か B か', lb, []) === null, 'pending: 質問中の作業セッション（moving に無い）の質問は返事待ちに載せてよい');
+    assert(D('## 返事を待っているもの\n- **設計:** A か B か\n\ncos watch を張り直しました（blive0001）') === null, 'pending: 空行のあとの段落は項目に入れない');
+    assert(D('## 返事を待っているもの\n- **設計:** A か B か\n\n**補足**\nfix-login は作業中') === null, 'pending: 太字だけの別の見出しで一覧は終わる');
+    assert(D('## 返事を待っているもの\n- **設計:** A か B か\n\n  fix-login の結果しだい') !== null, 'pending: 空行のあとでも字下げした行は項目の続き');
     const led = { workers: {
       run: { id: 'run', state: 'running' }, q: { id: 'q', state: 'running' }, done: { id: 'done', state: 'running' },
       sb: { id: 'sb', state: 'start-blocked' }, st: { id: 'st', state: 'starting' }, cl: { id: 'cl', state: 'closed' }, x: null,
+      bl: { id: 'bl', state: 'running', lastSeen: { status: 'blocked', seq: 2 } },
     } };
     const mv = movingWorkerIds(led, (w) => ({ q: '質問', done: '完了', st: '着手前' })[w.id] ?? '進行中');
     assert(JSON.stringify(mv) === '["run","st"]', `pending: 作業中の作業セッションだけ ${mv}`);
