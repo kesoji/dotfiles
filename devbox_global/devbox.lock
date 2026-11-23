@@ -748,6 +748,56 @@
         }
       }
     },
+    "exiftool@latest": {
+      "last_modified": "2026-11-21T08:18:15Z",
+      "resolved": "github:NixOS/nixpkgs/93a9ed0a866099a230ed5146a5bb7d16fd5c9b14#exiftool",
+      "source": "devbox-search",
+      "version": "13.60",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/idy8069f3x1ga6ja3babg2h54fk7fsx3-perl5.42.3-Image-ExifTool-13.60",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/ax58pw53bikiai21a3c636bd075wa61m-perl5.42.3-Image-ExifTool-13.60-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/idy8069f3x1ga6ja3babg2h54fk7fsx3-perl5.42.3-Image-ExifTool-13.60"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/mwksz2b4jirkkziwq6zgsx5qa46mzhpc-perl5.42.3-Image-ExifTool-13.60",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/365p5xm0arq29xj4n3ywq1gciy8131jz-perl5.42.3-Image-ExifTool-13.60-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/mwksz2b4jirkkziwq6zgsx5qa46mzhpc-perl5.42.3-Image-ExifTool-13.60"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/byq0lng5w9kzx1w75xqlrqdyvlcyrxj0-perl5.42.3-Image-ExifTool-13.60",
+              "default": true
+            },
+            {
+              "name": "devdoc",
+              "path": "/nix/store/vndkfi97ww6dyir7hjqnj85phyfmk6yr-perl5.42.3-Image-ExifTool-13.60-devdoc"
+            }
+          ],
+          "store_path": "/nix/store/byq0lng5w9kzx1w75xqlrqdyvlcyrxj0-perl5.42.3-Image-ExifTool-13.60"
+        }
+      }
+    },
     "fd@latest": {
       "last_modified": "2026-11-19T13:46:25Z",
       "resolved": "github:NixOS/nixpkgs/19cfded70b91ca0981373973c5b1efffdd4d6647#fd",

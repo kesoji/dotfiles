@@ -73,7 +73,8 @@
     "prettier@latest",
     "stylua@latest",
     "shfmt@latest",
-    "php84Packages.php-cs-fixer@latest"
+    "php84Packages.php-cs-fixer@latest",
+    "exiftool@latest"
   ],
   "shell": {
     "init_hook": [
