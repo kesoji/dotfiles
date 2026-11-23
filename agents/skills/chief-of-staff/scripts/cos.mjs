@@ -12,6 +12,7 @@
 //   cos report <ID>
 //   cos read <ID> [--lines N]
 //   cos check <ID>
+//   cos land <ID>
 //   cos close <ID> [--force] [--keep-branch]
 //   cos retro status | collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force] | done [--file F]
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
@@ -42,7 +43,7 @@
 // --repo: 作業ツリーを CoS のリポジトリ（ハブ）ではなく別のリポジトリ（対象）に作る。台帳・依頼書の決まり・
 // 見張りはハブに置いたまま、worktree・ブランチ・準備・マージ済みの判定・片付けは対象のリポジトリで行う。
 // 作業セッションは対象の worktree で起動する＝対象の .claude/（フック・権限）がそのまま効く。
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import {
   cpSync,
   appendFileSync,
@@ -99,6 +100,8 @@ const DEFAULT_CFG = {
   alertWindowMin: 10,
   // cos reorient: 期日の来た確認を文脈に戻す TODO のファイル（`~` 可・相対なら cos.json のあるディレクトリから）。
   todoFiles: [],
+  // cos watch: macOS で動いている作業セッションがいるあいだ `caffeinate -i -w <watch の pid>` を抱えてスリープを止める。
+  keepAwake: true,
 };
 const DAY_MS = 86_400_000;
 
@@ -318,6 +321,35 @@ export function herdrPlace(w) {
 // git の worktree を持つ依頼か（片付けで worktree を消す・status で未コミットを数える）。
 export function hasOwnWorktree(w) {
   return w.where === 'worktree' || w.where === 'detached';
+}
+
+// cos close で worktree を消すときに --force を付けるか。ユーザーの --force に加え、マージ済みで未コミットが無い
+// （dirty が '' ＝確かめて空だった）なら付ける＝サブモジュールを持つ worktree は git が --force 無しでは消さないため。
+// dirty が null（作業ツリーが無く確かめられない）なら付けない。
+export function worktreeRemoveForce({ userForce, merged, dirty }) {
+  return Boolean(userForce) || (merged === true && dirty === '');
+}
+
+// cos land の判断。止まる理由（reason）か、すること（action: 'ff'＝そのまま ff・'rebase'＝載せ直してから ff・'already'＝取り込み済み）。
+// agentStatus: herdr のエージェントの状態（いなければ null）。dirty: 作業ツリーの git status --porcelain（作業ツリーが無ければ null）。
+// headInBranch: CoS のツリーの HEAD をブランチが含む。branchInHead: ブランチが HEAD に含まれる（＝取り込み済み）。
+export function landPlan({ where, agentStatus, reportState: rs, dirty, headInBranch, branchInHead }) {
+  if (where !== 'worktree') return { reason: 'ブランチのある依頼（worktree）ではありません' };
+  if (agentStatus === 'working') return { reason: '作業セッションがまだ作業中です（ターンが終わってから）' };
+  if (rs !== '完了') return { reason: `報告書の状態が「${rs ?? '読めない'}」です（「完了」のときだけ取り込む）` };
+  if (dirty === null) return { reason: '作業ツリーがありません' };
+  if (dirty !== '') return { reason: `作業ツリーに未コミットの変更があります:\n${dirty}` };
+  if (branchInHead) return { action: 'already' };
+  return { action: headInBranch ? 'ff' : 'rebase' };
+}
+
+// cos watch がスリープを止める caffeinate をどうするか。'start'・'stop'・null（そのまま）。macOS だけ・keepAwake が false なら何もしない
+// （切ったときに走っていれば止める）。active＝動いている作業セッションの数・running＝caffeinate が生きているか。
+export function keepAwakeAction({ platform, enabled, active, running }) {
+  const want = platform === 'darwin' && enabled !== false && active > 0;
+  if (want && !running) return 'start';
+  if (!want && running) return 'stop';
+  return null;
 }
 
 // 作業セッションを立てる前に流す準備（cos.json の setup）。worktree の依頼は既定で流し（--no-setup で止める）、
@@ -1402,11 +1434,14 @@ function cmdWatch(argv) {
   // 期限の記録が無ければここで作る（期間の始まり＝台帳の最初の依頼）。
   if (!existsSync(ctx.retroFile)) updateRetro(ctx, () => {});
   const t0 = Date.now();
+  let awake = null;
   for (;;) {
     const led = readLedger(ctx);
     const ws = Object.values(led.workers).filter((w) => WATCHED.has(w.state));
     // 作業セッションが0本なら herdr に問い合わせない（0本でも見張りは終わらない＝振り返りの期限を待つ）。
     const agents = ws.length > 0 ? herdr(['agent', 'list']).result.agents : [];
+    // Mac のスリープで作業セッションが止まらないように（動いている作業セッションがいるあいだだけ）
+    awake = keepAwake(awake, ctx.cfg.keepAwake, ws.filter((w) => findAgent(w, agents)).length);
     const { events, seen } = ws.length > 0 ? detectEvents(ws, agents) : { events: [], seen: {} };
     if (Object.keys(seen).length > 0) {
       updateLedger(ctx, (l) => {
@@ -1501,6 +1536,33 @@ function cmdWatch(argv) {
     }
     sleep(intervalMs);
   }
+}
+
+// caffeinate を起こす・止める。返すのは今の状態（{ child } か、起動に失敗したら { failed: true }＝この見張りでは試し直さない・null）。
+// -w <watch の pid> なので、watch が終われば caffeinate も終わる（unref＝watch の終わりを caffeinate が待たせない）。
+function keepAwake(cur, enabled, active) {
+  if (cur?.failed) return cur;
+  const act = keepAwakeAction({ platform: process.platform, enabled, active, running: Boolean(cur) });
+  if (act === 'start') {
+    try {
+      const child = spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore' });
+      child.on('error', () => {}); // 見つからない等は投げない（見張りを止めない）
+      if (!child.pid) return { failed: true };
+      child.unref();
+      return { child };
+    } catch {
+      return { failed: true };
+    }
+  }
+  if (act === 'stop') {
+    try {
+      cur.child.kill();
+    } catch {
+      // 既に終わっていれば何もしない
+    }
+    return null;
+  }
+  return cur;
 }
 
 // 急ぎの知らせを鳴らす。失敗しても投げない（見張りや監視のスクリプトを止めない）。
@@ -1941,8 +2003,9 @@ function cmdClose(argv) {
   }
 
   let merged = true;
+  let dirty = null;
   if (hasOwnWorktree(w) && existsSync(w.cwd)) {
-    const dirty = git(['status', '--porcelain'], w.cwd);
+    dirty = git(['status', '--porcelain'], w.cwd);
     if (dirty && !opt.force) die(`未コミットの変更があります（捨ててよければ --force）:\n${dirty}`);
   }
   const gdir = gitDirOf(ctx, w);
@@ -1963,11 +2026,14 @@ function cmdClose(argv) {
   setWorker(ctx, id, { state: 'closing' });
   stopAgent(w);
   if (hasOwnWorktree(w)) {
+    // マージ済み・未コミット無しなら worktree の削除にだけ --force を付ける（サブモジュールを持つ worktree は git が消さない）。
+    // 台帳の forced はユーザーが --force を付けたときだけ（振り返りの数字を濁さない）。
+    const rmForce = worktreeRemoveForce({ userForce: opt.force, merged, dirty }) ? ['--force'] : [];
     if (workspaceExists(w.workspace)) {
-      herdr(['worktree', 'remove', '--workspace', w.workspace, ...(opt.force ? ['--force'] : [])]);
+      herdr(['worktree', 'remove', '--workspace', w.workspace, ...rmForce]);
     } else if (existsSync(w.cwd)) {
       // ワークスペースはユーザーが閉じ済み。worktree だけ残っている。
-      git(['worktree', 'remove', ...(opt.force ? ['--force'] : []), w.cwd], gdir);
+      git(['worktree', 'remove', ...rmForce, w.cwd], gdir);
     }
     if (w.where === 'worktree' && !opt['keep-branch'] && gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir)) {
       git(['branch', merged ? '-d' : '-D', w.branch], gdir);
@@ -1987,6 +2053,82 @@ function cmdClose(argv) {
   logEvent(ctx, { id, kind: 'closed', forced: Boolean(opt.force) });
   noteChiefSession(ctx, chiefSessionFromEnv(), 'close');
   console.log(`片付けました: ${id}（控え ${archive}）`);
+}
+
+// git を走らせ、失敗しても投げずに出力を返す（rebase・merge の失敗の理由を出すため）。
+function gitTry(args, cwd) {
+  try {
+    return { ok: true, out: execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim() };
+  } catch (e) {
+    return { ok: false, out: `${String(e.stdout ?? '')}${String(e.stderr ?? '')}`.trim() || e.message };
+  }
+}
+
+// cos land <ID>: 完了した作業セッションのブランチを CoS のツリー（--repo なら対象）に取り込む。
+// HEAD を含んでいればそのまま ff、含んでいなければ作業セッションの worktree で HEAD の上に載せ直してから ff。
+// 衝突したら載せ直しをやめて終了コード 1（作業セッションに頼む）。マージの後の検証はしない（chiefRules・CoS の仕事）。
+function cmdLand(argv) {
+  const { pos } = parseArgs(argv);
+  const id = checkId(pos[0]);
+  requireHerdr();
+  const ctx = repoCtx();
+  const w = getWorker(ctx, id);
+  const gdir = gitDirOf(ctx, w);
+  const a = findAgent(w, herdr(['agent', 'list']).result.agents);
+  const dirty = w.where === 'worktree' && existsSync(w.cwd) ? git(['status', '--porcelain'], w.cwd) : null;
+  const hasBranch = w.where === 'worktree' && gitOk(['show-ref', '--verify', '--quiet', `refs/heads/${w.branch}`], gdir);
+  if (w.where === 'worktree' && !hasBranch) die(`ブランチ ${w.branch} がありません`);
+  const head = git(['rev-parse', 'HEAD'], gdir);
+  const plan = landPlan({
+    where: w.where,
+    agentStatus: a?.agent_status ?? null,
+    reportState: readReport(w).state,
+    dirty,
+    headInBranch: hasBranch && gitOk(['merge-base', '--is-ancestor', head, w.branch], gdir),
+    branchInHead: hasBranch && gitOk(['merge-base', '--is-ancestor', w.branch, 'HEAD'], gdir),
+  });
+  if (plan.reason) die(`${id} は取り込めません: ${plan.reason}`);
+  // 取り込む前に検査の結果を出す（警告があっても止めない＝close と同じ）。
+  try {
+    printCheck(id, runCheck(ctx, w));
+  } catch (e) {
+    console.log(`cos check ${id}: 検査できませんでした（${e.message}）`);
+  }
+  const where = w.repo ? `${w.repo} の HEAD` : 'このツリーの HEAD';
+  if (plan.action === 'already') {
+    console.log(`${w.branch} は${where} に取り込み済みです（cos close ${id} で片付ける）`);
+    return;
+  }
+  const short = (sha) => sha.slice(0, 9);
+  let rebased = false;
+  if (plan.action === 'rebase') {
+    const before = git(['rev-parse', w.branch], gdir);
+    const r = gitTry(['rebase', head], w.cwd);
+    if (!r.ok) {
+      const ab = gitTry(['rebase', '--abort'], w.cwd);
+      console.log(r.out);
+      die(`${w.branch} を ${short(head)}（${where}）の上に載せ直せませんでした（衝突など）。${ab.ok ? '載せ直しはやめて元に戻しました。' : `rebase --abort にも失敗しました（${ab.out}）。作業ツリー ${w.cwd} を見てください。`}作業セッションに載せ直しを頼んでください（cos send ${id} "…"）`);
+    }
+    rebased = true;
+    const after = git(['rev-parse', w.branch], gdir);
+    // 作業セッションが後で知れるように、受け箱に知らせを置く（報告書は作業セッションが書き直すので、そこには書かない）。
+    const mbox = dirname(w.report);
+    const n = readdirSync(mbox).filter((f) => /^msg-\d+\.md$/.test(f)).length + 1;
+    const note = join(mbox, `msg-${String(n).padStart(2, '0')}.md`);
+    writeFileSync(note, `# CoS からの知らせ（${now()}）\n\nCoS が \`cos land\` で、ブランチ \`${w.branch}\` を ${where}（${short(head)}）の上に載せ直してから取り込みました。\nブランチの履歴が書き換わっています（前 ${short(before)} → 後 ${short(after)}）。続きの作業をするときは \`git log\` で今の履歴を確かめてから進めてください。\n`);
+    console.log(`載せ直しました: ${w.branch} ${short(before)} → ${short(after)}（土台 ${short(head)}・作業セッションへの知らせ ${note}）`);
+  }
+  const m = gitTry(['merge', '--ff-only', w.branch], gdir);
+  if (!m.ok) {
+    console.log(m.out);
+    die(`${where} に ${w.branch} を ff でマージできませんでした${rebased ? '（載せ直しは済んでいます）' : ''}。${gdir} の作業ツリーの状態を見てください`);
+  }
+  const landed = git(['rev-parse', 'HEAD'], gdir);
+  setWorker(ctx, id, { landedAt: now(), landedRange: `${head}..${landed}`, rebased });
+  logEvent(ctx, { id, kind: 'landed', from: head, to: landed, rebased });
+  noteChiefSession(ctx, chiefSessionFromEnv(), 'land');
+  console.log(`取り込んだ範囲 ${short(head)}..${short(landed)}（${w.repo ? `${w.repo}・` : ''}${git(['rev-list', '--count', `${head}..${landed}`], gdir)} コミット${rebased ? '・載せ直しあり' : ''}）`);
+  console.log(`検証はリポジトリの決まり（chiefRules）に従う。終わったら cos close ${id}`);
 }
 
 // SessionStart のフック。`cos chief` で起動した CoS のセッションだけで動く（chief-settings.json）。
@@ -2843,12 +2985,43 @@ function selfTestAlert(assert) {
   assert(alertCommands('urgent', 'a"b', 'c\\d', 'darwin')[1][1][1].startsWith('display notification "c\\\\d" with title "a\\"b"'), 'alert: osascript の引用');
 }
 
+function selfTestLand(assert) {
+  // cos close の worktree の削除の --force
+  assert(worktreeRemoveForce({ userForce: false, merged: true, dirty: '' }), 'close: マージ済み・未コミット無しなら --force');
+  assert(!worktreeRemoveForce({ userForce: false, merged: true, dirty: null }), 'close: 作業ツリーが確かめられなければ付けない');
+  assert(!worktreeRemoveForce({ userForce: false, merged: false, dirty: '' }), 'close: マージされていなければ付けない');
+  assert(!worktreeRemoveForce({ userForce: false, merged: true, dirty: ' M a' }), 'close: 未コミットがあれば付けない');
+  assert(worktreeRemoveForce({ userForce: true, merged: false, dirty: ' M a' }), 'close: ユーザーの --force はそのまま');
+  // cos land の判断
+  const P = (o) => landPlan({ where: 'worktree', agentStatus: 'idle', reportState: '完了', dirty: '', headInBranch: true, branchInHead: false, ...o });
+  assert(P({}).action === 'ff', 'land: HEAD を含めば ff');
+  assert(P({ headInBranch: false }).action === 'rebase', 'land: 含まなければ載せ直す');
+  assert(P({ branchInHead: true }).action === 'already', 'land: 取り込み済み');
+  assert(P({ agentStatus: null }).action === 'ff' && P({ agentStatus: 'done' }).action === 'ff', 'land: エージェントがいない・done でも動く');
+  assert(P({ agentStatus: 'working' }).reason?.includes('作業中'), 'land: 作業中なら止まる');
+  assert(P({ reportState: '進行中' }).reason?.includes('「進行中」'), 'land: 完了でなければ止まる');
+  assert(P({ reportState: null }).reason?.includes('読めない'), 'land: 報告書が読めなければ止まる');
+  assert(P({ dirty: '?? x' }).reason?.includes('未コミット'), 'land: 未コミットがあれば止まる');
+  assert(P({ dirty: null }).reason?.includes('作業ツリーがありません'), 'land: 作業ツリーが無ければ止まる');
+  assert(P({ where: 'detached' }).reason?.includes('worktree'), 'land: ブランチの無い依頼は止まる');
+  assert(P({ agentStatus: 'working', branchInHead: true }).reason, 'land: 取り込み済みでも作業中なら先に止まる');
+  // cos watch の caffeinate
+  const K = (o) => keepAwakeAction({ platform: 'darwin', enabled: true, active: 1, running: false, ...o });
+  assert(K({}) === 'start', 'keepAwake: 作業セッションがいれば起こす');
+  assert(K({ running: true }) === null, 'keepAwake: 起きていればそのまま');
+  assert(K({ active: 0 }) === null && K({ active: 0, running: true }) === 'stop', 'keepAwake: 0 本なら止める');
+  assert(K({ platform: 'linux' }) === null && K({ platform: 'linux', running: true }) === 'stop', 'keepAwake: macOS 以外は何もしない');
+  assert(K({ enabled: false }) === null && K({ enabled: false, running: true }) === 'stop', 'keepAwake: keepAwake: false なら起こさない');
+  assert(K({ enabled: undefined }) === 'start', 'keepAwake: 既定は起こす');
+}
+
 function selfTest() {
   const assert = (c, m) => {
     if (!c) throw new Error(`self-test 失敗: ${m}`);
   };
   selfTestStall(assert);
   selfTestAlert(assert);
+  selfTestLand(assert);
   assert(slug('T-42') === 't-42', 'slug');
   assert(agentName('', 't-42') === 't-42', 'agentName 素');
   assert(agentName('ab-', 't-42') === 'ab-t-42', 'agentName 接頭辞');
@@ -3348,7 +3521,8 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos report <ID>
   cos read <ID> [--lines N]
   cos check <ID>                            取り込み前の機械検査（報告書の状態と検証の記録・他のセッションのコミット・土台の遅れ）。PR を作る前に打つ
-  cos close <ID> [--force] [--keep-branch]  （先に cos check の結果を出す。警告があっても止めない）
+  cos land <ID>                             完了した作業セッションのブランチを HEAD に取り込む（HEAD を含まなければ作業セッションの worktree で載せ直してから ff。衝突したら戻して終了コード 1）
+  cos close <ID> [--force] [--keep-branch]  （先に cos check の結果を出す。警告があっても止めない。マージ済み・未コミット無しなら worktree の削除に --force を自動で付ける）
   cos retro status                          週1回の振り返りの期限・前回
   cos retro collect [--since ISO] [--until ISO] [--session ID,...] [--out F] [--force]
                                             期間の材料（依頼ごとの数字・CoS の会話のユーザーの発言）を集めて記録の下書きを作る
@@ -3370,7 +3544,7 @@ if (isMain) {
   const [cmd, ...rest] = process.argv.slice(2);
   const table = {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, 'deploy-watch': cmdDeployWatch, status: cmdStatus, ls: cmdStatus,
-    report: cmdReport, read: cmdRead, check: cmdCheck, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot, answer: cmdAnswer,
+    report: cmdReport, read: cmdRead, check: cmdCheck, land: cmdLand, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot, answer: cmdAnswer,
     'self-test': selfTest, alert: cmdAlert,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
