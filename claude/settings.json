@@ -13,7 +13,9 @@
       "mcp__zvec_grep__*"
     ],
     "deny": [
-      "Read(~/.aws/**)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.aws/sso/**)",
+      "Read(~/.aws/cli/**)",
       "Read(~/.ssh/**)",
       "Read(~/.config/gh/**)",
       "Read(~/.gnupg/**)",
@@ -89,7 +91,15 @@
     "credentials": {
       "files": [
         {
-          "path": "~/.aws",
+          "path": "~/.aws/credentials",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.aws/sso",
+          "mode": "deny"
+        },
+        {
+          "path": "~/.aws/cli",
           "mode": "deny"
         },
         {
