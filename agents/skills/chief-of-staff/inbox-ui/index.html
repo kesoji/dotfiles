@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoS 受け箱</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <h1>CoS 受け箱</h1>
+    <p class="counts" id="counts" aria-live="polite"></p>
+    <span class="conn" id="conn" data-state="connecting">つないでいます…</span>
+  </div>
+  <nav class="chips" id="chips" aria-label="CoS で絞り込む"></nav>
+</header>
+
+<main>
+  <p class="error" id="error" role="alert" hidden></p>
+
+  <section id="sec-ask" hidden>
+    <h2><span class="dot dot-ask"></span>要返事</h2>
+    <div class="list" id="list-ask"></div>
+  </section>
+
+  <section id="sec-review" hidden>
+    <h2><span class="dot dot-review"></span>確認依頼</h2>
+    <div class="list" id="list-review"></div>
+  </section>
+
+  <section id="sec-tell" hidden>
+    <h2><span class="dot dot-tell"></span>読むだけ <small>開いたら既読</small></h2>
+    <div class="list rows" id="list-tell"></div>
+  </section>
+
+  <p class="empty" id="empty" hidden>いま待っているものはありません。</p>
+
+  <details class="done" id="sec-done" hidden>
+    <summary>済んだもの <span id="done-count"></span></summary>
+    <div class="list rows" id="list-done"></div>
+  </details>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

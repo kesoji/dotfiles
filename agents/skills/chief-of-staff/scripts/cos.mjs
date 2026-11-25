@@ -18,6 +18,12 @@
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
 //   cos reorient --hook --known-only   （ユーザー全体の設定のフック用）chief.json にあるセッションを `cos chief` 無しで再開したときだけ戻す
 //   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
+//   cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--worker ID] [--link 名前=URL ...] [--supersedes ID] [--no-free-text]
+//   cos review --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
+//   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
+//   cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port 7788] [--ui-dir DIR]
+//   cos answer <id> <choice> [テキスト]      受け箱の項目に CLI で返す（cos answer add / read / list / hook は回答の記録）
+//   cos withdraw <id> [--force]
 //   cos self-test
 //   cos chief               CoS のセッションを起動する（bin/cos が scripts/chief.sh へ渡す）
 //   cos root [--sub]        この場所の CoS のディレクトリ（chief.sh 用）
@@ -31,6 +37,7 @@
 //   <git-common-dir>/cos/chief.json     CoS だったセッションの記録（振り返りで会話ログを読むため）
 //   <git-common-dir>/cos/alerts.json    急ぎの知らせを最後に鳴らした時刻（同じ件を短い間に二度鳴らさない）
 //   <git-common-dir>/cos/deploys.json   見張り中のデプロイ（cos deploy-watch で登録・cos watch が出来事を出したら消す）
+// 受け箱（全 CoS 共通・リポジトリの外）: ~/.cos/inbox/<id>.json（COS_INBOX_DIR で差し替えられる）。本体は inbox.mjs・形は inbox-schema.md。
 // 依頼書と報告書は作業セッションの作業ツリーの `.cos/<slug>/` に置く（info/exclude で git から外す）。
 // 環境変数 COS_DIR で状態の置き場所を差し替えられる（試験用＝本物の台帳を触らずに watch などを試す）。
 //
@@ -60,7 +67,13 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, REVIEW_LABEL, STALE_ASK_DAYS,
+  answerItem, answeredEvent, answeredFor, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
+  notifyNew, openCounts, overLimit, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
+  staleReviewTargets, withdrawItem, writeServerInfo,
+} from './inbox.mjs';
 
 const ALERT_KINDS_DEFAULT = ['blocked', 'start-blocked', 'deploy-failed', 'stalled', 'gone', 'question'];
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -104,6 +117,12 @@ const DEFAULT_CFG = {
   keepAwake: true,
   // cos status・cos spawn: 報告書が「完了」になってからこの時間（h）たっても片付いていない作業セッションを「取り込み待ち」として目立たせる。
   staleDoneHours: 24,
+  // 受け箱: 全 CoS の返事待ち（open な ask＋review）がこの件数を超えたら cos spawn が警告する（0 で見ない）。
+  inboxMaxOpen: 10,
+  // 受け箱: 報告書が「完了」のままこの日数たっても片付いていない作業セッションに、cos watch が確認依頼（review）を出す（0 で出さない）。
+  staleDoneReviewDays: 3,
+  // 受け箱: 画面に出す CoS の名前（空ならリポジトリの名前。サブディレクトリの CoS は <名前>/<sub>）。
+  chiefName: '',
 };
 const DAY_MS = 86_400_000;
 
@@ -1269,6 +1288,13 @@ function cmdSpawn(argv) {
     const stale = staleWorkers(ctx, active).map((x) => x.id);
     die(`同時に動かす作業セッションは ${ctx.cfg.maxWorkers} 本まで（いま ${active.length} 本）。超えるなら --force${stale.length ? `\n片付けの候補: ${stale.join(', ')}（報告書が「完了」のまま ${ctx.cfg.staleDoneHours} 時間以上。取り込んで cos close）` : ''}`);
   }
+  // 返事待ちが溜まっているときは、新しい依頼を立てる前にユーザーに一言断る（止めはしない）。
+  try {
+    const { n, over } = overLimit(listItems(inboxDir()).items, ctx.cfg.inboxMaxOpen);
+    if (over) console.error(`注意: 受け箱の返事待ち（要返事＋確認依頼）が全 CoS で ${n} 件あります（上限 ${ctx.cfg.inboxMaxOpen}）。ユーザーが答えきれていません。この依頼を立てたことと、返事待ちが溜まっていることをユーザーに一言伝えてください（一覧は cos inbox）。`);
+  } catch {
+    // 受け箱が読めなくても依頼は立てる
+  }
   if (herdr(['agent', 'list']).result.agents.some((a) => a.name === agent)) {
     die(`herdr にすでに ${agent} という名前のエージェントがいます（別のリポジトリの作業セッションかもしれません。cos.json の agentPrefix で分けられます）`);
   }
@@ -1473,6 +1499,7 @@ function cmdWatch(argv) {
   if (!existsSync(ctx.retroFile)) updateRetro(ctx, () => {});
   const t0 = Date.now();
   let awake = null;
+  const inbox = { dir: inboxDir(), stamp: null, answered: [], staleCheckedAt: 0 };
   for (;;) {
     const led = readLedger(ctx);
     const ws = Object.values(led.workers).filter((w) => WATCHED.has(w.state));
@@ -1492,8 +1519,25 @@ function cmdWatch(argv) {
     }
     // 見張り中のデプロイ（登録が無ければ gh を呼ばない・問い合わせは deployPollSec ごと）
     const deployEvents = pollDeploys(ctx, { pollMs: Math.max(ctx.cfg.deployPollSec * 1000, intervalMs), missingMs: ctx.cfg.deployMissingSec * 1000 });
+    // 受け箱: 取り込み待ちが長い作業セッションに確認依頼を出し（10 分に1回見る）、この CoS の項目に付いた答えを拾う。
+    // 受け箱が変わっていなければ読み直さない（更新時刻で見る）。読めなくても見張りは止めない。
+    try {
+      if (Date.now() - inbox.staleCheckedAt > 600_000) {
+        inbox.staleCheckedAt = Date.now();
+        for (const it of autoStaleReviews(ctx, led)) logEvent(ctx, { kind: 'inbox-stale-review', worker: it.worker, item: it.id });
+      }
+      const stamp = inboxStamp(inbox.dir);
+      if (stamp !== inbox.stamp) {
+        inbox.answered = answeredFor(listItems(inbox.dir).items, ctx.root);
+        inbox.stamp = stamp;
+      }
+    } catch (e) {
+      if (!inbox.warned) console.error(`cos watch: 受け箱（${inbox.dir}）を読めません: ${e.message}`);
+      inbox.warned = true;
+    }
+    const answeredEvents = inbox.answered.map(answeredEvent);
     let retroNotify = false;
-    if (events.length === 0 && deployEvents.length === 0 && retroDue(peekRetro(ctx), interval, Date.now()).notify) {
+    if (events.length === 0 && deployEvents.length === 0 && answeredEvents.length === 0 && retroDue(peekRetro(ctx), interval, Date.now()).notify) {
       // 同じ日に二度出さない。見張りが2本走っていても1本だけが出すよう、ロックの中で確かめ直して印を付ける。
       retroNotify = updateRetro(ctx, (r) => {
         if (!retroDue(r, interval, Date.now()).notify) return false;
@@ -1501,7 +1545,7 @@ function cmdWatch(argv) {
         return true;
       });
     }
-    const step = watchStep({ events: [...events, ...deployEvents], retroNotify, timedOut: Date.now() - t0 > timeoutMs });
+    const step = watchStep({ events: [...events, ...deployEvents, ...answeredEvents], retroNotify, timedOut: Date.now() - t0 > timeoutMs });
     if (step === 'retro-due') {
       const r = peekRetro(ctx);
       const { dueAt } = retroDue(r, interval, Date.now());
@@ -1538,6 +1582,16 @@ function cmdWatch(argv) {
         logEvent(ctx, { kind: ev.event, id: ev.id, repo: ev.repo, sha: ev.sha });
         console.log(JSON.stringify(ev));
       }
+      for (const ev of answeredEvents) {
+        logEvent(ctx, { kind: 'answered', item: ev.id, itemKind: ev.kind, worker: ev.worker, choice: ev.choice });
+        console.log(JSON.stringify(ev));
+      }
+      // 渡した印を付ける（同じ答えで二度起こさない）。付けられなくても出来事は出す。
+      try {
+        markDelivered(inbox.dir, answeredEvents.map((ev) => ev.id));
+      } catch (e) {
+        console.error(`cos watch: 受け箱に「渡した」の印を付けられません（次の見張りでもう一度出ます）: ${e.message}`);
+      }
       console.log('');
       for (const ev of events) {
         const what = {
@@ -1552,6 +1606,7 @@ function cmdWatch(argv) {
         console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}${ev.apiError ? `・画面に API のエラー（応答の途中で切れて止まった。cos send ${ev.id} --seen で続きを促す）` : ''}`);
       }
       for (const ev of deployEvents) console.log(deployLine(ev));
+      for (const ev of answeredEvents) console.log(answeredLine(ev));
       // 急ぐ種類は音と通知で知らせる（ユーザーが CoS の画面を見ていなくても気づけるように）
       const rang = [];
       // cos close で片付けた直後の作業セッションは gone として拾われるが、CoS が自分で終わらせたので鳴らさない
@@ -1899,6 +1954,7 @@ function cmdStatus(argv) {
   }
   console.log(retroLine(ctx));
   { const al = answersLine(ctx); if (al) console.log(al); }
+  { const il = inboxLine(ctx); if (il) console.log(il); }
 }
 
 function cmdRename(argv) {
@@ -2924,6 +2980,8 @@ export function movingWorkerIds(ledger, reportStateOf) {
 function cmdAnswer(argv) {
   const [sub, ...rest] = argv;
   if (sub === 'hook') return answerHook();
+  // add / read / list 以外は受け箱の項目の id＝CLI で返事をする（cos answer <id> <choice> [テキスト]）
+  if (sub !== undefined && !['add', 'read', 'list'].includes(sub) && !sub.startsWith('--')) return inboxGuard(() => cmdInboxAnswer(argv));
   const ctx = repoCtx();
   if (sub === 'add') {
     const { pos, opt } = parseArgs(rest);
@@ -2961,7 +3019,7 @@ function cmdAnswer(argv) {
     for (const x of items) console.log(`[${x.id}] ${x.readAt ? '読んだ' : '未確認'}  ${x.question}${x.answer ? `\n      答え: ${x.answer}` : ''}  （${ago(x.answeredAt)}）`);
     return;
   }
-  throw new UsageError('cos answer (add|read|list|hook)');
+  throw new UsageError('cos answer (add|read|list|hook) ／ 受け箱に返すなら cos answer <id> <choice> [テキスト]');
 }
 
 // CoS の Stop フック（`cos answer hook`）。未確認の回答・「進めているもの」の印・「返事を待っているもの」の作業中の項目を見て、
@@ -2993,6 +3051,247 @@ function answerHook() {
   } catch {
     // 壊れていても CoS を止めない
   }
+}
+
+// ───────── 受け箱（cos ask / review / tell / inbox / answer <id> / withdraw） ─────────
+// 本体は inbox.mjs（画面の API と同じ関数を呼ぶ）。ここは引数の読み取りと、どの CoS の項目かの決定だけ。
+
+// 受け箱の誤り（InboxError）を cos のエラーの出し方に合わせる。
+function inboxGuard(fn) {
+  try {
+    return fn();
+  } catch (e) {
+    if (e instanceof InboxError) die(e.message);
+    throw e;
+  }
+}
+
+// 何度も書ける引数（--option・--link）を先に抜き出す。
+function takeMulti(argv, names) {
+  const multi = Object.fromEntries(names.map((n) => [n, []]));
+  const rest = [];
+  for (let i = 0; i < argv.length; i++) {
+    const k = argv[i].startsWith('--') ? argv[i].slice(2) : null;
+    if (k && names.includes(k)) {
+      if (argv[i + 1] === undefined) throw new UsageError(`--${k} に値がありません`);
+      multi[k].push(argv[++i]);
+    } else rest.push(argv[i]);
+  }
+  return { multi, rest };
+}
+
+// この CoS（受け箱の項目の chief）。dir は cos.json のあるディレクトリ＝cos watch が「自分の項目か」を見る鍵。
+function chiefOf(ctx) {
+  const name = ctx.cfg.chiefName || `${basename(ctx.main)}${ctx.sub ? `/${ctx.sub}` : ''}`;
+  return { name, dir: realpathSync(ctx.root), session: process.env.CLAUDE_CODE_SESSION_ID || null };
+}
+
+function inboxUrlHint(dir) {
+  const sv = serverInfo(dir);
+  return sv ? `画面: ${sv.url}` : '画面は起動していません（どこかのペインで cos inbox serve）';
+}
+
+function cmdInboxCreate(kind, argv) {
+  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID]`;
+  const { multi, rest } = takeMulti(argv, ['option', 'link']);
+  const { pos, opt } = parseArgs(rest, ['no-free-text']);
+  if (pos.length || !opt.title) throw new UsageError(usage);
+  if (process.env.COS_WORKER_ID) die(`受け箱に出せるのは CoS だけです（ここは作業セッション ${process.env.COS_WORKER_ID}。CoS への連絡は報告書で）`);
+  if (kind !== 'ask' && (multi.option.length || opt.recommend || opt['no-free-text'])) throw new UsageError(`選択肢を持てるのは cos ask だけです\n${usage}`);
+  let body = opt.body ?? '';
+  if (opt['body-file']) {
+    try {
+      body = readFileSync(opt['body-file'], 'utf8').trim();
+    } catch (e) {
+      die(`--body-file が読めません: ${e.message}`);
+    }
+  }
+  if (!body.trim()) throw new UsageError(`本文（--body-file か --body）が要ります。前の会話を見なくても答えられるように書く\n${usage}`);
+  const ctx = repoCtx();
+  const dir = inboxDir();
+  inboxGuard(() => {
+    const item = createItem(dir, {
+      kind,
+      chief: chiefOf(ctx),
+      worker: opt.worker ?? null,
+      title: opt.title,
+      body,
+      options: multi.option.map(parseOption),
+      recommend: opt.recommend ?? null,
+      freeText: !opt['no-free-text'],
+      links: multi.link.map((l) => parseLink(l, process.cwd())),
+      supersedes: opt.supersedes ?? null,
+    });
+    noteChiefSession(ctx, chiefSessionFromEnv(), kind);
+    logEvent(ctx, { kind: 'inbox', item: item.id, itemKind: kind, worker: item.worker ?? undefined, supersedes: item.supersedes ?? undefined });
+    const via = notifyNew(item);
+    console.log(item.id);
+    const c = openCounts(listItems(dir).items);
+    console.error(`受け箱に出しました（${KIND_LABEL[kind]}）: ${item.title}${item.supersedes ? `・${item.supersedes} を置き換え` : ''}${via.length ? `・知らせ ${via.join('＋')}` : ''}`);
+    console.error(`全 CoS の未対応: 要返事 ${c.ask}・確認 ${c.review}・読むだけ ${c.tell}。${inboxUrlHint(dir)}`);
+    if (kind !== 'tell') console.error('答えが付くと cos watch が answered で終わります（張っていなければ張る）。会話には「受け箱に n 件出しました」の1行だけを書く。');
+  });
+}
+
+function answerText(x) {
+  if (!x.answer) return '';
+  const label = x.kind === 'review' ? REVIEW_LABEL[x.answer.choice] : x.options?.find((o) => o.key === x.answer.choice)?.label;
+  return [x.answer.choice ? `${x.answer.choice}${label ? `（${label}）` : ''}` : null, x.answer.text ? `「${x.answer.text}」` : null].filter(Boolean).join(' ');
+}
+
+function answeredLine(ev) {
+  const what = [ev.choice ? `${ev.choice}${ev.label ? `（${ev.label}）` : ''}` : null, ev.text ? `「${ev.text}」` : null].filter(Boolean).join(' ');
+  return `受け箱 ${ev.id}（${KIND_LABEL[ev.kind]}${ev.worker ? `・${ev.worker}` : ''}）「${ev.title}」にユーザーが答えた: ${what}`;
+}
+
+// git の外でも動く（一覧・返事・画面）。自分の CoS が分かれば印を付ける。
+function chiefDirSoft() {
+  try {
+    const cwd = process.env.COS_ROOT && existsSync(process.env.COS_ROOT) ? process.env.COS_ROOT : process.cwd();
+    return realpathSync(locate(cwd, process.env.COS_DIR).root);
+  } catch {
+    return null;
+  }
+}
+
+function cmdInbox(argv) {
+  const dir = inboxDir();
+  const [sub, ...rest] = argv;
+  if (sub === 'serve') return cmdInboxServe(rest);
+  if (sub === 'show') {
+    if (!rest[0]) throw new UsageError('cos inbox show <id>');
+    return inboxGuard(() => console.log(JSON.stringify(getItem(dir, rest[0]), null, 2)));
+  }
+  if (sub === 'read') {
+    if (!rest[0]) throw new UsageError('cos inbox read <id>');
+    return inboxGuard(() => {
+      const x = readItem(dir, rest[0]);
+      console.log(`既読にしました: ${x.id}「${x.title}」`);
+    });
+  }
+  const { pos, opt } = parseArgs(argv, ['all', 'mine', 'json']);
+  if (pos.length) throw new UsageError('cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port N] [--ui-dir DIR]');
+  const me = chiefDirSoft();
+  const { items, skipped } = listItems(dir);
+  let rows = sortInbox(items.filter((x) => opt.all || x.status === 'open'));
+  if (opt.mine) rows = rows.filter((x) => sameDir(x.chief?.dir, me));
+  if (opt.json) {
+    console.log(JSON.stringify(rows, null, 2));
+    return undefined;
+  }
+  const c = openCounts(items);
+  console.log(`受け箱 ${dir}・未対応: 要返事 ${c.ask}・確認 ${c.review}・読むだけ ${c.tell}。${inboxUrlHint(dir)}`);
+  for (const x of rows) {
+    const mine = sameDir(x.chief?.dir, me) ? '★' : ' ';
+    const old = x.kind === 'ask' && x.status === 'open' && Date.now() - Date.parse(x.createdAt) >= STALE_ASK_DAYS * DAY_MS ? `・${STALE_ASK_DAYS}日以上` : '';
+    const st = x.status === 'open' ? '' : `  → ${{ answered: `返事 ${answerText(x)}${x.deliveredAt ? '' : '（CoS に未配達）'}`, read: '既読', withdrawn: `取り下げ${x.supersededBy ? `（${x.supersededBy} に置き換え）` : ''}` }[x.status] ?? x.status}`;
+    console.log(`${mine}[${KIND_LABEL[x.kind]}] ${x.id}  ${x.chief?.name}${x.worker ? ` / ${x.worker}` : ''}・${ago(x.createdAt)}${old}  ${x.title}${st}`);
+  }
+  if (rows.length === 0) console.log(opt.all ? '（項目はありません）' : '（未対応の項目はありません）');
+  if (skipped.length) console.log(`読めないファイル ${skipped.length} 件: ${skipped.map((s) => `${s.file}（${s.reason}）`).join('・')}`);
+  if (me) console.log('★＝この CoS の項目');
+  return undefined;
+}
+
+function cmdInboxAnswer(argv) {
+  const [id, choice, ...text] = argv;
+  if (!id || choice === undefined) throw new UsageError('cos answer <id> <choice> [テキスト]（ask は選択肢の key・文章だけなら -。review は approve / reject）');
+  const x = answerItem(inboxDir(), id, { choice, text: text.join(' ') || null, via: 'cli' });
+  console.log(`返事を付けました: ${x.id}「${x.title}」→ ${answerText(x)}（${x.chief?.name} の cos watch が answered で拾います）`);
+}
+
+function cmdWithdraw(argv) {
+  const { pos, opt } = parseArgs(argv, ['force']);
+  if (!pos[0]) throw new UsageError('cos withdraw <id> [--force]');
+  inboxGuard(() => {
+    const x = withdrawItem(inboxDir(), pos[0], { chiefDir: opt.force ? null : chiefDirSoft() ?? '/' });
+    console.log(`取り下げました: ${x.id}「${x.title}」`);
+  });
+}
+
+// 画面を出す（127.0.0.1 だけ）。画面のファイルは --ui-dir（既定はスキルの inbox-ui/）＝ディレクトリを差し替えれば作り直せる。
+function cmdInboxServe(argv) {
+  const { opt } = parseArgs(argv, []);
+  const port = Number(opt.port ?? process.env.COS_INBOX_PORT ?? INBOX_DEFAULT_PORT);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new UsageError(`--port が数ではありません: ${opt.port}`);
+  const uiDir = resolve(opt['ui-dir'] ?? join(SKILL_DIR, 'inbox-ui'));
+  if (!existsSync(join(uiDir, 'index.html'))) die(`画面のディレクトリに index.html がありません: ${uiDir}`);
+  const dir = inboxDir();
+  mkdirSync(dir, { recursive: true });
+  const server = serveInbox({ dir, port, uiDir });
+  server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      const sv = serverInfo(dir);
+      die(`ポート ${port} は使われています${sv ? `（受け箱の画面がもう動いています: ${sv.url}・pid ${sv.pid}）` : '（別のポートなら --port）'}`);
+    }
+    die(`画面を出せません: ${e.message}`);
+  });
+  server.on('listening', () => {
+    const url = `http://127.0.0.1:${server.address().port}/`;
+    // 同じ受け箱に画面がもう動いていれば、その記録は書き換えない（cos ask などが案内する画面は先に動いていたほう）
+    const other = serverInfo(dir);
+    if (other && other.pid !== process.pid) console.log(`（同じ受け箱の画面がもう動いています: ${other.url}・pid ${other.pid}。案内に出るのはそちらです）`);
+    else writeServerInfo(dir, { pid: process.pid, port: server.address().port, url, uiDir, startedAt: now() });
+    console.log(`CoS 受け箱: ${url}`);
+    console.log(`受け箱 ${dir}・画面 ${uiDir}（止めるには Ctrl-C）`);
+  });
+  const stop = () => {
+    clearServerInfo(dir, process.pid);
+    process.exit(0);
+  };
+  process.on('SIGINT', stop);
+  process.on('SIGTERM', stop);
+}
+
+// cos status の1行（この CoS の未対応と、全 CoS の返事待ち）。
+function inboxLine(ctx) {
+  try {
+    const dir = inboxDir();
+    const { items } = listItems(dir);
+    if (items.length === 0) return null;
+    const mine = openCounts(items.filter((x) => sameDir(x.chief?.dir, ctx.root)));
+    const { n, over } = overLimit(items, ctx.cfg.inboxMaxOpen);
+    const undelivered = answeredFor(items, ctx.root).length;
+    return `受け箱: この CoS の未対応 要返事 ${mine.ask}・確認 ${mine.review}・読むだけ ${mine.tell}${undelivered ? `・答えが付いて未読 ${undelivered} 件（cos watch が answered で出す）` : ''}／全 CoS の返事待ち ${n} 件（上限 ${ctx.cfg.inboxMaxOpen}${over ? '＝超えています。新しい依頼を立てる前にユーザーに一言断る' : ''}）。${inboxUrlHint(dir)}`;
+  } catch (e) {
+    return `受け箱を読めません: ${e.message}`;
+  }
+}
+
+// 報告書が「完了」のまま staleDoneReviewDays 日たっても片付いていない作業セッションに、確認依頼を1回だけ出す。
+// 出した項目を返す。cos watch が10分に1回呼ぶ（LLM を起こさずに、取り込み待ちをユーザーの画面に出す）。
+function autoStaleReviews(ctx, led) {
+  const days = Number(ctx.cfg.staleDoneReviewDays);
+  if (!(days > 0)) return [];
+  const open = Object.values(led.workers).filter((w) => w.state !== 'closed');
+  if (open.length === 0) return [];
+  const stale = staleWorkers({ ...ctx, cfg: { ...ctx.cfg, staleDoneHours: days * 24 } }, open);
+  if (stale.length === 0) return [];
+  const dir = inboxDir();
+  const out = [];
+  for (const s of staleReviewTargets(stale, listItems(dir).items, ctx.root, led.workers)) {
+    const w = led.workers[s.id];
+    const rep = readReport(w);
+    const summary = rep.text ? recordSection(rep.text, '要約') : null;
+    const item = createItem(dir, {
+      kind: 'review',
+      chief: chiefOf(ctx),
+      worker: w.id,
+      tag: `stale-done:${w.id}`,
+      title: `${w.id}${w.title && w.title !== w.id ? `（${w.title}）` : ''}: 完了から ${Math.floor(s.ms / DAY_MS)} 日、取り込まれていません`,
+      body: [
+        `作業セッション **${w.id}** の報告書が「完了」になってから ${Math.floor(s.ms / DAY_MS)} 日たちましたが、取り込み（マージ・片付け）が済んでいません。`,
+        '',
+        '- **承認** → CoS が取り込んで片付けます。',
+        '- **差し戻し** → コメントに「捨てる」か、直してほしい点を書いてください。',
+        ...(summary ? ['', '### 報告書の要約', '', summary.split('\n').slice(0, 40).join('\n')] : []),
+      ].join('\n'),
+      links: existsSync(w.report ?? '') ? [{ label: '報告書', href: pathToFileURL(w.report).href }] : [],
+    });
+    notifyNew(item);
+    out.push(item);
+  }
+  return out;
 }
 
 function cmdRoot(argv) {
@@ -3132,6 +3431,9 @@ function selfTest() {
   selfTestStall(assert);
   selfTestAlert(assert);
   selfTestLand(assert);
+  selfTestInbox(assert);
+  assert(watchStep({ events: [answeredEvent({ id: 'i1', kind: 'ask', title: 't', options: [], answer: { choice: null, text: 'はい', at: 'T' } })], retroNotify: false, timedOut: false }) === 'events', 'inbox: 答えが付いたら見張りが終わる');
+  assert(alertFor(answeredEvent({ id: 'i1', kind: 'ask', title: 't', options: [], answer: { choice: null, text: 'はい', at: 'T' } })) === null, 'inbox: answered は鳴らさない（ユーザーが自分で答えた）');
   assert(slug('T-42') === 't-42', 'slug');
   assert(agentName('', 't-42') === 't-42', 'agentName 素');
   assert(agentName('ab-', 't-42') === 'ab-t-42', 'agentName 接頭辞');
@@ -3646,6 +3948,17 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos answer hook                           （CoS の Stop フック用）報告に未確認の回答が載っていない・「進めているもの」に印の無い項目があれば1回止める
   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
                                             ユーザーの手が要る急ぎの件を音と通知で知らせる（同じ件は既定 10 分に1回・失敗しても終了コード 0）
+  cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text] [--link 名前=URL ...] [--worker ID] [--supersedes ID]
+                                            受け箱に「要返事」を出す（id を標準出力に出す）。答えが付くと cos watch が answered で終わる
+  cos review --title T (--body-file F | --body TEXT) [--link 名前=URL ...] [--worker ID] [--supersedes ID]
+                                            受け箱に「確認依頼」を出す（ユーザーは承認か、コメント付きの差し戻し）
+  cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
+                                            受け箱に「読むだけ」を出す（開いたら既読・見張りは起こさない）
+  cos inbox [--all] [--mine] [--json]       受け箱の一覧（全 CoS。★＝この CoS の項目）
+  cos inbox show <id> | read <id>           項目の JSON を出す／読むだけの項目を既読にする
+  cos inbox serve [--port 7788] [--ui-dir DIR]   受け箱の画面を 127.0.0.1 に出す（1つだけ動かす。画面のファイルは --ui-dir で差し替えられる）
+  cos answer <id> <choice> [テキスト]         受け箱の項目に CLI で返す（ask は選択肢の key・文章だけなら -。review は approve / reject）
+  cos withdraw <id> [--force]               受け箱に出した項目を取り下げる（この CoS の未対応の項目だけ）
   cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
   cos self-test`;
 
@@ -3656,6 +3969,8 @@ if (isMain) {
     spawn: cmdSpawn, send: cmdSend, watch: cmdWatch, 'deploy-watch': cmdDeployWatch, status: cmdStatus, ls: cmdStatus,
     report: cmdReport, read: cmdRead, check: cmdCheck, land: cmdLand, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot, answer: cmdAnswer,
     'self-test': selfTest, alert: cmdAlert,
+    ask: (a) => cmdInboxCreate('ask', a), review: (a) => cmdInboxCreate('review', a), tell: (a) => cmdInboxCreate('tell', a),
+    inbox: cmdInbox, withdraw: cmdWithdraw,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
     console.log(HELP);
