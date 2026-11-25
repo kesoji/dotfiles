@@ -299,7 +299,7 @@ function todoCard(item) {
   const draw = () => {
     if (!d.rejecting) {
       const done = h('button', { class: 'btn primary', type: 'button', text: 'やった', title: `Enter か ${MOD_ENTER} でも送れる`, onclick: () => { done.disabled = true; act(item.id, 'answer', { choice: 'done', text: d.text.trim() || null }); } });
-      const ta = autoText({ value: d.text, placeholder: '一言（任意・結果など）', label: '一言', oninput: (v) => { d.text = v; }, onsubmit: () => done.click() });
+      const ta = autoText({ value: d.text, placeholder: '一言（任意・結果など）', label: '一言', oninput: (v) => { d.text = v; }, onsubmit: () => { if (d.text.trim()) done.click(); } }); // 空の Enter で「やった」にしない（押すのはボタン）
       reply.replaceChildren(ta, done,
         h('button', { class: 'btn danger', type: 'button', text: 'できない…', onclick: () => { d.rejecting = true; draw(); reply.querySelector('textarea').focus(); } }),
         h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' }));
