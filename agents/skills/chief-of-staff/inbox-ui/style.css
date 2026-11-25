@@ -1,5 +1,6 @@
 :root {
-  --page-width: min(1440px, 96vw);
+  --page-width: min(2200px, 98vw);
+  --col-min: 440px; /* 1列の最小幅。画面幅に応じて 1〜3 列になる */
   --bg: #f6f5f1;
   --card: #ffffff;
   --ink: #1d1d1b;
@@ -157,3 +158,13 @@ details.fold > summary { cursor: pointer; color: var(--sub); font-size: 13px; ma
 @media (prefers-reduced-motion: no-preference) {
   .card, .row { transition: border-color .15s; }
 }
+
+/* 段組み: 要返事・確認依頼・読むだけを横に並べる（空の群は詰める）。エラー・空・済んだものは全幅 */
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--col-min), 100%), 1fr));
+  column-gap: 20px;
+  align-items: start;
+}
+main > .error, main > .empty, main > .done { grid-column: 1 / -1; }
+main > section[hidden], main > .error[hidden], main > .empty[hidden], main > .done[hidden] { display: none; }
