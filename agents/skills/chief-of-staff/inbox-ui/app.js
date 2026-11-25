@@ -113,19 +113,25 @@ function connect() {
 }
 
 // ───── 複数行の入力欄 ─────
-// Enter で送る・Shift+Enter で改行。日本語の変換を確定する Enter（isComposing / keyCode 229）では送らない。
+// Enter で送る・Shift+Enter で改行。⌘Enter（Mac 以外は Ctrl+Enter）でも送る。
+// enterSends: false の欄（差し戻し＝間違えて送ると困る）は、Enter は改行で、⌘Enter／Ctrl+Enter だけが送る。
+// 日本語の変換を確定する Enter（isComposing / keyCode 229）では送らない。
 // 行が増えたら高さを伸ばす（上限は CSS の max-height。超えたらスクロール）。
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const MOD_ENTER = IS_MAC ? '⌘Enter' : 'Ctrl+Enter';
 function grow(ta) {
   if (!ta.isConnected) return;
   ta.style.height = 'auto';
   ta.style.height = `${ta.scrollHeight + 2}px`;
 }
-function autoText({ value = '', placeholder = '', label = '', oninput, onsubmit }) {
+function autoText({ value = '', placeholder = '', label = '', oninput, onsubmit, enterSends = true }) {
   const ta = h('textarea', {
     class: 'auto', rows: 1, value, placeholder, 'aria-label': label, autocomplete: 'off',
     oninput: () => { grow(ta); if (oninput) oninput(ta.value); },
     onkeydown: (e) => {
-      if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+      const mod = IS_MAC ? e.metaKey : e.ctrlKey;
+      if (!mod && (e.shiftKey || !enterSends)) return; // 改行
       e.preventDefault();
       if (onsubmit) onsubmit();
     },
@@ -217,7 +223,7 @@ function draftOf(id) {
 function askCard(item) {
   const d = draftOf(item.id);
   const opts = item.options || [];
-  const send = h('button', { class: 'btn primary', type: 'submit', text: '返す' });
+  const send = h('button', { class: 'btn primary', type: 'submit', text: '返す', title: `Enter か ${MOD_ENTER} でも返せる` });
   const text = autoText({
     value: d.text,
     placeholder: opts.length ? (item.freeText ? '一言（任意）。選ばずに文章だけで返してもよい' : '一言（任意）') : '返事を書く',
@@ -253,9 +259,10 @@ function reviewCard(item) {
         h('button', { class: 'btn danger', type: 'button', text: '差し戻し…', onclick: () => { d.rejecting = true; draw(); reply.querySelector('textarea').focus(); } }));
       return;
     }
-    const send = h('button', { class: 'btn danger', type: 'button', text: '差し戻す', disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'reject', text: d.text.trim() }); } });
-    const ta = autoText({ value: d.text, placeholder: '差し戻す理由・直してほしい点（必須）', label: '差し戻しのコメント', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click() });
-    reply.replaceChildren(ta, send, h('button', { class: 'btn', type: 'button', text: 'やめる', onclick: () => { d.rejecting = false; draw(); } }));
+    const send = h('button', { class: 'btn danger', type: 'button', text: '差し戻す', title: `${MOD_ENTER} でも送れる`, disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'reject', text: d.text.trim() }); } });
+    const ta = autoText({ value: d.text, placeholder: '差し戻す理由・直してほしい点（必須）', label: '差し戻しのコメント', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click(), enterSends: false });
+    reply.replaceChildren(ta, send, h('button', { class: 'btn', type: 'button', text: 'やめる', onclick: () => { d.rejecting = false; draw(); } }),
+      h('span', { class: 'key-hint', text: `${MOD_ENTER} で送る（Enter は改行）` }));
   };
   draw();
   return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title', text: item.title }), bodyBlock(item), linksBlock(item), reply);
@@ -346,7 +353,7 @@ function setFilter(name) {
 const compose = (() => {
   const c = state.compose;
   const to = h('select', { id: 'compose-to', 'aria-label': '宛先の CoS', onchange: () => { c.to = to.value; sync(); } });
-  const send = h('button', { class: 'btn primary', type: 'submit', text: '送る' });
+  const send = h('button', { class: 'btn primary', type: 'submit', text: '送る', title: `Enter か ${MOD_ENTER} でも送れる` });
   const text = autoText({ placeholder: '', label: 'CoS への指示', oninput: (v) => { c.text = v; sync(); }, onsubmit: () => form.requestSubmit() });
   const target = () => (state.filter ? state.chiefs.find((x) => x.name === state.filter) : state.chiefs.find((x) => x.dir === c.to));
   function sync() { send.disabled = c.sending || !target() || !c.text.trim(); }

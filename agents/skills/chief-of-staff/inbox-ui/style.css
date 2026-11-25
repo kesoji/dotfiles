@@ -217,3 +217,4 @@ main > .chiefs[hidden] { display: none; }
 .body.plain { white-space: pre-wrap; margin: 0; }
 .replies { margin: 8px 0 0; padding-left: 1.3em; color: var(--sub); font-size: 13px; }
 .reply-to { color: var(--sub); }
+.key-hint { flex: 1 1 100%; color: var(--sub); font-size: 12px; margin-top: -2px; }
