@@ -360,7 +360,7 @@ function chiefCard(c) {
   const n = (k) => ws.filter((w) => workerKind(w) === k).length;
   const count = (k, label) => (n(k) ? h('span', { class: `cnt ${k}`, title: label, text: `${label} ${n(k)}` }) : null);
   const open = chiefOpen();
-  const more = ws.length ? h('details', { class: 'ch-more', open: open.has(c.name), ontoggle: (e) => {
+  const more = ws.length ? h('details', { class: 'ch-more', open: picked || open.has(c.name), ontoggle: (e) => {
     const cur = chiefOpen();
     if (e.target.open) cur.add(c.name); else cur.delete(c.name);
     save('cos-inbox-ch-open', JSON.stringify([...cur]));

@@ -232,3 +232,11 @@ main > .chiefs[hidden] { display: none; }
 .row > summary .who { flex: 1 1 auto; min-width: 0; white-space: normal; }
 .row > summary .t { order: 5; flex: 1 1 100%; min-width: 0; }
 .title a, .row > summary .t a { color: var(--accent); }
+
+/* CoS を1つ選んでいるときは、カードを全幅にし、作業セッションの詳細を開いて横に並べる */
+.chief-card.picked { flex-basis: 100%; }
+.chief-card.picked .workers {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--worker-col-min, 360px), 1fr));
+  gap: 6px 18px; padding-left: 0; list-style: none;
+}
+.chief-card.picked .workers > li { border-left: 3px solid var(--line); padding-left: 8px; margin: 0; }
