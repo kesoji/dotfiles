@@ -1,10 +1,10 @@
-// CoS の受け箱 — 全 CoS からユーザーへの「要返事（ask）」「確認依頼（review）」「読むだけ（tell）」と、
+// CoS の受け箱 — 全 CoS からユーザーへの「要返事（ask）」「確認依頼（review）」「やること（todo）」「読むだけ（tell）」と、
 // ユーザーから CoS への「指示（message）」を1か所に置く。
 //
 // 項目は1件1ファイル（<受け箱>/<id>.json）。置き場所は ~/.cos/inbox（環境変数 COS_INBOX_DIR で差し替える＝試験用）。
 // 項目の形の説明は ../inbox-schema.md（形を変えるときはそこと upgradeItem を直す）。
 //
-// このファイルの関数を、CLI（cos.mjs の cos ask / review / tell / inbox / answer / withdraw）と
+// このファイルの関数を、CLI（cos.mjs の cos ask / review / todo / tell / inbox / answer / withdraw）と
 // 画面の API（cos inbox serve の /api/…）の両方が呼ぶ。画面（../inbox-ui/）は API だけに依存する。
 // CoS の一覧（どこにどの CoS がいるか）は ~/.cos/chiefs/ に記録する（noteChief・listChiefs）。
 // 依存は node の標準だけ。
@@ -18,12 +18,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const INBOX_V = 1;
 export const INBOX_DEFAULT_PORT = 7788;
-// 答えていない要返事を赤く出すまでの日数（画面と cos inbox の一覧）。
+// 答えていない要返事・終わっていないやることを赤く出すまでの日数（画面と cos inbox の一覧）。
 export const STALE_ASK_DAYS = 3;
-export const KIND_LABEL = { ask: '要返事', review: '確認依頼', tell: '読むだけ', message: '指示' };
-// CoS がユーザーに出す種類（cos ask / review / tell）。message はユーザーが CoS に出す（画面の API だけが作る）。
-const KIND_ORDER = { ask: 0, review: 1, tell: 2 };
-const SORT_ORDER = { ...KIND_ORDER, message: 3 };
+export const KIND_LABEL = { ask: '要返事', review: '確認依頼', todo: 'やること', tell: '読むだけ', message: '指示' };
+// CoS がユーザーに出す種類（cos ask / review / todo / tell）。message はユーザーが CoS に出す（画面の API だけが作る）。
+const KIND_ORDER = { ask: 0, review: 1, todo: 2, tell: 3 };
+const SORT_ORDER = { ...KIND_ORDER, message: 4 };
+// ユーザーの返事を待つ種類（返事待ちの件数・通知・answered の出来事の対象）。tell は入らない（開いたら既読で終わる）。
+export const WAITING_KINDS = ['ask', 'review', 'todo'];
 // 指示の長さの上限（画面は短い指示向け。長いやり取りは herdr のペインで）。
 export const MAX_MESSAGE_CHARS = 4000;
 // 見張りの印（~/.cos/chiefs/ の watch.beatAt）がこの秒数より古ければ、見張りは動いていないとみなす。
@@ -31,6 +33,28 @@ export const WATCH_BEAT_STALE_SEC = 120;
 const STATUS_LABEL = { open: '未対応', answered: '返事済み', read: '既読', withdrawn: '取り下げ' };
 const REVIEW_CHOICES = { approve: 'approve', ok: 'approve', 承認: 'approve', reject: 'reject', ng: 'reject', 差し戻し: 'reject', 差戻し: 'reject' };
 export const REVIEW_LABEL = { approve: '承認', reject: '差し戻し' };
+const TODO_CHOICES = { done: 'done', やった: 'done', 済: 'done', 済み: 'done', cannot: 'cannot', cant: 'cannot', できない: 'cannot' };
+export const TODO_LABEL = { done: 'やった', cannot: 'できない' };
+
+// cos tell の誤用（読むだけの項目で、ユーザーに作業や返事を求めている）を見つけるための言い回し。
+// 足し引きはここだけでする。[見つける形, 止めたときに出す名前]。引用（> の行・「」『』の中）とコード（``` と ` の中）は見ない（tellMisuse）。
+export const TELL_REQUEST_PHRASES = [
+  [/(?:ください|下さい)/, '〜ください'],
+  [/お願い(?:します|いたします|致します|したい|できます|です)/, 'お願いします'],
+  [/(?:て|で)(?:ほしい|欲しい)/, '〜してほしい'],
+  [/あなた(?:が|の)(?:すること|やること|作業|番)/, 'あなたがすること'],
+  [/(?:試す|使う|進める|始める)前に/, '〜する前に'],
+  [/(?:試して|やって|確認して|確かめて|見て)(?:みて|おいて)/, '〜してみて'],
+  [/(?:知らせて|教えて|連絡して|返信して|返事して)(?!もら|くれ|いただ|頂)/, '知らせて・教えて'],
+  [/(?:たら|れば|次第)[^。\n]{0,16}(?:知らせ|教え|連絡|返信|返事)/, '〜したら知らせて'],
+  [/(?:どうしますか|どちらに(?:しますか|しましょうか)|(?:ますか|でしょうか|ましょうか|(?:よい|いい|良い|よろしい)ですか)\s*[？?])/, '〜しますか？'],
+  [/(?:(?<!いく)[うくぐすつぬぶむる]か|ますか)\s*[。？?]?\s*$/, '〜するか・〜しますか で終わる問い'],
+  [/頼みたいことがあれば|一言(?:ください|下さい|もらえ|いただけ)/, '頼みたいことがあれば・一言ください'],
+  // 見出しや行頭（#・箇条書き・太字・【 の後ろ）に置いた、ユーザーの行動や判断を促す語
+  [/^\s*(?:#{1,6}\s*|[-*・■▼◆]\s*|\*\*|__|【|\[)*(?:(?:推奨|おすすめ|お勧め|次の一手|やること|判断)\s*(?:$|[:：（(）)】\]*＊_、])|決めて|選んで)/, '行頭の 推奨・おすすめ・次の一手・やること・判断・決めて・選んで'],
+];
+// 番号付きの行動の並び（行頭が 1. 2. … で、動詞の終止形で終わる行）。CoS 自身の予定の列挙でも当たるので、止めずに注意だけ出す（soft）。
+const TELL_NUMBERED_ACTION = /^\s*\d+\s*[.．)）、]\s*\S.*[うくぐすつぬぶむる]$/;
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
 const KEY_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const LINK_SCHEMES = new Set(['http:', 'https:', 'file:']);
@@ -38,6 +62,9 @@ const LINK_SCHEMES = new Set(['http:', 'https:', 'file:']);
 const REPO_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
 const MAX_BODY = 1 << 20; // API に送れる本文（1MB）
 const MAX_LINK_FILE = 5 << 20; // リンクのファイルを画面に出す上限（5MB）
+// 手元の HTML のリンクを HTML として出すときに付ける CSP。allow-same-origin を付けない＝その文書のオリジンは受け箱と別（null）になり、
+// 図のための JS は動くが、受け箱の API は読めず（別オリジンの応答は読めない）、POST も Origin の検査で断られる。
+export const LINK_HTML_CSP = 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox';
 
 // status は API が返す HTTP の状態（400 入力が違う・404 無い・409 もう済んでいる）。CLI は文だけ使う。
 export class InboxError extends Error {
@@ -124,7 +151,7 @@ export function makeId(nowMs, chiefName, rand = Math.random) {
 // 入力を確かめて項目にする（書き込まない）。
 export function buildItem(input, { nowMs = Date.now(), rand = Math.random } = {}) {
   const kind = input.kind;
-  if (!(kind in KIND_ORDER)) throw new InboxError(400, `kind は ask・review・tell のどれかです: ${kind}`);
+  if (!Object.hasOwn(KIND_ORDER, kind)) throw new InboxError(400, `kind は ask・review・todo・tell のどれかです: ${kind}`);
   const title = String(input.title ?? '').trim();
   if (!title) throw new InboxError(400, '題（--title）がありません');
   const chief = input.chief ?? {};
@@ -217,7 +244,7 @@ export function applyAck(item, nowIso = new Date().toISOString()) {
   return { ...item, status: 'read', readAt: nowIso };
 }
 
-// 返事を付ける（ask・review）。choice は ask なら選択肢の key（自由記述だけなら null）、review なら approve / reject。
+// 返事を付ける（ask・review・todo）。choice は ask なら選択肢の key（自由記述だけなら null）、review なら approve / reject、todo なら done / cannot。
 export function applyAnswer(item, { choice = null, text = null, via = 'cli' } = {}, nowIso = new Date().toISOString()) {
   if (item.kind === 'message') throw new InboxError(400, `${item.id} はユーザーからの指示です（CoS は cos inbox ack で既読にし、返事は cos ask / tell --reply-to で出す）`);
   if (item.kind === 'tell') throw new InboxError(400, `${item.id} は読むだけの項目です（返事はできません。既読にします）`);
@@ -228,6 +255,10 @@ export function applyAnswer(item, { choice = null, text = null, via = 'cli' } = 
     c = REVIEW_CHOICES[String(c ?? '').toLowerCase()] ?? null;
     if (!c) throw new InboxError(400, '確認依頼への返事は approve（承認）か reject（差し戻し）です');
     if (c === 'reject' && !t) throw new InboxError(400, '差し戻しにはコメントが要ります');
+  } else if (item.kind === 'todo') {
+    c = Object.hasOwn(TODO_CHOICES, String(c ?? '').toLowerCase()) ? TODO_CHOICES[String(c).toLowerCase()] : null;
+    if (!c) throw new InboxError(400, 'やることへの返事は done（やった）か cannot（できない）です');
+    if (c === 'cannot' && !t) throw new InboxError(400, '「できない」にはコメント（理由・どこで止まったか）が要ります');
   } else if (c === null) {
     if (!item.freeText) throw new InboxError(400, `${item.id} は選択肢から選びます（${item.options.map((o) => o.key).join(', ')}）`);
     if (!t) throw new InboxError(400, '選択肢を選ぶか、文章で返してください');
@@ -291,28 +322,68 @@ export function messageEvent(item) {
   return { event: 'message', id: item.id, title: item.title, text: item.body, at: item.createdAt };
 }
 
+// 返事の choice の、人が読む名前（承認・差し戻し／やった・できない／選択肢のラベル）。無ければ null。
+export function answerLabel(item) {
+  const c = item.answer?.choice ?? null;
+  if (c === null) return null;
+  if (item.kind === 'review') return REVIEW_LABEL[c] ?? c;
+  if (item.kind === 'todo') return TODO_LABEL[c] ?? c;
+  return item.options?.find((o) => o.key === c)?.label ?? null;
+}
+
+// 項目が古くなっているか（未対応の要返事・やることが STALE_ASK_DAYS 日以上残っている＝赤く出す）。
+export function isStaleItem(item, nowMs = Date.now(), days = STALE_ASK_DAYS) {
+  return (item.kind === 'ask' || item.kind === 'todo') && item.status === 'open' && nowMs - Date.parse(item.createdAt) >= days * 86400000;
+}
+
+// cos tell の題と本文に、ユーザーに作業や返事を求める言い回しがあるか。見つけたものを [{ phrase, line, soft? }] で返す（無ければ空）。
+// soft が付いたもの（番号付きの行動の並び）は誤検知が多いので、cos tell は止めずに注意だけ出す。
+// 引用（> で始まる行・「」『』の中）とコード（``` の囲みと ` の中）は見ない。
+export function tellMisuse(title, body) {
+  const hits = [];
+  const numbered = [];
+  let fence = false;
+  for (const raw of `${title ?? ''}\n${body ?? ''}`.split('\n')) {
+    if (/^\s*(?:```|~~~)/.test(raw)) {
+      fence = !fence;
+      continue;
+    }
+    if (fence || /^\s*>/.test(raw)) continue;
+    const line = raw.replace(/`[^`]*`/g, ' ').replace(/「[^」]*」|『[^』]*』/g, ' ');
+    if (TELL_NUMBERED_ACTION.test(line.replace(/[。.\s]+$/, '').replace(/(?:（[^（）]*）|\([^()]*\))$/, '').trimEnd())) numbered.push(raw.trim());
+    for (const [re, phrase] of TELL_REQUEST_PHRASES) {
+      if (re.test(line)) {
+        hits.push({ phrase, line: raw.trim() });
+        break;
+      }
+    }
+  }
+  if (numbered.length >= 2) hits.push({ phrase: '番号付きの行動の並び', line: numbered.join(' ／ '), soft: true });
+  return hits;
+}
+
 // 見張りの出来事（cos watch が出す1行）。
 export function answeredEvent(item) {
   const c = item.answer?.choice ?? null;
-  const label = item.kind === 'review' ? REVIEW_LABEL[c] ?? c : item.options?.find((o) => o.key === c)?.label ?? null;
+  const label = answerLabel(item);
   return { event: 'answered', id: item.id, kind: item.kind, worker: item.worker ?? undefined, title: item.title, choice: c, label: label ?? undefined, text: item.answer?.text ?? undefined, at: item.answer?.at };
 }
 
-// 並び: 要返事 → 確認依頼 → 読むだけ。各群の中は古い順（待たせている順）。
+// 並び: 要返事 → 確認依頼 → やること → 読むだけ。各群の中は古い順（待たせている順）。
 export function sortInbox(items) {
   return [...items].sort((a, b) => (SORT_ORDER[a.kind] ?? 9) - (SORT_ORDER[b.kind] ?? 9) || String(a.createdAt).localeCompare(String(b.createdAt)));
 }
 
 export function openCounts(items) {
-  const c = { ask: 0, review: 0, tell: 0 };
-  for (const x of items) if (x.status === 'open' && x.kind in c) c[x.kind]++;
+  const c = { ask: 0, review: 0, todo: 0, tell: 0 };
+  for (const x of items) if (x.status === 'open' && Object.hasOwn(c, x.kind)) c[x.kind]++;
   return c;
 }
 
-// 返事待ち（open な ask と review）が上限を超えているか（cos spawn の警告）。
+// 返事待ち（open な ask・review・todo）が上限を超えているか（cos spawn の警告）。
 export function overLimit(items, max) {
   const c = openCounts(items);
-  const n = c.ask + c.review;
+  const n = WAITING_KINDS.reduce((a, k) => a + c[k], 0);
   return { n, over: Number(max) > 0 && n > Number(max) };
 }
 
@@ -326,7 +397,8 @@ export function staleReviewTargets(stale, items, chiefDir, workers) {
 }
 
 // 項目の形を読み分ける。形を変えたら v を上げ、ここで古い形を新しい形に直す。
-// kind "message" と replyTo は足しただけ（前からある項目の読み方は変わらない）ので v は 1 のまま。
+// kind "message"・"todo" と replyTo・repo は足しただけ（前からある項目の読み方は変わらない）ので v は 1 のまま。
+// v を上げるのは、前からある項目の読み方が変わるときだけ（上げると、古い版は新しい項目を全部読み飛ばす）。
 export function upgradeItem(j) {
   if (!j || typeof j !== 'object') throw new InboxError(400, '項目が JSON のオブジェクトではありません');
   switch (j.v) {
@@ -337,7 +409,7 @@ export function upgradeItem(j) {
   }
 }
 
-// 新しい要返事・確認依頼を知らせるコマンド（herdr の通知と macOS の通知の両方を出す）。
+// 新しい要返事・確認依頼・やることを知らせるコマンド（herdr の通知と macOS の通知の両方を出す）。
 export function notifyCommands(item, platform) {
   const title = `${KIND_LABEL[item.kind]}（${item.chief.name}）`;
   const cmds = [['herdr', ['notification', 'show', title, '--body', item.title, '--sound', 'request']]];
@@ -510,9 +582,9 @@ export function inboxStamp(dir) {
   }
 }
 
-// 新しい要返事・確認依頼を知らせる。失敗しても投げない。COS_INBOX_NOTIFY=0 で出さない（試験用）。
+// 新しい要返事・確認依頼・やることを知らせる。失敗しても投げない。COS_INBOX_NOTIFY=0 で出さない（試験用）。
 export function notifyNew(item, env = process.env) {
-  if (env.COS_INBOX_NOTIFY === '0' || (item.kind !== 'ask' && item.kind !== 'review')) return [];
+  if (env.COS_INBOX_NOTIFY === '0' || !WAITING_KINDS.includes(item.kind)) return [];
   const via = [];
   for (const [bin, args] of notifyCommands(item, process.platform)) {
     try {
@@ -526,7 +598,7 @@ export function notifyNew(item, env = process.env) {
 }
 
 // ───────── CoS の記録（~/.cos/chiefs/<鍵>.json） ─────────
-// 画面が「どの CoS がどこにいるか」を知るための記録。CoS だけが打つコマンド（cos watch・ask / review / tell・inbox ack・spawn）と
+// 画面が「どの CoS がどこにいるか」を知るための記録。CoS だけが打つコマンド（cos watch・ask / review / todo / tell・inbox ack・spawn）と
 // cos chief の起動フックが書く。サーバーは読むだけ。1つの CoS に1ファイル（鍵は CoS のディレクトリのハッシュ）。
 //   { v, name, dir, stateDir, retroIntervalDays, seenAt, via, watch: { pid, startedAt, beatAt } | null, watchEndedAt }
 
@@ -624,11 +696,11 @@ function closedAt(x) {
   return x.answer?.at ?? x.readAt ?? x.withdrawnAt ?? x.createdAt;
 }
 
-// API の1回の呼び出し。返すのは { status, json } か { status, text, type }。ネットワークを通さず試せるように http から切り離してある。
+// API の1回の呼び出し。返すのは { status, json } か { status, text, type, headers? }。ネットワークを通さず試せるように http から切り離してある。
 //   GET  /api/items[?status=open]         全部（未対応を並び順で先に、済んだものは新しい順）
 //   GET  /api/items/:id
-//   GET  /api/items/:id/links/:n          項目のリンクが指す手元のファイルの中身（項目に書かれたファイルだけ）
-//   POST /api/items/:id/answer  { choice, text }
+//   GET  /api/items/:id/links/:n          項目のリンクが指す手元のファイルの中身（項目に書かれたファイルだけ。.html は sandbox 付きの HTML、ほかはテキスト）
+//   POST /api/items/:id/answer  { choice, text }   ask は選択肢の key、review は approve / reject、todo は done / cannot
 //   POST /api/items/:id/read
 //   GET  /api/chiefs                      記録されている CoS と今の状況（作業セッション・見張り・振り返りの期限・未読の指示）
 //   POST /api/messages  { to, text }      CoS 宛ての指示を作る（to は GET /api/chiefs の dir）
@@ -675,6 +747,7 @@ export function handleApi(dir, method, pathname, { query = new URLSearchParams()
           now: new Date().toISOString(),
           staleAskDays: STALE_ASK_DAYS,
           counts: openCounts(items),
+          waiting: overLimit(items, 0).n,
           unreadMessages: items.filter((x) => x.kind === 'message' && x.status === 'open').length,
           chiefs: [...new Set(items.map((x) => x.chief?.name).filter(Boolean))].sort(),
           items: [...open, ...closed].map(publicItem),
@@ -696,6 +769,8 @@ export function handleApi(dir, method, pathname, { query = new URLSearchParams()
       }
       if (!st.isFile()) throw new InboxError(400, `ファイルではありません: ${file}`);
       if (st.size > MAX_LINK_FILE) throw new InboxError(400, `大きすぎて出せません（${st.size} バイト）: ${file}`);
+      // .html / .htm は HTML として出す（sandbox 付き＝受け箱のオリジンでは動かさない）。ほかはテキスト。
+      if (/\.html?$/i.test(file)) return { status: 200, text: readFileSync(file, 'utf8'), type: 'text/html; charset=utf-8', headers: { 'Content-Security-Policy': LINK_HTML_CSP } };
       return { status: 200, text: readFileSync(file, 'utf8'), type: 'text/plain; charset=utf-8' };
     }
     if (seg.length === 4 && method === 'POST' && seg[3] === 'answer') {
@@ -779,8 +854,8 @@ export function watchInbox(dir, onChange, { debounceMs = 40, pollMs = 2000 } = {
 // Host が自分でない要求と、JSON でない POST・よその Origin の POST は断る。
 export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.0.0.1', chiefs = undefined, chiefStatus = null }) {
   const allowed = () => new Set([`127.0.0.1:${server.address().port}`, `localhost:${server.address().port}`]);
-  const send = (res, status, body, type) => {
-    res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+  const send = (res, status, body, type, headers = {}) => {
+    res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers });
     res.end(body);
   };
   const sendJson = (res, status, json) => send(res, status, JSON.stringify(json), 'application/json; charset=utf-8');
@@ -810,7 +885,7 @@ export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.
       }
       if (req.method === 'GET') {
         const r = handleApi(dir, 'GET', url.pathname, { query: url.searchParams, chiefs, chiefStatus });
-        return r.json ? sendJson(res, r.status, r.json) : send(res, r.status, r.text, r.type);
+        return r.json ? sendJson(res, r.status, r.json) : send(res, r.status, r.text, r.type, r.headers);
       }
       if (req.method !== 'POST') return sendJson(res, 405, { error: 'GET か POST だけです' });
       const origin = req.headers.origin;
@@ -975,6 +1050,43 @@ export function selfTestInbox(assert) {
   assert(throws(() => applyAnswer(review, { choice: 'reject' }), 400) && throws(() => applyAnswer(review, { choice: 'maybe' }), 400), 'inbox: 差し戻しはコメント必須');
   assert(throws(() => applyAnswer(tell, { choice: 'a' }), 400), 'inbox: 読むだけには返事できない');
 
+  // やること（todo）: やった（一言は任意）・できない（コメント必須）
+  const todo = buildItem({ kind: 'todo', chief: A, worker: 'w1', title: 'API を有効にして試す', body: 'b' }, { nowMs: T0 + 1500 });
+  assert(todo.kind === 'todo' && todo.v === 1 && todo.status === 'open' && todo.options === null && todo.recommend === null && todo.freeText === null, 'inbox: todo の形（選択肢を持たない）');
+  assert(throws(() => buildItem({ kind: 'todo', chief: A, title: 'x', options: [{ key: 'a', label: 'A' }] }), 400) && throws(() => buildItem({ kind: 'toString', chief: A, title: 'x' }), 400), 'inbox: todo は選択肢を持てない・知らない種類は断る');
+  const t1 = applyAnswer(todo, { choice: 'done', via: 'ui' }, 'T');
+  const t2 = applyAnswer(todo, { choice: 'やった', text: ' 動きました ' }, 'T');
+  assert(t1.status === 'answered' && t1.answer.choice === 'done' && t1.answer.text === null && t2.answer.choice === 'done' && t2.answer.text === '動きました' && todo.status === 'open', 'inbox: やった（一言は任意）');
+  const t3 = applyAnswer(todo, { choice: 'cannot', text: '権限が無い' }, 'T');
+  assert(t3.answer.choice === 'cannot' && t3.answer.text === '権限が無い' && applyAnswer(todo, { choice: 'できない', text: 'x' }).answer.choice === 'cannot', 'inbox: できない（コメント付き）');
+  assert(throws(() => applyAnswer(todo, { choice: 'cannot' }), 400) && throws(() => applyAnswer(todo, { choice: 'cannot', text: '  ' }), 400), 'inbox: できないはコメント必須');
+  assert(throws(() => applyAnswer(todo, {}), 400) && throws(() => applyAnswer(todo, { text: '文章だけ' }), 400) && throws(() => applyAnswer(todo, { choice: 'approve' }), 400) && throws(() => applyAnswer(todo, { choice: 'constructor' }), 400), 'inbox: todo への返事は done か cannot だけ');
+  assert(throws(() => applyAnswer(t1, { choice: 'done' }), 409) && throws(() => applyRead(todo), 400) && throws(() => applyAck(todo), 400), 'inbox: 返事済みの todo には返せない・既読／ack では終わらない');
+  const te = answeredEvent(t3);
+  assert(te.event === 'answered' && te.kind === 'todo' && te.choice === 'cannot' && te.label === 'できない' && te.text === '権限が無い' && te.worker === 'w1' && answeredEvent(t1).label === 'やった' && answeredEvent(t1).text === undefined, `inbox: todo の出来事 ${JSON.stringify(te)}`);
+  assert(answeredFor([t1, todo], '/r/main').map((x) => x.id).join() === t1.id && answeredFor([t1], '/r/it').length === 0 && answeredFor([{ ...t1, deliveredAt: 'T' }], '/r/main').length === 0, 'inbox: todo の答えは出した CoS だけを起こす・一度だけ');
+  const DAY = 86400000;
+  assert(isStaleItem(todo, T0 + 1500 + 3 * DAY) && isStaleItem(ask, T0 + 3 * DAY) && !isStaleItem(todo, T0 + 2 * DAY) && !isStaleItem(t1, T0 + 9 * DAY) && !isStaleItem(review, T0 + 9 * DAY) && !isStaleItem(tell, T0 + 9 * DAY), 'inbox: 何日も残った要返事・やることは赤くする');
+
+  // cos tell の誤用（ユーザーに作業や返事を求める言い回し）: 止める・引用とコードは見ない
+  const mis = (b, t = '題') => tellMisuse(t, b).filter((h) => !h.soft).length;
+  const soft = (b) => tellMisuse('題', b).filter((h) => h.soft).length;
+  // 実際にあった誤用の形: 「推奨」の見出しの下にユーザーが選ぶ行動が番号付きで並び、「一言ください」で締める（お願いします・してください は無い）
+  const picks = '調べた結果、外からのログインは見つかりませんでした。\n\n## 推奨（急ぎではない）\n\n1. 担当の方に一言聞く\n2. 気になるならパスワードを変える\n3. 運用を担当者と決める\n\n何か頼みたいことがあれば、画面から CoS に一言ください';
+  assert(mis(picks) === 2 && soft(picks) === 1 && tellMisuse('題', picks).find((h) => h.soft).line.includes('パスワードを変える'), `inbox tell: 推奨の見出し＋番号付きの行動＋一言ください は止める ${JSON.stringify(tellMisuse('題', picks))}`);
+  assert(mis('推奨: 案 A') === 1 && mis('**おすすめ**\n案 B') === 1 && mis('### 次の一手') === 1 && mis('- やること: 鍵を作り直す') === 1 && mis('【判断】残すか消すか') === 1 && mis('決めてもらうこと: 期日') === 1 && mis('選んでもらう案は2つ') === 1, 'inbox tell: 行頭の 推奨・おすすめ・次の一手・やること・判断・決めて・選んで');
+  assert(mis('前回の推奨どおりに直しました') === 0 && mis('やることは全部終わりました') === 0 && mis('判断の根拠は報告書にあります') === 0 && mis('3つの案から A を選んで実装しました') === 0, 'inbox tell: 行頭でない・見出しでない語は止めない');
+  assert(mis('このまま残すか') === 1 && mis('- 先に B を直しますか') === 1 && mis('どちらにするか。') === 1 && mis('どうするかは来週決めます') === 0 && mis('頼みたいことがあれば画面からどうぞ') === 1 && mis('一言もらえれば進めます') === 1, 'inbox tell: 〜するか・〜しますか で終わる問い／頼みたいことがあれば・一言');
+  assert(soft('1. 鍵を作り直す\n2. 設定を書き換える（5分）\n3. 再起動する。') === 1 && mis('1. 鍵を作り直す\n2. 設定を書き換える') === 0 && soft('1. 鍵を作り直す') === 0 && soft('1. 鍵を作り直した\n2. 設定を書き換えた') === 0 && soft('1. 3件\n2. 5件') === 0, 'inbox tell: 番号付きの行動の並びは注意だけ（soft）・過去形や名詞の並びは当てない');
+  assert(mis('People API を有効にしてください') === 1 && mis('有効にしたら知らせて。') === 1 && mis('あなたがすること: コンソールで有効にする') === 1 && mis('試す前に API を有効にする必要があります') === 1, 'inbox tell: 作業を求める言い回しを見つける');
+  assert(mis('確認をお願いします') === 1 && mis('結果を教えてください') === 1 && mis('ご確認ください') === 1 && mis('この方針で進めますか？') === 1 && mis('一度試してみて') === 1 && mis('見てほしい点が2つあります') === 1 && mis('本文', '設定をお願いします') === 1, 'inbox tell: 返事を求める言い回し・題も見る');
+  assert(mis('マージしました。テストは全部通っています。\n次は B に着手します。') === 0 && mis('利用者に教えてもらった手順で直しました') === 0 && mis('3件を取り込みました（PR #12）') === 0, 'inbox tell: 普通の報告は止めない');
+  assert(mis('> People API を有効にしてください\n\nと依頼されたので、有効にしました。') === 0 && mis('  > 教えてください\nに答えます') === 0, 'inbox tell: 引用（> の行）は見ない');
+  assert(mis('文言を `保存してください` に変えました') === 0 && mis('```\necho "入力してください"\n```\n上のとおり直しました') === 0 && mis('~~~\nお願いします\n~~~') === 0, 'inbox tell: コードの中は見ない');
+  assert(mis('ユーザーの「有効にしてください」という指示に応えました') === 0 && mis('『お願いします』の表記を直した') === 0 && mis('ボタン「保存」を押してください') === 1, 'inbox tell: 「」『』の中は見ない（外は見る）');
+  assert(mis('```\nコード\n```\nこのあと確認してください\n> 引用\nもう一度お願いします') === 2 && tellMisuse('題', '有効にしてください')[0].line === '有効にしてください' && typeof tellMisuse('題', '有効にしてください')[0].phrase === 'string', 'inbox tell: 見つけた行と言い回しを返す');
+  assert(TELL_REQUEST_PHRASES.every(([re, name]) => re instanceof RegExp && !re.global && typeof name === 'string'), 'inbox tell: 言い回しの一覧の形');
+
   // 既読・取り下げ
   const r1 = applyRead(tell, 'T');
   assert(r1.status === 'read' && r1.readAt === 'T' && applyRead(r1) === r1 && throws(() => applyRead(ask), 400), 'inbox: 既読は tell だけ・二度目は変えない');
@@ -992,9 +1104,10 @@ export function selfTestInbox(assert) {
 
   // 並びと件数
   const old = buildItem({ kind: 'ask', chief: B, title: '古い' }, { nowMs: T0 - 5000 });
-  assert(sortInbox([tell, review, ask, old]).map((x) => x.title).join() === '古い,どれにするか,PR を見て,終わりました', 'inbox: 要返事 → 確認 → 読むだけ・古い順');
-  assert(JSON.stringify(openCounts([ask, old, review, tell, a1, r1])) === JSON.stringify({ ask: 2, review: 1, tell: 1 }), 'inbox: 件数は未対応だけ');
-  assert(overLimit([ask, old, review, tell], 3).over === false && overLimit([ask, old, review, tell], 2).over === true && overLimit([ask, old, review], 0).over === false && overLimit([ask, old, review, tell], 2).n === 3, 'inbox: 上限は ask+review・0 なら見ない');
+  assert(sortInbox([tell, todo, review, ask, old]).map((x) => x.title).join() === '古い,どれにするか,PR を見て,API を有効にして試す,終わりました', 'inbox: 要返事 → 確認 → やること → 読むだけ・古い順');
+  assert(JSON.stringify(openCounts([ask, old, review, tell, a1, r1, todo, t1])) === JSON.stringify({ ask: 2, review: 1, todo: 1, tell: 1 }), 'inbox: 件数は未対応だけ');
+  assert(overLimit([ask, old, review, tell], 3).over === false && overLimit([ask, old, review, tell], 2).over === true && overLimit([ask, old, review], 0).over === false && overLimit([ask, old, review, tell], 2).n === 3, 'inbox: 上限は ask+review+todo・0 なら見ない');
+  assert(overLimit([ask, review, todo, tell], 2).n === 3 && overLimit([ask, review, todo, tell], 2).over === true && overLimit([ask, review, t1, tell], 2).n === 2, 'inbox: 終わっていない todo は返事待ちに数える');
 
   // 取り込み待ちの確認依頼は、同じ作業セッションに一度だけ
   const sr = { ...review, tag: 'stale-done:w1' };
@@ -1018,8 +1131,8 @@ export function selfTestInbox(assert) {
   assert(throws(() => applyAck(ask), 400) && throws(() => applyAck(tell), 400) && throws(() => applyAnswer(m1, { text: 'x' }), 400) && throws(() => applyRead(m1), 400), 'inbox: ack は指示だけ・指示には返事／既読（read）できない');
   const me = messageEvent(m1);
   assert(me.event === 'message' && me.id === m1.id && me.title === m1.title && me.text === m1.body && me.at === m1.createdAt, `inbox: 指示の出来事 ${JSON.stringify(me)}`);
-  assert(answeredFor([m1, k1], '/r/main').length === 0 && JSON.stringify(openCounts([m1, ask])) === JSON.stringify({ ask: 1, review: 0, tell: 0 }) && overLimit([m1, m2], 1).n === 0, 'inbox: 指示は answered・ユーザーの未対応の件数に入らない');
-  assert(sortInbox([m1, tell, ask]).map((x) => x.kind).join() === 'ask,tell,message', 'inbox: 指示は並びの最後');
+  assert(answeredFor([m1, k1], '/r/main').length === 0 && JSON.stringify(openCounts([m1, ask])) === JSON.stringify({ ask: 1, review: 0, todo: 0, tell: 0 }) && overLimit([m1, m2], 1).n === 0, 'inbox: 指示は answered・ユーザーの未対応の件数に入らない');
+  assert(sortInbox([m1, tell, todo, ask]).map((x) => x.kind).join() === 'ask,todo,tell,message', 'inbox: 指示は並びの最後');
   assert(buildItem({ kind: 'tell', chief: A, title: 'x', replyTo: 'm' }).replyTo === 'm' && !('replyTo' in tell), 'inbox: replyTo は付けたときだけ');
 
   // GitHub のリポジトリ（項目の repo）
@@ -1041,7 +1154,8 @@ export function selfTestInbox(assert) {
   // 知らせ
   const nc = notifyCommands(ask, 'darwin');
   assert(nc.length === 2 && nc[0][0] === 'herdr' && nc[0][1].join(' ') === 'notification show 要返事（cos-main） --body どれにするか --sound request' && nc[1][0] === 'osascript', `inbox: 知らせ ${JSON.stringify(nc)}`);
-  assert(notifyCommands(review, 'linux').length === 1 && notifyNew(tell, {}).length === 0 && notifyNew(ask, { COS_INBOX_NOTIFY: '0' }).length === 0, 'inbox: tell は知らせない・止められる');
+  assert(notifyCommands(review, 'linux').length === 1 && notifyNew(tell, {}).length === 0 && notifyNew(ask, { COS_INBOX_NOTIFY: '0' }).length === 0 && notifyNew(todo, { COS_INBOX_NOTIFY: '0' }).length === 0, 'inbox: tell は知らせない・止められる');
+  assert(notifyCommands(todo, 'linux')[0][1].join(' ') === 'notification show やること（cos-main） --body API を有効にして試す --sound request', 'inbox: やることの知らせ');
   assert(notifyCommands({ ...ask, title: 'a"b\\c' }, 'darwin')[1][1][1].includes('"a\\"b\\\\c"'), 'inbox: 通知の文のエスケープ');
 
   // launchd の plist
@@ -1066,16 +1180,23 @@ export function selfTestInbox(assert) {
     const tl = createItem(dir, { kind: 'tell', chief: B, title: 'T1' });
     const ot = createItem(dir, { kind: 'ask', chief: B, title: '他の CoS の問い' });
     writeFileSync(join(dir, 'memo.txt'), 'メモの中身');
+    writeFileSync(join(dir, 'fig.HTML'), '<!doctype html><p>図</p>');
+    const hv = createItem(dir, { kind: 'tell', chief: B, title: 'H1', links: [{ label: '説明', href: pathToFileURL(join(dir, 'fig.HTML')).href }, { label: 'メモ', href: pathToFileURL(join(dir, 'memo.txt')).href }] });
+    const hr = handleApi(dir, 'GET', `/api/items/${hv.id}/links/0`);
+    const hp = handleApi(dir, 'GET', `/api/items/${hv.id}/links/1`);
+    assert(hr.status === 200 && hr.type.startsWith('text/html') && hr.text.includes('<p>図</p>') && hr.headers['Content-Security-Policy'] === LINK_HTML_CSP && /^sandbox /.test(LINK_HTML_CSP) && LINK_HTML_CSP.includes('allow-scripts') && !LINK_HTML_CSP.includes('allow-same-origin'), 'inbox API: 手元の .html は sandbox 付きの HTML で出す（受け箱のオリジンでは動かさない）');
+    assert(hp.type.startsWith('text/plain') && hp.headers === undefined, 'inbox API: .html 以外のファイルはテキストのまま');
+    withdrawItem(dir, hv.id);
     writeFileSync(join(dir, 'broken.json'), '{');
     writeFileSync(join(dir, 'future.json'), JSON.stringify({ v: 99, id: 'future' }));
     const ls = listItems(dir);
-    assert(ls.items.length === 5 && ls.skipped.length === 2, `inbox: 壊れた・読めない版のファイルは飛ばす ${ls.items.length}/${ls.skipped.length}`);
+    assert(ls.items.length === 6 && ls.skipped.length === 2, `inbox: 壊れた・読めない版のファイルは飛ばす ${ls.items.length}/${ls.skipped.length}`);
     assert(throws(() => getItem(dir, '../x'), 404) && throws(() => getItem(dir, 'nope'), 404), 'inbox: 無い id');
 
     const api = (m, p, o) => handleApi(dir, m, p, o);
     const all = api('GET', '/api/items').json;
-    assert(all.v === 1 && all.items.length === 5 && all.skipped === 2 && JSON.stringify(all.counts) === JSON.stringify({ ask: 2, review: 1, tell: 1 }) && all.staleAskDays === 3, `inbox API: 一覧 ${JSON.stringify(all.counts)}`);
-    assert(all.items.map((x) => x.status).join() === 'open,open,open,open,withdrawn' && all.items[0].kind === 'ask' && all.items[2].kind === 'review' && all.items[3].kind === 'tell', 'inbox API: 未対応を並び順で先に');
+    assert(all.v === 1 && all.items.length === 6 && all.skipped === 2 && JSON.stringify(all.counts) === JSON.stringify({ ask: 2, review: 1, todo: 0, tell: 1 }) && all.waiting === 3 && all.staleAskDays === 3, `inbox API: 一覧 ${JSON.stringify(all.counts)}`);
+    assert(all.items.map((x) => x.status).join() === 'open,open,open,open,withdrawn,withdrawn' && all.items[0].kind === 'ask' && all.items[2].kind === 'review' && all.items[3].kind === 'tell', 'inbox API: 未対応を並び順で先に');
     assert(all.chiefs.join() === 'cos-main,経理IT' && api('GET', '/api/items', { query: new URLSearchParams('status=open') }).json.items.length === 4, 'inbox API: CoS の名前・未対応だけ');
     const pv = api('GET', `/api/items/${rv.id}`).json;
     assert(pv.links[0].url === `/api/items/${rv.id}/links/0` && pv.links[1].url === 'https://example.com/1', 'inbox API: 手元のファイルのリンクは API 経由');
@@ -1098,6 +1219,22 @@ export function selfTestInbox(assert) {
     const w2 = createItem(dir, { kind: 'ask', chief: { ...A, dir }, title: '取り下げる問い' });
     assert(throws(() => withdrawItem(dir, w2.id, { chiefDir: '/r/it' }), 400) && withdrawItem(dir, w2.id, { chiefDir: dir }).status === 'withdrawn', 'inbox: 取り下げは自分の CoS の項目だけ');
     assert(api('POST', `/api/items/${w2.id}/answer`, { body: { text: 'x' } }).status === 409, 'inbox API: 取り下げた項目には返せない');
+
+    // やること（todo）: 一覧の並びと件数・画面の API で返す・出した CoS の見張りだけが拾う
+    const td1 = createItem(dir, { kind: 'todo', chief: { ...A, dir }, title: 'やること1' });
+    const td2 = createItem(dir, { kind: 'todo', chief: B, title: '他の CoS のやること' });
+    const tl2 = createItem(dir, { kind: 'tell', chief: B, title: 'T2' });
+    const lt = api('GET', '/api/items').json;
+    assert(lt.counts.todo === 2 && lt.counts.tell === 1 && lt.waiting === 2 && lt.items.filter((x) => x.status === 'open').map((x) => x.kind).join() === 'todo,todo,tell', `inbox API: やることは読むだけの前・返事待ちに数える ${JSON.stringify(lt.counts)}`);
+    assert(api('POST', `/api/items/${td1.id}/read`).status === 400 && getItem(dir, td1.id).status === 'open', 'inbox API: やることは既読では終わらない');
+    assert(api('POST', `/api/items/${td1.id}/answer`, { body: { choice: 'cannot' } }).status === 400 && api('POST', `/api/items/${td1.id}/answer`, { body: { text: '文章だけ' } }).status === 400 && api('POST', `/api/items/${td1.id}/answer`, { body: { choice: 'approve' } }).status === 400 && getItem(dir, td1.id).status === 'open', 'inbox API: できないはコメント必須・done か cannot だけ');
+    const ta = api('POST', `/api/items/${td1.id}/answer`, { body: { choice: 'done', text: '有効にして、取得できた' } });
+    assert(ta.status === 200 && ta.json.status === 'answered' && ta.json.answer.choice === 'done' && ta.json.answer.text === '有効にして、取得できた' && ta.json.answer.via === 'ui' && api('POST', `/api/items/${td1.id}/answer`, { body: { choice: 'done' } }).status === 409, 'inbox API: やった（一言つき）・二度目は 409');
+    assert(answeredFor(listItems(dir).items, dir).map((x) => x.id).join() === td1.id && !answeredFor(listItems(dir).items, '/r/it').some((x) => x.id === td1.id), 'inbox: やることの答えは出した CoS の見張りだけが拾う');
+    assert(answerItem(dir, td2.id, { choice: 'cannot', text: '権限が無い', via: 'cli' }).answer.choice === 'cannot' && answeredFor(listItems(dir).items, '/r/it').some((x) => x.id === td2.id) && !answeredFor(listItems(dir).items, dir).some((x) => x.id === td2.id), 'inbox: 他の CoS のやることでは起きない');
+    markDelivered(dir, [td1.id]);
+    assert(answeredFor(listItems(dir).items, dir).length === 0 && api('GET', '/api/items').json.waiting === 0, 'inbox: 渡したやることの答えは二度出ない・終われば返事待ちから外れる');
+    readItem(dir, tl2.id);
 
     // CoS の記録（一時ディレクトリ）: 書く・書き足す・見張りの印・消えたディレクトリは出さない
     const cdir = join(dir, '.chiefs');

@@ -1,7 +1,7 @@
 {
   "name": "CoS 受け箱",
   "short_name": "CoS 受け箱",
-  "description": "chief of staff（CoS）からの要返事・確認依頼・読むだけと、CoS への指示",
+  "description": "chief of staff（CoS）からの要返事・確認依頼・やること・読むだけと、CoS への指示",
   "lang": "ja",
   "id": "/",
   "start_url": "/",

@@ -11,6 +11,7 @@
   --accent-ink: #ffffff;
   --ask: #c2410c;
   --review: #2456c9;
+  --todo: #7b3fc4;
   --tell: #8a8880;
   --danger: #c0271d;
   --danger-bg: #fdf0ee;
@@ -28,6 +29,7 @@
     --accent-ink: #10131c;
     --ask: #f08a4b;
     --review: #7ea2ff;
+    --todo: #b99af2;
     --tell: #8a8880;
     --danger: #ff7b6e;
     --danger-bg: #331a17;
@@ -79,6 +81,7 @@ h2 small { font-weight: normal; color: var(--sub); }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .dot-ask { background: var(--ask); }
 .dot-review { background: var(--review); }
+.dot-todo { background: var(--todo); }
 .dot-tell { border: 1.5px solid var(--tell); }
 
 .list { display: grid; gap: 10px; }
@@ -164,7 +167,7 @@ textarea.auto, .reply textarea.auto { min-height: 0; max-height: 14em; resize: n
   .card, .row { transition: border-color .15s; }
 }
 
-/* 段組み: 要返事・確認依頼を広く、読むだけを細く横に並べる（空の群は詰める・狭い画面では縦に積む）。エラー・空・済んだものは全幅 */
+/* 段組み: 要返事・確認依頼・やることを広く、読むだけを細く横に並べる（空の群は詰める・狭い画面では縦に積む）。エラー・空・済んだものは全幅 */
 main { display: flex; flex-wrap: wrap; column-gap: 20px; align-items: flex-start; }
 main > section { flex: 2 1 var(--col-min); min-width: 0; }
 main > #sec-tell { flex: 1 1 var(--col-min-narrow); }

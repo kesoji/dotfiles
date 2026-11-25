@@ -5,7 +5,7 @@
 const $ = (id) => document.getElementById(id);
 const state = {
   items: [],
-  counts: { ask: 0, review: 0, tell: 0 },
+  counts: { ask: 0, review: 0, todo: 0, tell: 0 },
   staleAskDays: 3,
   filter: load('cos-inbox-filter') || '',
   drafts: new Map(), // id → { choice, text, rejecting }（描き直しても書きかけを失わない）
@@ -31,7 +31,7 @@ function ago(iso) {
   return `${Math.floor(s / 86400)}日前`;
 }
 function isStale(item) {
-  return item.kind === 'ask' && item.status === 'open' && Date.now() - Date.parse(item.createdAt) >= state.staleAskDays * 86400000;
+  return (item.kind === 'ask' || item.kind === 'todo') && item.status === 'open' && Date.now() - Date.parse(item.createdAt) >= state.staleAskDays * 86400000;
 }
 
 // ───── API ─────
@@ -188,11 +188,18 @@ function bodyBlock(item) {
   return body;
 }
 
-// 手元の .md は view.html で Markdown として表示する（元のテキストはそこから開ける）
+// 手元のファイルのリンクは、もう片方のホスト名（127.0.0.1 ⇄ localhost）の URL で開く。同じサーバーだがオリジンが別なので、
+// アプリ（PWA）の窓の中ではなく、ブラウザの別タブで開く（PWA の範囲は入れたときのオリジンだけ）。どちらでもないホスト名なら同じオリジンのまま。
+const ALT_ORIGIN = (() => {
+  const other = { '127.0.0.1': 'localhost', localhost: '127.0.0.1' }[location.hostname];
+  return other ? `${location.protocol}//${other}${location.port ? `:${location.port}` : ''}` : '';
+})();
+// 手元の .md は view.html で Markdown として表示する（元のテキストはそこから開ける）。.html はサーバーが sandbox 付きの HTML で返す。
 function linkHref(l, repo) {
   const url = l.url || l.href;
-  if (url.startsWith('/api/') && /\.(md|markdown)$/i.test(l.href)) return `view.html?src=${encodeURIComponent(url)}&name=${encodeURIComponent(l.label)}${repo ? `&repo=${encodeURIComponent(repo)}` : ''}`;
-  return url;
+  if (!url.startsWith('/api/')) return url;
+  if (/\.(md|markdown)$/i.test(l.href)) return `${ALT_ORIGIN}/view.html?src=${encodeURIComponent(url)}&name=${encodeURIComponent(l.label)}${repo ? `&repo=${encodeURIComponent(repo)}` : ''}`;
+  return `${ALT_ORIGIN}${url}`;
 }
 function linksBlock(item) {
   if (!item.links || !item.links.length) return null;
@@ -268,11 +275,33 @@ function reviewCard(item) {
   return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
 }
 
+// やること: 「やった」（一言は任意）と「できない…」（コメント必須）。押すまで受け箱に残る。
+function todoCard(item) {
+  const d = draftOf(item.id);
+  const reply = h('div', { class: 'reply' });
+  const draw = () => {
+    if (!d.rejecting) {
+      const done = h('button', { class: 'btn primary', type: 'button', text: 'やった', title: `${MOD_ENTER} でも送れる`, onclick: () => { done.disabled = true; act(item.id, 'answer', { choice: 'done', text: d.text.trim() || null }); } });
+      const ta = autoText({ value: d.text, placeholder: '一言（任意・結果など）', label: '一言', oninput: (v) => { d.text = v; }, onsubmit: () => done.click(), enterSends: false });
+      reply.replaceChildren(ta, done,
+        h('button', { class: 'btn danger', type: 'button', text: 'できない…', onclick: () => { d.rejecting = true; draw(); reply.querySelector('textarea').focus(); } }));
+      return;
+    }
+    const send = h('button', { class: 'btn danger', type: 'button', text: 'できないと返す', title: `${MOD_ENTER} でも送れる`, disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'cannot', text: d.text.trim() }); } });
+    const ta = autoText({ value: d.text, placeholder: 'できない理由・どこで止まったか（必須）', label: 'できない理由', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click(), enterSends: false });
+    reply.replaceChildren(ta, send, h('button', { class: 'btn', type: 'button', text: 'やめる', onclick: () => { d.rejecting = false; draw(); } }),
+      h('span', { class: 'key-hint', text: `${MOD_ENTER} で送る（Enter は改行）` }));
+  };
+  draw();
+  return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
+}
+
+const CHOICE_JA = { review: { approve: '承認', reject: '差し戻し' }, todo: { done: 'やった', cannot: 'できない' } };
 function answerSummary(item) {
   if (item.status === 'read') return '既読';
   if (item.status === 'withdrawn') return item.supersededBy ? '取り下げ（置き換え）' : '取り下げ';
   const a = item.answer || {};
-  const label = item.kind === 'review' ? { approve: '承認', reject: '差し戻し' }[a.choice] : (item.options || []).find((o) => o.key === a.choice)?.label;
+  const label = CHOICE_JA[item.kind] ? CHOICE_JA[item.kind][a.choice] : (item.options || []).find((o) => o.key === a.choice)?.label;
   return [label || a.choice, a.text ? `「${a.text}」` : null].filter(Boolean).join(' ') || '返事済み';
 }
 
@@ -297,7 +326,7 @@ function row(item) {
 
 // ───── CoS への指示と CoS の状況 ─────
 const repliesOf = (id) => state.items.filter((x) => x.replyTo === id);
-const KIND_JA = { ask: '要返事', review: '確認依頼', tell: '読むだけ' };
+const KIND_JA = { ask: '要返事', review: '確認依頼', todo: 'やること', tell: '読むだけ' };
 
 // 送った指示の1行。開くと全文と、CoS の返事（--reply-to で出された項目）。
 function msgRow(item) {
@@ -523,11 +552,13 @@ function render() {
 
   // 見出しの件数（全 CoS）
   const c = state.counts;
-  $('counts').replaceChildren('要返事 ', h('b', { text: String(c.ask) }), ' ・ 確認 ', h('b', { text: String(c.review) }), ' ・ 読むだけ ', h('b', { text: String(c.tell) }));
-  const waiting = c.ask + c.review;
+  // todo は、知らない版のサーバー（counts に無い）でも画面が数える
+  const nTodo = c.todo ?? open.filter((x) => x.kind === 'todo').length;
+  $('counts').replaceChildren('要返事 ', h('b', { text: String(c.ask) }), ' ・ 確認 ', h('b', { text: String(c.review) }), ' ・ やること ', h('b', { text: String(nTodo) }), ' ・ 読むだけ ', h('b', { text: String(c.tell) }));
+  const waiting = c.ask + c.review + nTodo; // 返事待ち＝ユーザーが返すまで残るもの
   document.title = `${waiting ? `(${waiting}) ` : ''}CoS 受け箱`;
   { const fav = $('favicon'); const want = waiting ? 'favicon-alert.svg' : 'favicon.svg'; if (fav && !fav.getAttribute('href').endsWith(want)) fav.setAttribute('href', want); } // 返事待ちがあればタブのアイコンに赤丸
-  // アプリ（PWA）のアイコンに、返事待ち（要返事＋確認依頼）の件数を出す。使えないブラウザでは何もしない。
+  // アプリ（PWA）のアイコンに、返事待ち（要返事＋確認依頼＋やること）の件数を出す。使えないブラウザでは何もしない。
   try {
     if (waiting && navigator.setAppBadge) navigator.setAppBadge(waiting).catch(() => {});
     else if (!waiting && navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
@@ -558,20 +589,23 @@ function render() {
 
   const asks = open.filter((x) => x.kind === 'ask' && seen(x));
   const reviews = open.filter((x) => x.kind === 'review' && seen(x));
+  const todos = open.filter((x) => x.kind === 'todo' && seen(x));
   const tells = all.filter((x) => x.kind === 'tell' && (x.status === 'open' || (state.kept.has(x.id) && x.status === 'read')) && seen(x))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const done = all.filter((x) => x.status !== 'open' && x.kind !== 'message' && !tells.includes(x) && seen(x)).slice(0, 30);
 
   reconcile($('list-ask'), asks, askCard, cardSig);
   reconcile($('list-review'), reviews, reviewCard, cardSig);
+  reconcile($('list-todo'), todos, todoCard, cardSig);
   reconcile($('list-tell'), tells, row, rowSig);
   reconcile($('list-done'), done, row, rowSig);
   $('sec-ask').hidden = !asks.length;
   $('sec-review').hidden = !reviews.length;
+  $('sec-todo').hidden = !todos.length;
   $('sec-tell').hidden = !tells.length;
   $('sec-done').hidden = !done.length;
   $('done-count').textContent = done.length ? `（直近 ${done.length} 件）` : '';
-  $('empty').hidden = Boolean(asks.length || reviews.length || tells.length);
+  $('empty').hidden = Boolean(asks.length || reviews.length || todos.length || tells.length);
 
   // 消えた項目の書きかけは捨てる
   for (const id of [...state.drafts.keys()]) if (!open.some((x) => x.id === id)) state.drafts.delete(id);
