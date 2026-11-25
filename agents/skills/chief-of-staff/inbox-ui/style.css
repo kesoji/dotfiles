@@ -330,3 +330,4 @@ main > .chiefs[hidden] { display: none; }
   .tf-row { flex-wrap: wrap; }
   .tf-main { flex-basis: 100%; padding-left: 37px; }
 }
+.tf-add-hint { color: var(--sub); font-size: 12.5px; margin: 4px 0 8px; }

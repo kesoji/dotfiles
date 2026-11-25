@@ -634,50 +634,15 @@ function todoRow(r) {
 }
 const todoSig = (r) => JSON.stringify([r.id, r.t, state.todos.length > 1 && !state.filter, state.today]);
 
-// TODO を足す入力欄（1つだけ作って使い回す）。1行で、Enter で足す。文頭の日付（11/28・2026-12-01・明日）が期日になり、無ければ「いつでも」。
+// TODO は画面からは足さない（ユーザーの決定: CoS に「TODO: 〜」と指示で頼み、CoS が cos todo-file で整えて足す）。
+// 画面でできるのは済にする・戻すだけ。ここには足し方の案内だけを出す。
 const todoAdd = (() => {
-  const d = { text: '', file: '', sending: false, board: null };
-  const file = h('select', { 'aria-label': 'TODO ファイル', onchange: () => { d.file = file.value; } });
-  const text = h('input', { type: 'text', autocomplete: 'off', enterkeyhint: 'done', 'aria-label': 'TODO を足す', oninput: () => { d.text = text.value; sync(); } });
-  const send = h('button', { class: 'btn', type: 'button', text: '足す', onclick: () => add() });
-  function sync() { send.disabled = d.sending || !d.board || !d.text.trim(); }
-  async function add() {
-    if (d.sending || !d.board || !d.text.trim()) return;
-    d.sending = true; sync();
-    try {
-      const j = await api('POST', '/api/todos', { to: d.board.dir, file: d.file || undefined, text: d.text });
-      d.text = ''; text.value = '';
-      if (j.commit && j.commit.reason) showError(`TODO は足しましたが、コミットできませんでした: ${j.commit.reason}`);
-    } catch (err) {
-      showError(err.message);
-    } finally {
-      d.sending = false; sync(); refresh();
-    }
-  }
-  // Enter で足す。日本語の変換を確定する Enter（isComposing / keyCode 229）では足さない。フォームの既定の送信は使わない。
-  text.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
-    e.preventDefault();
-    add();
-  });
-  const form = h('form', { class: 'tf-add', onsubmit: (e) => e.preventDefault() }, file, text, send);
-  // 足す先: CoS を選んでいればその CoS、選んでいなくても TODO ファイルを持つ CoS が1つだけならその CoS。それ以外は出さない。
+  const form = h('p', { class: 'tf-add-hint' });
   function update() {
     const b = state.filter ? state.todos.find((x) => x.name === state.filter) : state.todos.length === 1 ? state.todos[0] : null;
-    d.board = b && b.files.length ? b : null;
-    form.hidden = !d.board;
-    if (!d.board) return;
-    const want = JSON.stringify(b.files.map((f) => f.path));
-    if (file.dataset.sig !== want) {
-      file.dataset.sig = want;
-      file.replaceChildren(...b.files.map((f) => h('option', { value: f.path, text: f.label })));
-      d.file = b.files.some((f) => f.path === d.file) ? d.file : b.files[0].path;
-      file.value = d.file;
-    }
-    file.hidden = b.files.length < 2;
-    text.placeholder = `${b.name} の TODO に足す（例: 11/28 請求書を出す）`;
-    text.title = '文頭の日付（11/28・2026-12-01・今日・明日）が期日になります。無ければ「いつでも」。Enter で足す';
-    sync();
+    form.hidden = !(b && b.files.length);
+    if (form.hidden) return;
+    form.textContent = `TODO を足すときは、${b.name} への指示に「TODO: 〜」と書いてください（CoS が期日と言い回しを整えて足します）。ここでは済にする・戻すだけができます。`;
   }
   return { form, update };
 })();
