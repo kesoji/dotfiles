@@ -1,4 +1,5 @@
 :root {
+  --page-width: min(1440px, 96vw);
   --bg: #f6f5f1;
   --card: #ffffff;
   --ink: #1d1d1b;
@@ -49,7 +50,7 @@ button, input, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--line);
   padding: 12px 16px 10px;
 }
-.top-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; max-width: 860px; margin: 0 auto; }
+.top-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; max-width: var(--page-width); margin: 0 auto; }
 h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
 .counts { margin: 0; color: var(--sub); font-variant-numeric: tabular-nums; flex: 1; min-width: 12em; }
 .counts b { color: var(--ink); }
@@ -59,7 +60,7 @@ h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
 .conn[data-state="lost"] { color: var(--danger); }
 .conn[data-state="lost"]::before { background: var(--danger); }
 
-.chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: 860px; margin: 8px auto 0; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: var(--page-width); margin: 8px auto 0; }
 .chip {
   border: 1px solid var(--line); background: transparent; border-radius: 999px;
   padding: 2px 12px; cursor: pointer; font-size: 13px; min-height: 28px;
@@ -68,7 +69,7 @@ h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
 .chip .n { color: var(--sub); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .chip[aria-pressed="true"] .n { color: inherit; opacity: .7; }
 
-main { max-width: 860px; margin: 0 auto; padding: 4px 16px 80px; }
+main { max-width: var(--page-width); margin: 0 auto; padding: 4px 16px 80px; }
 h2 { font-size: 14px; margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
 h2 small { font-weight: normal; color: var(--sub); }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
