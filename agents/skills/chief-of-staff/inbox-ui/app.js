@@ -386,6 +386,33 @@ function setFilter(name) {
   render();
 }
 
+// ───── 絞り込みの並びと、数字キーでの切り替え ─────
+// 並びは「全部」が先頭、その後ろに CoS。CoS は初めて画面に出た順（同時に出たものは名前順）で、順番を localStorage に覚える。
+// 名前順のままだと、CoS が1つ増えるたびに後ろの番号がずれるため。新しい CoS は末尾に付き、いなくなった CoS の席は詰める。
+function chiefOrder(names) {
+  let known = [];
+  try { const v = JSON.parse(load('cos-inbox-order') || '[]'); if (Array.isArray(v)) known = v.filter((x) => typeof x === 'string'); } catch { /* 壊れていたら作り直す */ }
+  const fresh = [...names].filter((n) => !known.includes(n)).sort();
+  if (fresh.length) { known = [...known, ...fresh]; save('cos-inbox-order', JSON.stringify(known)); }
+  return known.filter((n) => names.has(n));
+}
+// ⌘1〜9（Mac 以外は Ctrl+1〜9）で、絞り込みの 1〜9 番目を選ぶ（1＝全部）。
+// 普通のタブではブラウザが ⌘数字をタブの切り替えに使って画面に届かないので、入力欄にフォーカスが無いときは数字だけでも切り替える。
+// アプリ（PWA）の窓では ⌘数字が届く。ボタンのヒントは、その窓で効くほうを出す。
+const IS_APP = ['standalone', 'minimal-ui', 'window-controls-overlay'].some((m) => { try { return matchMedia(`(display-mode: ${m})`).matches; } catch { return false; } }) || navigator.standalone === true;
+const keyHint = (i) => (i > 8 ? null : IS_APP ? `${IS_MAC ? '⌘' : 'Ctrl+'}${i + 1}` : String(i + 1));
+const typing = (el) => Boolean(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
+document.addEventListener('keydown', (e) => {
+  if (e.isComposing || e.keyCode === 229 || e.repeat || e.altKey || e.shiftKey) return;
+  if (!/^[1-9]$/.test(e.key)) return;
+  const mod = IS_MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
+  if (!mod && (e.metaKey || e.ctrlKey || typing(document.activeElement))) return; // 文字を打っている最中の数字は奪わない
+  const chip = $('chips').hidden ? null : $('chips').children[Number(e.key) - 1];
+  if (!chip) return; // 当てはまる絞り込みが無ければブラウザに任せる
+  e.preventDefault();
+  if (chip.getAttribute('aria-pressed') !== 'true') chip.click();
+});
+
 // 指示の入力欄（1つだけ作って使い回す＝描き直しても書きかけを失わない）
 const compose = (() => {
   const c = state.compose;
@@ -489,7 +516,7 @@ function render() {
   const all = state.items;
   const open = all.filter((x) => x.status === 'open');
   // 絞り込みに出す CoS: 記録されている CoS（指示の宛先になる）と、未対応の項目を持つ CoS
-  const chiefs = [...new Set([...state.chiefs.map((c) => c.name), ...all.filter((x) => x.status === 'open' || state.kept.has(x.id)).map((x) => x.chief.name)])].sort();
+  const chiefs = chiefOrder(new Set([...state.chiefs.map((c) => c.name), ...all.filter((x) => x.status === 'open' || state.kept.has(x.id)).map((x) => x.chief.name)]));
   if (state.filter && !chiefs.includes(state.filter)) state.filter = '';
   const seen = (x) => !state.filter || x.chief.name === state.filter;
   paintChiefs(new Set([...all.map((x) => x.chief.name), ...chiefs]));
@@ -507,12 +534,14 @@ function render() {
   } catch { /* バッジが出せなくても動く */ }
 
   // CoS ごとの絞り込み
-  const chip = (name, label, n) => h('button', {
+  const chip = (name, label, n, i) => h('button', {
     class: 'chip', type: 'button', 'aria-pressed': String(state.filter === name),
+    'aria-keyshortcuts': i > 8 ? null : `${IS_MAC ? 'Meta' : 'Control'}+${i + 1} ${i + 1}`,
     onclick: () => setFilter(name),
-  }, name ? h('span', { class: 'swatch', 'data-chief': name }) : null, label, h('span', { class: 'n', text: String(n) }));
+  }, name ? h('span', { class: 'swatch', 'data-chief': name }) : null, label, h('span', { class: 'n', text: String(n) }),
+  keyHint(i) ? h('kbd', { class: 'key', 'aria-hidden': 'true', text: keyHint(i) }) : null);
   const mine = open.filter((x) => x.kind !== 'message'); // 件数はユーザーの番のものだけ
-  $('chips').replaceChildren(chip('', '全部', mine.length), ...chiefs.map((n) => chip(n, n, mine.filter((x) => x.chief.name === n).length)));
+  $('chips').replaceChildren(chip('', '全部', mine.length, 0), ...chiefs.map((n, i) => chip(n, n, mine.filter((x) => x.chief.name === n).length, i + 1)));
   $('chips').hidden = chiefs.length < (state.chiefs.length ? 1 : 2);
 
   // CoS の状況と、指示の入力欄・送った指示

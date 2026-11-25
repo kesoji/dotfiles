@@ -70,6 +70,8 @@ h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .chip .n { color: var(--sub); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .chip[aria-pressed="true"] .n { color: inherit; opacity: .7; }
+.chip .key { margin-left: 7px; font: 10px/1 ui-sans-serif, system-ui, sans-serif; color: var(--sub); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; vertical-align: 1px; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] .key { color: inherit; border-color: currentColor; opacity: .6; }
 
 main { max-width: var(--page-width); margin: 0 auto; padding: 4px 16px 80px; }
 h2 { font-size: 14px; margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
