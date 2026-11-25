@@ -3224,7 +3224,7 @@ function cmdInboxServe(argv) {
   server.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {
       const sv = serverInfo(dir);
-      die(`ポート ${port} は使われています${sv ? `（受け箱の画面がもう動いています: ${sv.url}・pid ${sv.pid}）` : '（別のポートなら --port）'}`);
+      die(`ポート ${port} は使われています${sv?.port === port ? `（受け箱の画面がもう動いています: ${sv.url}・pid ${sv.pid}）` : `（${portOwner(port) || '別のプロセス'}。別のポートなら --port）`}`);
     }
     die(`画面を出せません: ${e.message}`);
   });
@@ -3232,7 +3232,8 @@ function cmdInboxServe(argv) {
     const url = `http://127.0.0.1:${server.address().port}/`;
     // 同じ受け箱に画面がもう動いていれば、その記録は書き換えない（cos ask などが案内する画面は先に動いていたほう）
     const other = serverInfo(dir);
-    if (other && other.pid !== process.pid) console.log(`（同じ受け箱の画面がもう動いています: ${other.url}・pid ${other.pid}。案内に出るのはそちらです）`);
+    // 記録が古い（その pid は生きているが、そのポートで誰も聞いていない＝pid の使い回し）なら書き換える
+    if (other && other.pid !== process.pid && !portFree(other.port)) console.log(`（同じ受け箱の画面がもう動いています: ${other.url}・pid ${other.pid}。案内に出るのはそちらです）`);
     else writeServerInfo(dir, { pid: process.pid, port: server.address().port, url, uiDir, startedAt: now() });
     console.log(`CoS 受け箱: ${url}`);
     console.log(`受け箱 ${dir}・画面 ${uiDir}（止めるには Ctrl-C）`);
