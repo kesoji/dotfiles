@@ -100,6 +100,7 @@ macOS では、動いている作業セッションがいるあいだ `cos watch
 | `deploy-done`（デプロイの run が全部成功） | 待っていた件（マージ・push の報告など）を締め、ユーザーに一言「<repo> の <sha> のデプロイが終わりました」と伝える。 |
 | `deploy-failed`（失敗・取り消しの run がある） | 出来事の `failed` の workflow と URL をユーザーに伝える。原因の調べと直しは作業セッションに頼む（同じ依頼の作業セッションが残っていればそこへ返す）。取り消し（`cancelled`）は次の push に置き換わっただけのこともあるので、そう見えるならそう添える。 |
 | `deploy-missing`（登録から `deployMissingSec` 秒 run が無い・gh に問い合わせられない） | push が届いているか（`git ls-remote`）・workflow の path のフィルタで走らなかったのではないかを確かめ、ユーザーに伝える。走るはずのない push なら知らせるだけでよい。 |
+| `message`（ユーザーが受け箱の画面からこの CoS 宛てに指示を書いた） | `cos inbox show <id>` で全文を読み、`cos inbox ack <id>` で既読にして（画面に「CoS が読んだ」と出る）、ユーザーが会話で言ったのと同じに**普通の依頼として扱う**（依頼書を書いて立てる・答える・聞き返す）。受け答えは会話ではなく受け箱で返す: 答えは `cos tell --reply-to <id>`、聞き返しは `cos ask --reply-to <id>`、出来たものの確認は `cos review --reply-to <id>`（ユーザーは画面を見ていて、ペインの会話は見ていない）。同じ指示は一度しか出ない。他の CoS 宛ての指示では起きない。 |
 | `answered`（受け箱のこの CoS の項目にユーザーが答えた） | 出来事の `choice`（選んだ選択肢の key。確認依頼は `approve`／`reject`）と `text`（一言・差し戻しのコメント）を読んで、待っていた件を進める（作業セッションの質問なら `cos send`・確認依頼の承認なら取り込み）。同じ答えは一度しか出ない。他の CoS の項目では起きない。 |
 | `timeout` | 張り直すだけ。**ユーザーには知らせない**（何も起きていないことを報告しない。返事の文も書かない）。 |
 
@@ -115,7 +116,7 @@ macOS では、動いている作業セッションがいるあいだ `cos watch
 | `gone` | エージェントがいなくなり、報告書が「完了」以外 | urgent |
 | `question` | ターンが終わり、報告書が「質問」 | info |
 
-`timeout`・`deploy-done`・`deploy-missing`・`retro-due`・`answered`・完了・「進行中」のままのターン終わりは鳴らさない。
+`timeout`・`deploy-done`・`deploy-missing`・`retro-due`・`answered`・`message`・完了・「進行中」のままのターン終わりは鳴らさない。
 
 - 出来事が来ても、状態が前と変わっていない（すでに受け箱に出した質問の待機中・待ち時間の要約だけ・途中経過の「進行中」・時間切れ）ときは、ユーザーに知らせず張り直す。知らせるのは、完了・承認待ち・止まった理由など、ユーザーに伝える中身があるときだけ。**知らせないターンでは受け箱の中身や件数も書かない**（出すのは張り直した事実の1行まで）。空のターンに一覧を出すと、直前にユーザーが読んでいた文を押し流す。
 - **ユーザーの返事・判断・確認が要るものと、読んでほしいだけのものは、会話に並べず受け箱に出す**（下の「受け箱」）。会話には「受け箱に n 件出しました」の1行だけを書く。「返事を待っているもの」「読んでほしい回答」の見出しで会話の末尾に並べる前の決まりはやめた。理由: 複数の CoS が毎回全文を並べ直すと、ユーザーは何に答えればよいかを追えない。
@@ -145,6 +146,20 @@ macOS では、動いている作業セッションがいるあいだ `cos watch
 - `cos watch` は、報告書が「完了」のまま `staleDoneReviewDays` 日（既定 3）たっても片付いていない作業セッションに、確認依頼を自動で1回出す（承認＝取り込んで片付ける／差し戻し＝コメントに「捨てる」か直す点）。答えは `answered` で届く。
 - 全 CoS の返事待ち（未対応の要返事＋確認依頼）が `inboxMaxOpen` 件（既定 10）を超えていると、`cos spawn` が注意を出す。そのときは、依頼を立てたことと返事待ちが溜まっていることをユーザーに一言伝える。件数は `cos status` にも出る。
 - 作業セッションは受け箱に出せない（コマンドが断る）。作業セッションの質問は、報告書を読んだ CoS が受け箱に出す。
+
+### ユーザーからの指示（画面 → CoS）
+
+画面の上の CoS の絞り込みを押すと、その CoS 宛ての入力欄が出る（「全部」のときは宛先を選ぶ）。書かれた指示は受け箱の項目（`kind: "message"`・`chief` が宛先）になり、宛先の CoS の `cos watch` が出来事 `message` で終わる。
+
+- `message` を受けたら、`cos inbox show <id>` で読み、`cos inbox ack <id>` で既読にし、普通の依頼として扱う（上の表）。ack を忘れると、画面は「送った（CoS は未読）」のままで、`cos status` の「受け箱」の行に未読の指示として残る。
+- **指示への受け答えも、会話ではなく受け箱で返す**（`cos tell` / `cos ask` / `cos review` に `--reply-to <指示の id>`）。画面では、指示の下に返事が並び、返事の項目に元の指示が出る。`--reply-to` を付けて出すと、元の指示が未読なら既読になる。すぐ終わらない依頼は、受け取ったこと（何をするか・作業セッションを立てたか）を `cos tell --reply-to` で先に返す。
+- 指示が届くのは `cos watch` が動いているあいだだけ。CoS が作業中（ターンの途中）なら、そのターンが終わって見張りを張り直したときに届く。画面には CoS ごとに「見張り中／見張りなし」が出る。
+- 画面は短い指示向け。画像の貼り付け・長いやり取り・急ぎの用件は、今までどおり herdr のペインで受ける。
+- 画面に出る CoS の一覧と状況（作業セッションと報告書の状態・見張り・振り返りの期限）は、`~/.cos/chiefs/` の記録から作る。記録は `cos chief` の起動フック・`cos watch`・`cos spawn`・`cos ask` / `review` / `tell`・`cos inbox ack` が書く（CoS が自分で書くものは無い）。画面に自分が出ていなければ、`cos watch` を張れば出る。
+
+### 画面をアプリ（PWA）として入れる
+
+Cmd+Tab で切り替えられる独立したアプリにできる。Chrome で `http://127.0.0.1:7788/` を開き、アドレスバーの右のインストールのアイコン（または ⋮ →「キャスト、保存、共有」→「ページをアプリとしてインストール」）。Safari なら「ファイル」→「Dock に追加」。アプリのアイコンには、返事待ち（要返事＋確認依頼）の件数がバッジで出る。
 
 ## 取り込みと片付け
 
@@ -200,7 +215,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos spawn <ID> --brief <file> --label <名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]` | 作業セッションを立てて依頼書を渡す。`--label` はサイドバーの名前（幅 `labelWidth` まで）。`--base` の既定は cos.json の `defaultBase`、無ければ CoS のツリーの HEAD。`--no-worktree` はブランチなし（detached の worktree）。準備は worktree の依頼で既定で流し（`--no-setup` で止める）、`--no-worktree` では `--setup` のときだけ流す。どちらもサイドバーでリポジトリの下に字下げして出る。`--repo` は worktree を別のリポジトリ（対象）に作る（下の「複数のリポジトリを1つの CoS で扱う」）。`--force` は同時実行数の上限を超える。上限で止まるときは、取り込み待ち（下の `cos status`）の作業セッションを「片付けの候補: a, b」として出す |
 | `cos rename <ID> <名前>` | サイドバーの名前を付け直す |
 | `cos send <ID> (<text> \| --file <file> \| --first) [--seen]` | 追加の指示を送る。`--first` は依頼書を（もう一度）渡す。相手が作業中なら画面の最後を出して止まる（報告書より先に進んでいることがある）。画面を見て、それでも送るなら `--seen` |
-| `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった・デプロイの終わり・受け箱の答え＝`answered`）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ。デプロイは張り直さなくても、走っている見張りが次の問い合わせから拾う。macOS では動いている作業セッションがいるあいだ `caffeinate -i -w <watch の pid>` を抱えてスリープを止める（`keepAwake`） |
+| `cos watch [--timeout 秒] [--interval 秒]` | 出来事（ターン終了・承認待ち・いなくなった・デプロイの終わり・受け箱の答え＝`answered`・ユーザーからの指示＝`message`）か振り返りの期限（`retro-due`）まで待って終わる。作業セッションが0本でも待つ。デプロイは張り直さなくても、走っている見張りが次の問い合わせから拾う。macOS では動いている作業セッションがいるあいだ `caffeinate -i -w <watch の pid>` を抱えてスリープを止める（`keepAwake`） |
 | `cos deploy-watch <repo> <sha> [--workflow W] [--label 名前] [--event E,...]` | push のあとに打つ。デプロイを見張りの台帳（`<git-common-dir>/cos/deploys.json`）に足してすぐ返る。`cos watch` が `deployPollSec` ごとに `gh run list --commit` でそのコミットの run を見て、全部終わったら `deploy-done`（成功）／`deploy-failed`（失敗した workflow と run の URL）、`deployMissingSec` 秒 run が無ければ `deploy-missing` を出し、台帳から消す。全部終わってももう1回同じ顔ぶれで終わっているのを見てから出す（`workflow_run` で続く workflow を待つ）。登録のときに1回 gh を呼んで、リポジトリ・workflow の名前の誤りをその場で知らせる |
 | `cos deploy-watch --cancel <ID>` | デプロイの見張りをやめる（ID は `cos status` に出る。例 `app@1a2b3c4`） |
 | `cos status [--all] [--json]` | 一覧（herdr の状態・報告書の状態・コミット数・マージ済みか・未コミット数・見張り中のデプロイ・受け箱のこの CoS の未対応と全 CoS の返事待ち）。報告書が「完了」になってから `staleDoneHours` 以上たっても台帳に残っている作業セッションには「← 取り込み待ち（完了から N 時間／N 日）」を添える（2日未満は時間。`--json` では `staleDone`＝経過のミリ秒）。「完了」になった時刻は、`cos watch` が記録したターンの終わり（events.jsonl）のうち最後まで「完了」が続いている最初のもの。記録が無ければ（見張りを張っていなかった・最後の記録が「完了」でない）報告書の更新時刻 |
@@ -218,8 +233,10 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos ask --title T (--body-file F \| --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text] [--link 名前=URL ...] [--worker ID] [--supersedes ID]` | 受け箱に「要返事」を出す。標準出力に項目の id だけを出す（案内は標準エラー）。`--no-free-text` は文章だけの返事を受け付けない（選択肢が要る）。`--link` の値は URL か手元のファイルのパス。新しい項目は herdr と macOS の通知を出す |
 | `cos review --title T (--body-file F \| --body TEXT) [--link ...] [--worker ID] [--supersedes ID]` | 受け箱に「確認依頼」を出す（ユーザーは承認か、コメント付きの差し戻し） |
 | `cos tell --title T (--body-file F \| --body TEXT) [--link ...] [--worker ID] [--supersedes ID]` | 受け箱に「読むだけ」を出す（開いたら既読。通知は出さず、見張りも起こさない） |
+| `cos ask` / `cos review` / `cos tell` の `--reply-to <指示の id>` | ユーザーからの指示への返事として出す（この CoS 宛ての指示だけ）。画面で元の指示とつながり、元の指示が未読なら既読になる |
 | `cos inbox [--all] [--mine] [--json]` | 受け箱の一覧（全 CoS の未対応。★＝この CoS の項目）。`--all` は済んだものも（返事の中身・取り下げ・置き換えが出る）。git の外でも動く |
 | `cos inbox show <id>` / `cos inbox read <id>` | 項目の JSON を出す／読むだけの項目を CLI で既読にする |
+| `cos inbox ack <id> [--force]` | ユーザーからの指示（`cos watch` の `message`）に、読んだ印を付ける。この CoS 宛ての指示だけ（他の CoS 宛ては `--force`）。二度打ってもよい |
 | `cos inbox serve [--port 7788] [--ui-dir DIR]` | 受け箱の画面と API を 127.0.0.1 に出す（認証なし・全 CoS で1つ。ふだんは launchd が起動する＝`cos inbox service install`。手で打つのは試すとき）。画面は受け箱の変更を押し出し（SSE）で即座に映す。画面のファイルは `inbox-ui/`、`--ui-dir` で別の画面を指せる。動いている画面は `<受け箱>/.server.json` に記録される |
 | `cos inbox service install [--port 7788]` / `uninstall` / `status` / `plist` | 画面を macOS の launchd で常に動かす。`install` は `~/Library/LaunchAgents/local.cos-inbox.plist` を書いて `launchctl bootstrap gui/<uid>` で読み込む（RunAtLoad・KeepAlive。ログは `~/Library/Logs/cos-inbox.log`）。入っていれば入れ直す。ポートが使われていれば、使っているプロセスを出して終了コード 1（入れない）。起動して画面が応えるまで確かめ、応えなければログの最後を出して終了コード 1。plist の node は PATH の node、cos.mjs は `~/.claude/skills/chief-of-staff/scripts/cos.mjs`（どちらも symlink のまま）。`status` は plist・launchd・画面の状態（どれか欠けていれば終了コード 1）。`plist` は書く中身を標準出力に出すだけ |
 | `cos answer <id> <choice> [テキスト]` | 受け箱の項目に CLI で返す。要返事は選択肢の key（文章だけなら `-`）、確認依頼は `approve`／`reject`（`reject` はテキストが必須） |

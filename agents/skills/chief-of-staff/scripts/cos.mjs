@@ -18,10 +18,10 @@
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
 //   cos reorient --hook --known-only   （ユーザー全体の設定のフック用）chief.json にあるセッションを `cos chief` 無しで再開したときだけ戻す
 //   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
-//   cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--worker ID] [--link 名前=URL ...] [--supersedes ID] [--no-free-text]
-//   cos review --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
-//   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
-//   cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port 7788] [--ui-dir DIR]
+//   cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--worker ID] [--link 名前=URL ...] [--supersedes ID] [--reply-to ID] [--no-free-text]
+//   cos review --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
+//   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
+//   cos inbox [--all] [--mine] [--json] | show <id> | read <id> | ack <id> [--force] | serve [--port 7788] [--ui-dir DIR]
 //   cos inbox service install [--port 7788] | uninstall | status | plist     画面を launchd で常に動かす（macOS）
 //   cos answer <id> <choice> [テキスト]      受け箱の項目に CLI で返す（cos answer add / read / list / hook は回答の記録）
 //   cos withdraw <id> [--force]
@@ -39,6 +39,7 @@
 //   <git-common-dir>/cos/alerts.json    急ぎの知らせを最後に鳴らした時刻（同じ件を短い間に二度鳴らさない）
 //   <git-common-dir>/cos/deploys.json   見張り中のデプロイ（cos deploy-watch で登録・cos watch が出来事を出したら消す）
 // 受け箱（全 CoS 共通・リポジトリの外）: ~/.cos/inbox/<id>.json（COS_INBOX_DIR で差し替えられる）。本体は inbox.mjs・形は inbox-schema.md。
+// CoS の記録（全 CoS 共通・リポジトリの外）: ~/.cos/chiefs/<鍵>.json（受け箱の画面が CoS の一覧と状況を出すため。COS_CHIEFS_DIR で差し替えられる）。
 // 依頼書と報告書は作業セッションの作業ツリーの `.cos/<slug>/` に置く（info/exclude で git から外す）。
 // 環境変数 COS_DIR で状態の置き場所を差し替えられる（試験用＝本物の台帳を触らずに watch などを試す）。
 //
@@ -71,9 +72,9 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, REVIEW_LABEL, SERVICE_LABEL, STALE_ASK_DAYS,
-  answerItem, answeredEvent, answeredFor, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
-  nodeOnPath, notifyNew, openCounts, overLimit, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
-  servicePlist, staleReviewTargets, withdrawItem, writeServerInfo,
+  ackItem, answerItem, answeredEvent, answeredFor, chiefsDir, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
+  messageEvent, messagesFor, nodeOnPath, noteChief, notifyNew, openCounts, overLimit, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
+  servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo,
 } from './inbox.mjs';
 
 const ALERT_KINDS_DEFAULT = ['blocked', 'start-blocked', 'deploy-failed', 'stalled', 'gone', 'question'];
@@ -1371,6 +1372,7 @@ function cmdSpawn(argv) {
   });
   logEvent(ctx, { id, kind: 'spawned', where, agent, pane });
   noteChiefSession(ctx, chiefSession, 'spawn');
+  registerChief(ctx, 'spawn');
 
   // 作業セッションの印（環境変数）。リポジトリのフックはこれで「作業セッションには禁止」を判定できる。
   // 準備（setup）はエージェントを起動する前に同じシェルで流す＝失敗を CoS がその場で知れる。
@@ -1500,8 +1502,20 @@ function cmdWatch(argv) {
   if (!existsSync(ctx.retroFile)) updateRetro(ctx, () => {});
   const t0 = Date.now();
   let awake = null;
-  const inbox = { dir: inboxDir(), stamp: null, answered: [], staleCheckedAt: 0 };
+  const inbox = { dir: inboxDir(), stamp: null, answered: [], messages: [], staleCheckedAt: 0 };
+  // 受け箱の画面に「見張りが動いている」と出すための印（~/.cos/chiefs/）。30 秒ごとに打ち直し、終わるときに外す。
+  const startedAt = now();
+  let beatAt = 0;
+  const beat = () => {
+    if (Date.now() - beatAt < 30_000) return;
+    beatAt = Date.now();
+    registerChief(ctx, 'watch', { watch: { pid: process.pid, startedAt, beatAt: now() } });
+  };
+  process.on('exit', () => {
+    registerChief(ctx, 'watch', (r) => (r.watch?.pid === process.pid ? { ...r, watch: null, watchEndedAt: now() } : r));
+  });
   for (;;) {
+    beat();
     const led = readLedger(ctx);
     const ws = Object.values(led.workers).filter((w) => WATCHED.has(w.state));
     // 作業セッションが0本なら herdr に問い合わせない（0本でも見張りは終わらない＝振り返りの期限を待つ）。
@@ -1529,14 +1543,17 @@ function cmdWatch(argv) {
       }
       const stamp = inboxStamp(inbox.dir);
       if (stamp !== inbox.stamp) {
-        inbox.answered = answeredFor(listItems(inbox.dir).items, ctx.root);
+        const { items } = listItems(inbox.dir);
+        inbox.answered = answeredFor(items, ctx.root);
+        inbox.messages = messagesFor(items, ctx.root);
         inbox.stamp = stamp;
       }
     } catch (e) {
       if (!inbox.warned) console.error(`cos watch: 受け箱（${inbox.dir}）を読めません: ${e.message}`);
       inbox.warned = true;
     }
-    const answeredEvents = inbox.answered.map(answeredEvent);
+    // answered（この CoS の項目への答え）と message（この CoS 宛ての指示）。どちらも他の CoS の分では起きない。
+    const answeredEvents = [...inbox.answered.map(answeredEvent), ...inbox.messages.map(messageEvent)];
     let retroNotify = false;
     if (events.length === 0 && deployEvents.length === 0 && answeredEvents.length === 0 && retroDue(peekRetro(ctx), interval, Date.now()).notify) {
       // 同じ日に二度出さない。見張りが2本走っていても1本だけが出すよう、ロックの中で確かめ直して印を付ける。
@@ -1584,7 +1601,7 @@ function cmdWatch(argv) {
         console.log(JSON.stringify(ev));
       }
       for (const ev of answeredEvents) {
-        logEvent(ctx, { kind: 'answered', item: ev.id, itemKind: ev.kind, worker: ev.worker, choice: ev.choice });
+        logEvent(ctx, ev.event === 'message' ? { kind: 'message', item: ev.id } : { kind: 'answered', item: ev.id, itemKind: ev.kind, worker: ev.worker, choice: ev.choice });
         console.log(JSON.stringify(ev));
       }
       // 渡した印を付ける（同じ答えで二度起こさない）。付けられなくても出来事は出す。
@@ -1607,7 +1624,7 @@ function cmdWatch(argv) {
         console.log(`${ev.id}（${ev.agent}）: ${what}・報告書の状態「${ev.report ?? '読めない'}」${ev.startBlocked ? '・まだ依頼書を渡していない（片付いたら cos send --first）' : ''}${ev.apiError ? `・画面に API のエラー（応答の途中で切れて止まった。cos send ${ev.id} --seen で続きを促す）` : ''}`);
       }
       for (const ev of deployEvents) console.log(deployLine(ev));
-      for (const ev of answeredEvents) console.log(answeredLine(ev));
+      for (const ev of answeredEvents) console.log(ev.event === 'message' ? messageLine(ev) : answeredLine(ev));
       // 急ぐ種類は音と通知で知らせる（ユーザーが CoS の画面を見ていなくても気づけるように）
       const rang = [];
       // cos close で片付けた直後の作業セッションは gone として拾われるが、CoS が自分で終わらせたので鳴らさない
@@ -2303,6 +2320,8 @@ function cmdReorient(argv = []) {
   if (inRepo) {
     ctx = repoCtx();
     if (input.session_id) noteChiefSession(ctx, input.session_id, `hook:${source}`, input.transcript_path ?? null);
+    // cos chief で起動した CoS を、受け箱の画面の宛先に出す
+    if (opt.hook && process.env.COS_CHIEF === '1') registerChief(ctx, 'chief');
   }
   const { retro, retroIsDue } = retroInfo(ctx);
   if (source === 'startup' || source === 'resume') {
@@ -3087,13 +3106,49 @@ function chiefOf(ctx) {
   return { name, dir: realpathSync(ctx.root), session: process.env.CLAUDE_CODE_SESSION_ID || null };
 }
 
+// 受け箱の画面に出す CoS の記録（~/.cos/chiefs/）を書き足す。CoS だけが打つコマンドから呼ぶ（作業セッションは記録しない）。
+function registerChief(ctx, via, patch = {}) {
+  if (process.env.COS_WORKER_ID) return;
+  const base = { stateDir: ctx.dir, retroIntervalDays: ctx.cfg.retroIntervalDays, via };
+  noteChief(chiefsDir(), chiefOf(ctx), typeof patch === 'function' ? (r) => patch({ ...r, ...base }) : { ...base, ...patch });
+}
+
+// 記録されている CoS 1件の今の状況（画面の GET /api/chiefs 用）。その CoS の台帳・報告書・振り返りの期限を読むだけ（書かない）。
+function chiefStatusFor(c) {
+  if (!c.stateDir) return { error: '状態の置き場所が記録されていません（その CoS で cos watch を張ると記録されます）' };
+  const mini = { ledgerFile: join(c.stateDir, 'ledger.json'), retroFile: join(c.stateDir, 'retro.json'), eventsFile: join(c.stateDir, 'events.jsonl') };
+  const led = readLedger(mini);
+  const events = readEventsSoft(mini);
+  const nowMs = Date.now();
+  const workers = Object.values(led.workers)
+    .filter((w) => w.state !== 'closed')
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    .map((w) => {
+      const rep = readReport(w);
+      const row = {
+        id: w.id, label: w.label ?? null, title: w.title && w.title !== w.id ? w.title : null, state: w.state,
+        status: w.lastSeen?.status ?? null, statusAt: w.lastSeenAt ?? null, report: rep.state, reportUpdated: rep.mtime, createdAt: w.createdAt ?? null,
+      };
+      if (rep.state === '完了') {
+        const doneMs = doneSinceMs({ id: w.id, createdAt: w.createdAt, events, reportMtimeMs: rep.mtime ? Date.parse(rep.mtime) : null });
+        const ms = staleDoneMs({ report: rep.state, doneMs, nowMs, hours: DEFAULT_CFG.staleDoneHours });
+        if (ms != null) row.staleDone = ms;
+      }
+      return row;
+    });
+  const days = Number(c.retroIntervalDays) > 0 ? Number(c.retroIntervalDays) : DEFAULT_CFG.retroIntervalDays;
+  const r = peekRetro(mini);
+  const { dueAt, due } = retroDue(r, days, nowMs);
+  return { workers, retro: { dueAt: new Date(dueAt).toISOString(), due, intervalDays: days } };
+}
+
 function inboxUrlHint(dir) {
   const sv = serverInfo(dir);
   return sv ? `画面: ${sv.url}` : '画面は起動していません（cos inbox service install で常駐させる。確かめるのは cos inbox service status）';
 }
 
 function cmdInboxCreate(kind, argv) {
-  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID]`;
+  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--reply-to ID]`;
   const { multi, rest } = takeMulti(argv, ['option', 'link']);
   const { pos, opt } = parseArgs(rest, ['no-free-text']);
   if (pos.length || !opt.title) throw new UsageError(usage);
@@ -3122,13 +3177,15 @@ function cmdInboxCreate(kind, argv) {
       freeText: !opt['no-free-text'],
       links: multi.link.map((l) => parseLink(l, process.cwd())),
       supersedes: opt.supersedes ?? null,
+      replyTo: opt['reply-to'] ?? null,
     });
     noteChiefSession(ctx, chiefSessionFromEnv(), kind);
-    logEvent(ctx, { kind: 'inbox', item: item.id, itemKind: kind, worker: item.worker ?? undefined, supersedes: item.supersedes ?? undefined });
+    registerChief(ctx, kind);
+    logEvent(ctx, { kind: 'inbox', item: item.id, itemKind: kind, worker: item.worker ?? undefined, supersedes: item.supersedes ?? undefined, replyTo: item.replyTo ?? undefined });
     const via = notifyNew(item);
     console.log(item.id);
     const c = openCounts(listItems(dir).items);
-    console.error(`受け箱に出しました（${KIND_LABEL[kind]}）: ${item.title}${item.supersedes ? `・${item.supersedes} を置き換え` : ''}${via.length ? `・知らせ ${via.join('＋')}` : ''}`);
+    console.error(`受け箱に出しました（${KIND_LABEL[kind]}）: ${item.title}${item.supersedes ? `・${item.supersedes} を置き換え` : ''}${item.replyTo ? `・指示 ${item.replyTo} への返事` : ''}${via.length ? `・知らせ ${via.join('＋')}` : ''}`);
     console.error(`全 CoS の未対応: 要返事 ${c.ask}・確認 ${c.review}・読むだけ ${c.tell}。${inboxUrlHint(dir)}`);
     if (kind !== 'tell') console.error('答えが付くと cos watch が answered で終わります（張っていなければ張る）。会話には「受け箱に n 件出しました」の1行だけを書く。');
   });
@@ -3143,6 +3200,10 @@ function answerText(x) {
 function answeredLine(ev) {
   const what = [ev.choice ? `${ev.choice}${ev.label ? `（${ev.label}）` : ''}` : null, ev.text ? `「${ev.text}」` : null].filter(Boolean).join(' ');
   return `受け箱 ${ev.id}（${KIND_LABEL[ev.kind]}${ev.worker ? `・${ev.worker}` : ''}）「${ev.title}」にユーザーが答えた: ${what}`;
+}
+
+function messageLine(ev) {
+  return `受け箱 ${ev.id}: ユーザーからの指示「${ev.title}」が届いた → cos inbox show ${ev.id} で読み、cos inbox ack ${ev.id} で既読にして、普通の依頼として扱う（返事は cos ask / review / tell --reply-to ${ev.id}）`;
 }
 
 // git の外でも動く（一覧・返事・画面）。自分の CoS が分かれば印を付ける。
@@ -3171,8 +3232,24 @@ function cmdInbox(argv) {
       console.log(`既読にしました: ${x.id}「${x.title}」`);
     });
   }
+  if (sub === 'ack') {
+    const { pos, opt } = parseArgs(rest, ['force']);
+    if (!pos[0]) throw new UsageError('cos inbox ack <id> [--force]');
+    if (process.env.COS_WORKER_ID) die(`指示を既読にできるのは CoS だけです（ここは作業セッション ${process.env.COS_WORKER_ID}）`);
+    return inboxGuard(() => {
+      const x = ackItem(dir, pos[0], { chiefDir: opt.force ? null : chiefDirSoft() ?? '/' });
+      try {
+        const ctx = repoCtx();
+        registerChief(ctx, 'ack');
+        logEvent(ctx, { kind: 'message-ack', item: x.id });
+      } catch {
+        // 記録できなくても既読は付いている
+      }
+      console.log(`既読にしました: ${x.id}「${x.title}」（画面に「CoS が読んだ」と出ます。返事は cos ask / review / tell --reply-to ${x.id}）`);
+    });
+  }
   const { pos, opt } = parseArgs(argv, ['all', 'mine', 'json']);
-  if (pos.length) throw new UsageError('cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port N] [--ui-dir DIR] | service (install [--port N]|uninstall|status|plist [--port N])');
+  if (pos.length) throw new UsageError('cos inbox [--all] [--mine] [--json] | show <id> | read <id> | ack <id> [--force] | serve [--port N] [--ui-dir DIR] | service (install [--port N]|uninstall|status|plist [--port N])');
   const me = chiefDirSoft();
   const { items, skipped } = listItems(dir);
   let rows = sortInbox(items.filter((x) => opt.all || x.status === 'open'));
@@ -3186,8 +3263,8 @@ function cmdInbox(argv) {
   for (const x of rows) {
     const mine = sameDir(x.chief?.dir, me) ? '★' : ' ';
     const old = x.kind === 'ask' && x.status === 'open' && Date.now() - Date.parse(x.createdAt) >= STALE_ASK_DAYS * DAY_MS ? `・${STALE_ASK_DAYS}日以上` : '';
-    const st = x.status === 'open' ? '' : `  → ${{ answered: `返事 ${answerText(x)}${x.deliveredAt ? '' : '（CoS に未配達）'}`, read: '既読', withdrawn: `取り下げ${x.supersededBy ? `（${x.supersededBy} に置き換え）` : ''}` }[x.status] ?? x.status}`;
-    console.log(`${mine}[${KIND_LABEL[x.kind]}] ${x.id}  ${x.chief?.name}${x.worker ? ` / ${x.worker}` : ''}・${ago(x.createdAt)}${old}  ${x.title}${st}`);
+    const st = x.status === 'open' ? (x.kind === 'message' ? `  → CoS は未読${x.deliveredAt ? '（見張りは渡し済み）' : ''}` : '') : x.kind === 'message' ? `  → ${x.status === 'read' ? 'CoS が読んだ' : x.status}` : `  → ${{ answered: `返事 ${answerText(x)}${x.deliveredAt ? '' : '（CoS に未配達）'}`, read: '既読', withdrawn: `取り下げ${x.supersededBy ? `（${x.supersededBy} に置き換え）` : ''}` }[x.status] ?? x.status}`;
+    console.log(`${mine}[${KIND_LABEL[x.kind] ?? x.kind}] ${x.id}  ${x.kind === 'message' ? 'ユーザー → ' : ''}${x.chief?.name}${x.worker ? ` / ${x.worker}` : ''}・${ago(x.createdAt)}${old}  ${x.title}${st}`);
   }
   if (rows.length === 0) console.log(opt.all ? '（項目はありません）' : '（未対応の項目はありません）');
   if (skipped.length) console.log(`読めないファイル ${skipped.length} 件: ${skipped.map((s) => `${s.file}（${s.reason}）`).join('・')}`);
@@ -3220,7 +3297,7 @@ function cmdInboxServe(argv) {
   if (!existsSync(join(uiDir, 'index.html'))) die(`画面のディレクトリに index.html がありません: ${uiDir}`);
   const dir = inboxDir();
   mkdirSync(dir, { recursive: true });
-  const server = serveInbox({ dir, port, uiDir });
+  const server = serveInbox({ dir, port, uiDir, chiefStatus: chiefStatusFor });
   server.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {
       const sv = serverInfo(dir);
@@ -3384,7 +3461,8 @@ function inboxLine(ctx) {
     const mine = openCounts(items.filter((x) => sameDir(x.chief?.dir, ctx.root)));
     const { n, over } = overLimit(items, ctx.cfg.inboxMaxOpen);
     const undelivered = answeredFor(items, ctx.root).length;
-    return `受け箱: この CoS の未対応 要返事 ${mine.ask}・確認 ${mine.review}・読むだけ ${mine.tell}${undelivered ? `・答えが付いて未読 ${undelivered} 件（cos watch が answered で出す）` : ''}／全 CoS の返事待ち ${n} 件（上限 ${ctx.cfg.inboxMaxOpen}${over ? '＝超えています。新しい依頼を立てる前にユーザーに一言断る' : ''}）。${inboxUrlHint(dir)}`;
+    const unacked = unackedFor(items, ctx.root);
+    return `受け箱: この CoS の未対応 要返事 ${mine.ask}・確認 ${mine.review}・読むだけ ${mine.tell}${undelivered ? `・答えが付いて未読 ${undelivered} 件（cos watch が answered で出す）` : ''}${unacked.length ? `・ユーザーからの指示で未読 ${unacked.length} 件（${unacked.map((x) => x.id).join('・')}。cos inbox show <id> で読み、cos inbox ack <id>）` : ''}／全 CoS の返事待ち ${n} 件（上限 ${ctx.cfg.inboxMaxOpen}${over ? '＝超えています。新しい依頼を立てる前にユーザーに一言断る' : ''}）。${inboxUrlHint(dir)}`;
   } catch (e) {
     return `受け箱を読めません: ${e.message}`;
   }
@@ -3566,6 +3644,11 @@ function selfTest() {
   selfTestInbox(assert);
   assert(watchStep({ events: [answeredEvent({ id: 'i1', kind: 'ask', title: 't', options: [], answer: { choice: null, text: 'はい', at: 'T' } })], retroNotify: false, timedOut: false }) === 'events', 'inbox: 答えが付いたら見張りが終わる');
   assert(alertFor(answeredEvent({ id: 'i1', kind: 'ask', title: 't', options: [], answer: { choice: null, text: 'はい', at: 'T' } })) === null, 'inbox: answered は鳴らさない（ユーザーが自分で答えた）');
+  {
+    const mev = messageEvent({ id: 'm1', title: '題', body: '題\n本文', createdAt: 'T' });
+    assert(watchStep({ events: [mev], retroNotify: false, timedOut: false }) === 'events' && alertFor(mev) === null, 'inbox: 指示が届いたら見張りが終わる・鳴らさない');
+    assert(messageLine(mev).includes('cos inbox ack m1') && messageLine(mev).includes('--reply-to m1'), 'inbox: 指示の出来事の案内');
+  }
   assert(slug('T-42') === 't-42', 'slug');
   assert(agentName('', 't-42') === 't-42', 'agentName 素');
   assert(agentName('ab-', 't-42') === 'ab-t-42', 'agentName 接頭辞');
@@ -4080,14 +4163,16 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos answer hook                           （CoS の Stop フック用）報告に未確認の回答が載っていない・「進めているもの」に印の無い項目があれば1回止める
   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
                                             ユーザーの手が要る急ぎの件を音と通知で知らせる（同じ件は既定 10 分に1回・失敗しても終了コード 0）
-  cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text] [--link 名前=URL ...] [--worker ID] [--supersedes ID]
+  cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text] [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--reply-to ID]
                                             受け箱に「要返事」を出す（id を標準出力に出す）。答えが付くと cos watch が answered で終わる
-  cos review --title T (--body-file F | --body TEXT) [--link 名前=URL ...] [--worker ID] [--supersedes ID]
+  cos review --title T (--body-file F | --body TEXT) [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--reply-to ID]
                                             受け箱に「確認依頼」を出す（ユーザーは承認か、コメント付きの差し戻し）
-  cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
+  cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
                                             受け箱に「読むだけ」を出す（開いたら既読・見張りは起こさない）
+                                            --reply-to: ユーザーからの指示（画面で書かれた message）への返事。元の指示が未読なら既読にする
   cos inbox [--all] [--mine] [--json]       受け箱の一覧（全 CoS。★＝この CoS の項目）
   cos inbox show <id> | read <id>           項目の JSON を出す／読むだけの項目を既読にする
+  cos inbox ack <id> [--force]              ユーザーからの指示（cos watch の message）を読んだ印を付ける（この CoS 宛てだけ。画面に「CoS が読んだ」と出る）
   cos inbox serve [--port 7788] [--ui-dir DIR]   受け箱の画面を 127.0.0.1 に出す（1つだけ動かす。画面のファイルは --ui-dir で差し替えられる）
   cos inbox service install [--port 7788] | uninstall | status | plist
                                             画面を macOS の launchd で常に動かす（LaunchAgent。install は入っていれば入れ直す・plist は書く中身を出すだけ）

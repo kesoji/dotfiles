@@ -1,12 +1,15 @@
-// CoS の受け箱 — 全 CoS からユーザーへの「要返事（ask）」「確認依頼（review）」「読むだけ（tell）」を1か所に置く。
+// CoS の受け箱 — 全 CoS からユーザーへの「要返事（ask）」「確認依頼（review）」「読むだけ（tell）」と、
+// ユーザーから CoS への「指示（message）」を1か所に置く。
 //
 // 項目は1件1ファイル（<受け箱>/<id>.json）。置き場所は ~/.cos/inbox（環境変数 COS_INBOX_DIR で差し替える＝試験用）。
 // 項目の形の説明は ../inbox-schema.md（形を変えるときはそこと upgradeItem を直す）。
 //
 // このファイルの関数を、CLI（cos.mjs の cos ask / review / tell / inbox / answer / withdraw）と
 // 画面の API（cos inbox serve の /api/…）の両方が呼ぶ。画面（../inbox-ui/）は API だけに依存する。
+// CoS の一覧（どこにどの CoS がいるか）は ~/.cos/chiefs/ に記録する（noteChief・listChiefs）。
 // 依存は node の標準だけ。
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, watch, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
@@ -17,8 +20,14 @@ export const INBOX_V = 1;
 export const INBOX_DEFAULT_PORT = 7788;
 // 答えていない要返事を赤く出すまでの日数（画面と cos inbox の一覧）。
 export const STALE_ASK_DAYS = 3;
-export const KIND_LABEL = { ask: '要返事', review: '確認依頼', tell: '読むだけ' };
+export const KIND_LABEL = { ask: '要返事', review: '確認依頼', tell: '読むだけ', message: '指示' };
+// CoS がユーザーに出す種類（cos ask / review / tell）。message はユーザーが CoS に出す（画面の API だけが作る）。
 const KIND_ORDER = { ask: 0, review: 1, tell: 2 };
+const SORT_ORDER = { ...KIND_ORDER, message: 3 };
+// 指示の長さの上限（画面は短い指示向け。長いやり取りは herdr のペインで）。
+export const MAX_MESSAGE_CHARS = 4000;
+// 見張りの印（~/.cos/chiefs/ の watch.beatAt）がこの秒数より古ければ、見張りは動いていないとみなす。
+export const WATCH_BEAT_STALE_SEC = 120;
 const STATUS_LABEL = { open: '未対応', answered: '返事済み', read: '既読', withdrawn: '取り下げ' };
 const REVIEW_CHOICES = { approve: 'approve', ok: 'approve', 承認: 'approve', reject: 'reject', ng: 'reject', 差し戻し: 'reject', 差戻し: 'reject' };
 export const REVIEW_LABEL = { approve: '承認', reject: '差し戻し' };
@@ -38,6 +47,13 @@ export class InboxError extends Error {
 
 export function inboxDir(env = process.env) {
   return env.COS_INBOX_DIR ? resolve(env.COS_INBOX_DIR) : join(homedir(), '.cos', 'inbox');
+}
+
+// CoS の記録の置き場所。~/.cos/chiefs（COS_CHIEFS_DIR で差し替える）。
+// 受け箱を差し替えているとき（COS_INBOX_DIR＝試験）は、その中の .chiefs＝本物の記録を汚さない。
+export function chiefsDir(env = process.env) {
+  if (env.COS_CHIEFS_DIR) return resolve(env.COS_CHIEFS_DIR);
+  return env.COS_INBOX_DIR ? join(resolve(env.COS_INBOX_DIR), '.chiefs') : join(homedir(), '.cos', 'chiefs');
 }
 
 // ───────── 純関数（self-test の対象） ─────────
@@ -141,11 +157,53 @@ export function buildItem(input, { nowMs = Date.now(), rand = Math.random } = {}
     supersedes: input.supersedes ?? null,
   };
   if (input.tag) item.tag = String(input.tag);
+  if (input.replyTo) item.replyTo = String(input.replyTo);
   return item;
+}
+
+// 指示の題（1行目を縮めたもの。一覧と見張りの出来事に出す）。
+export function messageTitle(text, max = 60) {
+  const first = String(text ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+  const cps = [...first];
+  return cps.length > max ? `${cps.slice(0, max).join('')}…` : first;
+}
+
+// ユーザーから CoS への指示（kind: "message"）。chief は宛先の CoS。書き込まない。
+export function buildMessage({ chief, text, id = null }, { nowMs = Date.now(), rand = Math.random } = {}) {
+  if (!chief?.dir || !chief?.name) throw new InboxError(400, '宛先の CoS（chief.name・chief.dir）がありません');
+  const body = String(text ?? '').trim();
+  if (!body) throw new InboxError(400, '指示が空です');
+  if ([...body].length > MAX_MESSAGE_CHARS) throw new InboxError(400, `指示が長すぎます（${MAX_MESSAGE_CHARS} 字まで。長いやり取りは herdr のペインで）`);
+  return {
+    v: INBOX_V,
+    id: id ?? makeId(nowMs, chief.name, rand),
+    kind: 'message',
+    chief: { name: String(chief.name), dir: String(chief.dir), session: null },
+    worker: null,
+    title: messageTitle(body),
+    body,
+    options: null,
+    recommend: null,
+    freeText: null,
+    links: [],
+    createdAt: new Date(nowMs).toISOString(),
+    status: 'open',
+    answer: null,
+    supersedes: null,
+  };
+}
+
+// CoS が指示を読んだ印（message）。もう読んでいれば何も変えない。
+export function applyAck(item, nowIso = new Date().toISOString()) {
+  if (item.kind !== 'message') throw new InboxError(400, `${item.id} は${KIND_LABEL[item.kind] ?? item.kind}の項目です（ack できるのはユーザーからの指示）`);
+  if (item.status === 'read') return item;
+  if (item.status !== 'open') throw new InboxError(409, `${item.id} はもう「${STATUS_LABEL[item.status] ?? item.status}」です`);
+  return { ...item, status: 'read', readAt: nowIso };
 }
 
 // 返事を付ける（ask・review）。choice は ask なら選択肢の key（自由記述だけなら null）、review なら approve / reject。
 export function applyAnswer(item, { choice = null, text = null, via = 'cli' } = {}, nowIso = new Date().toISOString()) {
+  if (item.kind === 'message') throw new InboxError(400, `${item.id} はユーザーからの指示です（CoS は cos inbox ack で既読にし、返事は cos ask / tell --reply-to で出す）`);
   if (item.kind === 'tell') throw new InboxError(400, `${item.id} は読むだけの項目です（返事はできません。既読にします）`);
   if (item.status !== 'open') throw new InboxError(409, `${item.id} はもう「${STATUS_LABEL[item.status] ?? item.status}」です`);
   const t = String(text ?? '').trim() || null;
@@ -165,7 +223,7 @@ export function applyAnswer(item, { choice = null, text = null, via = 'cli' } = 
 
 // 既読にする（tell）。もう既読なら何も変えない。
 export function applyRead(item, nowIso = new Date().toISOString()) {
-  if (item.kind !== 'tell') throw new InboxError(400, `${item.id} は${KIND_LABEL[item.kind]}の項目です（既読にできるのは読むだけの項目）`);
+  if (item.kind !== 'tell') throw new InboxError(400, `${item.id} は${KIND_LABEL[item.kind]}の項目です（既読にできるのは読むだけの項目${item.kind === 'message' ? '。指示は cos inbox ack' : ''}）`);
   if (item.status === 'read') return item;
   if (item.status !== 'open') throw new InboxError(409, `${item.id} はもう「${STATUS_LABEL[item.status] ?? item.status}」です`);
   return { ...item, status: 'read', readAt: nowIso };
@@ -199,6 +257,24 @@ export function answeredFor(items, chiefDir) {
     .sort((a, b) => String(a.answer?.at).localeCompare(String(b.answer?.at)));
 }
 
+// この CoS（chiefDir）宛ての指示のうち、まだ読まれておらず、見張りが CoS に渡していないもの。
+// 他の CoS 宛ての指示は入れない（宛先でない CoS は起こさない）。
+export function messagesFor(items, chiefDir) {
+  return items
+    .filter((x) => x.kind === 'message' && x.status === 'open' && !x.deliveredAt && sameDir(x.chief?.dir, chiefDir))
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+
+// この CoS 宛ての、まだ ack していない指示（渡したかどうかは問わない）。
+export function unackedFor(items, chiefDir) {
+  return items.filter((x) => x.kind === 'message' && x.status === 'open' && sameDir(x.chief?.dir, chiefDir));
+}
+
+// 見張りの出来事（指示が届いた）。
+export function messageEvent(item) {
+  return { event: 'message', id: item.id, title: item.title, text: item.body, at: item.createdAt };
+}
+
 // 見張りの出来事（cos watch が出す1行）。
 export function answeredEvent(item) {
   const c = item.answer?.choice ?? null;
@@ -208,7 +284,7 @@ export function answeredEvent(item) {
 
 // 並び: 要返事 → 確認依頼 → 読むだけ。各群の中は古い順（待たせている順）。
 export function sortInbox(items) {
-  return [...items].sort((a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9) || String(a.createdAt).localeCompare(String(b.createdAt)));
+  return [...items].sort((a, b) => (SORT_ORDER[a.kind] ?? 9) - (SORT_ORDER[b.kind] ?? 9) || String(a.createdAt).localeCompare(String(b.createdAt)));
 }
 
 export function openCounts(items) {
@@ -234,6 +310,7 @@ export function staleReviewTargets(stale, items, chiefDir, workers) {
 }
 
 // 項目の形を読み分ける。形を変えたら v を上げ、ここで古い形を新しい形に直す。
+// kind "message" と replyTo は足しただけ（前からある項目の読み方は変わらない）ので v は 1 のまま。
 export function upgradeItem(j) {
   if (!j || typeof j !== 'object') throw new InboxError(400, '項目が JSON のオブジェクトではありません');
   switch (j.v) {
@@ -338,13 +415,42 @@ export function createItem(dir, input, opts = {}) {
       if (input.id || i > 20) throw new InboxError(409, `受け箱に ${item.id} がもうあります`);
       item = buildItem(input, { ...opts, rand: Math.random });
     }
+    // 返事の元の指示（--reply-to）: この CoS 宛ての指示だけ。まだ既読でなければ、返事を出した時点で既読にする。
+    let msg = null;
+    if (item.replyTo) {
+      msg = getItem(dir, item.replyTo);
+      if (msg.kind !== 'message') throw new InboxError(400, `${msg.id} はユーザーからの指示ではありません（--reply-to は指示の id）`);
+      if (!sameDir(msg.chief?.dir, item.chief.dir)) throw new InboxError(400, `${msg.id} は別の CoS（${msg.chief?.name}）宛ての指示です`);
+    }
     if (item.supersedes) {
       const old = getItem(dir, item.supersedes);
       if (!sameDir(old.chief?.dir, item.chief.dir)) throw new InboxError(400, `${old.id} は別の CoS（${old.chief?.name}）の項目なので置き換えられません`);
       writeItem(dir, applyWithdraw(old, item.createdAt, { supersededBy: item.id }));
     }
+    if (msg?.status === 'open') writeItem(dir, applyAck(msg, item.createdAt));
     writeItem(dir, item);
     return item;
+  });
+}
+
+// 指示を作る（画面の API から）。chief は宛先の CoS（listChiefs の1件）。
+export function createMessage(dir, { chief, text }, opts = {}) {
+  return withInboxLock(dir, () => {
+    let item = buildMessage({ chief, text }, opts);
+    for (let i = 0; existsSync(join(dir, `${item.id}.json`)); i++) {
+      if (i > 20) throw new InboxError(409, `受け箱に ${item.id} がもうあります`);
+      item = buildMessage({ chief, text }, { ...opts, rand: Math.random });
+    }
+    writeItem(dir, item);
+    return item;
+  });
+}
+
+// CoS が指示を読んだ印を付ける。chiefDir を渡すと、その CoS 宛てでなければ断る。
+export function ackItem(dir, id, { chiefDir = null } = {}) {
+  return mutate(dir, id, (x) => {
+    if (chiefDir && !sameDir(x.chief?.dir, chiefDir)) throw new InboxError(400, `${x.id} は別の CoS（${x.chief?.name}）宛てです（それでも既読にするなら --force）`);
+    return applyAck(x);
   });
 }
 
@@ -403,6 +509,91 @@ export function notifyNew(item, env = process.env) {
   return via;
 }
 
+// ───────── CoS の記録（~/.cos/chiefs/<鍵>.json） ─────────
+// 画面が「どの CoS がどこにいるか」を知るための記録。CoS だけが打つコマンド（cos watch・ask / review / tell・inbox ack・spawn）と
+// cos chief の起動フックが書く。サーバーは読むだけ。1つの CoS に1ファイル（鍵は CoS のディレクトリのハッシュ）。
+//   { v, name, dir, stateDir, retroIntervalDays, seenAt, via, watch: { pid, startedAt, beatAt } | null, watchEndedAt }
+
+function realDir(p) {
+  try {
+    return realpathSync(p);
+  } catch {
+    return resolve(p);
+  }
+}
+
+export function chiefKey(dir) {
+  return createHash('sha1').update(realDir(dir)).digest('hex').slice(0, 16);
+}
+
+function chiefFile(cdir, dir) {
+  return join(cdir, `${chiefKey(dir)}.json`);
+}
+
+// 記録を書き足す。patch は関数（今の記録 → 新しい記録）でもよい。失敗しても投げない（記録のせいでコマンドを止めない）。
+export function noteChief(cdir, chief, patch = {}) {
+  try {
+    mkdirSync(cdir, { recursive: true });
+    const file = chiefFile(cdir, chief.dir);
+    let cur = {};
+    try {
+      cur = JSON.parse(readFileSync(file, 'utf8'));
+    } catch {
+      // 無い・壊れているなら作り直す
+    }
+    const base = { ...cur, v: 1, name: String(chief.name), dir: realDir(chief.dir), seenAt: new Date().toISOString() };
+    const next = typeof patch === 'function' ? patch(base) : { ...base, ...patch };
+    const tmp = `${file}.tmp-${process.pid}`;
+    writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`);
+    renameSync(tmp, file);
+    return next;
+  } catch {
+    return null;
+  }
+}
+
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code === 'EPERM';
+  }
+}
+
+// 見張りが動いているか（pid が生きていて、印が新しい）。
+export function watchAlive(rec, nowMs = Date.now(), alive = pidAlive) {
+  const w = rec?.watch;
+  if (!w?.pid || !w.beatAt) return false;
+  return nowMs - Date.parse(w.beatAt) < WATCH_BEAT_STALE_SEC * 1000 && alive(w.pid);
+}
+
+// 記録されている CoS（ディレクトリが残っているものだけ・名前順）。
+export function listChiefs(cdir, { nowMs = Date.now(), alive = pidAlive, exists = existsSync } = {}) {
+  let names = [];
+  try {
+    names = readdirSync(cdir);
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+  }
+  const out = [];
+  for (const n of names) {
+    if (n.startsWith('.') || !n.endsWith('.json')) continue;
+    try {
+      const j = JSON.parse(readFileSync(join(cdir, n), 'utf8'));
+      if (!j?.name || !j?.dir || !exists(j.dir)) continue;
+      const on = watchAlive(j, nowMs, alive);
+      out.push({
+        name: j.name, dir: j.dir, stateDir: j.stateDir ?? null, retroIntervalDays: j.retroIntervalDays ?? null, seenAt: j.seenAt ?? null,
+        watch: { alive: on, since: on ? j.watch.startedAt ?? null : null, lastAt: on ? j.watch.beatAt : j.watchEndedAt ?? j.watch?.beatAt ?? null },
+      });
+    } catch {
+      // 読めない記録は飛ばす
+    }
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name) || a.dir.localeCompare(b.dir));
+}
+
 // ───────── 画面の API（localhost の JSON over HTTP） ─────────
 
 // 画面に渡す形。file:// のリンクはブラウザから開けないので、API 経由で読める url を足す。
@@ -423,10 +614,39 @@ function closedAt(x) {
 //   GET  /api/items/:id/links/:n          項目のリンクが指す手元のファイルの中身（項目に書かれたファイルだけ）
 //   POST /api/items/:id/answer  { choice, text }
 //   POST /api/items/:id/read
+//   GET  /api/chiefs                      記録されている CoS と今の状況（作業セッション・見張り・振り返りの期限・未読の指示）
+//   POST /api/messages  { to, text }      CoS 宛ての指示を作る（to は GET /api/chiefs の dir）
 //   GET  /api/events                      （serveInbox が出す）押し出し。SSE で、受け箱が変わるたびに `change` が届く
-export function handleApi(dir, method, pathname, { query = new URLSearchParams(), body = null } = {}) {
+// chiefs は記録されている CoS を返す関数（既定は listChiefs）。chiefStatus は CoS 1件 → 状況（cos.mjs が台帳を読んで作る。無ければ状況なし）。
+export function handleApi(dir, method, pathname, { query = new URLSearchParams(), body = null, chiefs = () => listChiefs(chiefsDir()), chiefStatus = null } = {}) {
   try {
     const seg = pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    if (seg[0] === 'api' && seg[1] === 'chiefs' && seg.length === 2) {
+      if (method !== 'GET') throw new InboxError(405, 'そういう API はありません');
+      const { items } = listItems(dir);
+      return {
+        status: 200,
+        json: {
+          v: INBOX_V,
+          now: new Date().toISOString(),
+          chiefs: chiefs().map((c) => {
+            let st = {};
+            try {
+              st = chiefStatus ? chiefStatus(c) : {};
+            } catch (e) {
+              st = { error: String(e.message ?? e) };
+            }
+            return { name: c.name, dir: c.dir, seenAt: c.seenAt, watch: c.watch, unread: unackedFor(items, c.dir).length, workers: [], retro: null, error: null, ...st };
+          }),
+        },
+      };
+    }
+    if (seg[0] === 'api' && seg[1] === 'messages' && seg.length === 2) {
+      if (method !== 'POST') throw new InboxError(405, 'そういう API はありません');
+      const chief = chiefs().find((c) => sameDir(c.dir, body?.to));
+      if (!chief) throw new InboxError(400, `宛先の CoS が見つかりません（to は GET /api/chiefs の dir）: ${body?.to ?? '(なし)'}`);
+      return { status: 200, json: publicItem(createMessage(dir, { chief, text: body?.text })) };
+    }
     if (seg[0] !== 'api' || seg[1] !== 'items') throw new InboxError(404, 'そういう API はありません');
     if (seg.length === 2 && method === 'GET') {
       const { items, skipped } = listItems(dir);
@@ -439,6 +659,7 @@ export function handleApi(dir, method, pathname, { query = new URLSearchParams()
           now: new Date().toISOString(),
           staleAskDays: STALE_ASK_DAYS,
           counts: openCounts(items),
+          unreadMessages: items.filter((x) => x.kind === 'message' && x.status === 'open').length,
           chiefs: [...new Set(items.map((x) => x.chief?.name).filter(Boolean))].sort(),
           items: [...open, ...closed].map(publicItem),
           skipped: skipped.length,
@@ -475,7 +696,7 @@ export function handleApi(dir, method, pathname, { query = new URLSearchParams()
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8',
+  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
 // 画面のファイル（uiDir の中だけ・隠しファイルは出さない）。
@@ -540,7 +761,7 @@ export function watchInbox(dir, onChange, { debounceMs = 40, pollMs = 2000 } = {
 
 // 画面と API を出す。127.0.0.1 にだけ bind する（認証は無い）。ほかのサイトのページから叩かれないように、
 // Host が自分でない要求と、JSON でない POST・よその Origin の POST は断る。
-export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.0.0.1' }) {
+export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.0.0.1', chiefs = undefined, chiefStatus = null }) {
   const allowed = () => new Set([`127.0.0.1:${server.address().port}`, `localhost:${server.address().port}`]);
   const send = (res, status, body, type) => {
     res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -572,7 +793,7 @@ export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.
         return undefined;
       }
       if (req.method === 'GET') {
-        const r = handleApi(dir, 'GET', url.pathname, { query: url.searchParams });
+        const r = handleApi(dir, 'GET', url.pathname, { query: url.searchParams, chiefs, chiefStatus });
         return r.json ? sendJson(res, r.status, r.json) : send(res, r.status, r.text, r.type);
       }
       if (req.method !== 'POST') return sendJson(res, 405, { error: 'GET か POST だけです' });
@@ -594,7 +815,7 @@ export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.
         } catch {
           return sendJson(res, 400, { error: 'JSON が読めません' });
         }
-        const r = handleApi(dir, 'POST', url.pathname, { body });
+        const r = handleApi(dir, 'POST', url.pathname, { body, chiefs, chiefStatus });
         sendJson(res, r.status, r.json);
       });
       return undefined;
@@ -768,6 +989,30 @@ export function selfTestInbox(assert) {
   assert(staleReviewTargets(stale, [sr], '/r/it', workers).length === 2, 'inbox: 他の CoS が出した分は数えない');
   assert(staleReviewTargets(stale, [sr], '/r/main', { ...workers, w1: { createdAt: '2026-11-26T00:00:00Z' } }).length === 2, 'inbox: 同じ ID を立て直したら出し直す');
 
+  // ユーザーからの指示（message）: 宛先の CoS だけ起きる・ack・読んだら二度出ない
+  const m1 = buildMessage({ chief: A, text: ' デプロイの状況を教えて \n細かいことは後で ' }, { nowMs: T0 + 3000 });
+  assert(m1.kind === 'message' && m1.status === 'open' && m1.title === 'デプロイの状況を教えて' && m1.body === 'デプロイの状況を教えて \n細かいことは後で' && m1.chief.dir === '/r/main' && m1.chief.session === null && m1.v === 1, `inbox: 指示の形 ${JSON.stringify(m1)}`);
+  assert(messageTitle('あ'.repeat(80)).length === 61 && messageTitle('\n\n 二行目 \n') === '二行目', 'inbox: 指示の題は最初の行を縮める');
+  assert(throws(() => buildMessage({ chief: A, text: '  ' }), 400) && throws(() => buildMessage({ chief: {}, text: 'x' }), 400) && throws(() => buildMessage({ chief: A, text: 'x'.repeat(MAX_MESSAGE_CHARS + 1) }), 400), 'inbox: 空・宛先なし・長すぎる指示は断る');
+  const m2 = buildMessage({ chief: B, text: '経理IT 宛て' }, { nowMs: T0 + 4000 });
+  assert(messagesFor([m1, m2, ask, a1], '/r/main').map((x) => x.id).join() === m1.id && messagesFor([m1, m2], '/r/it').map((x) => x.id).join() === m2.id && messagesFor([m1, m2], '/r/none').length === 0, 'inbox: message は宛先の CoS だけ起こす');
+  assert(messagesFor([{ ...m1, deliveredAt: 'T' }], '/r/main').length === 0 && unackedFor([{ ...m1, deliveredAt: 'T' }, m2], '/r/main').length === 1, 'inbox: 渡した指示は二度出ない（未読としては数える）');
+  const k1 = applyAck(m1, 'T');
+  assert(k1.status === 'read' && k1.readAt === 'T' && applyAck(k1) === k1 && m1.status === 'open' && messagesFor([k1], '/r/main').length === 0 && unackedFor([k1], '/r/main').length === 0, 'inbox: ack で既読・二度目は変えない');
+  assert(throws(() => applyAck(ask), 400) && throws(() => applyAck(tell), 400) && throws(() => applyAnswer(m1, { text: 'x' }), 400) && throws(() => applyRead(m1), 400), 'inbox: ack は指示だけ・指示には返事／既読（read）できない');
+  const me = messageEvent(m1);
+  assert(me.event === 'message' && me.id === m1.id && me.title === m1.title && me.text === m1.body && me.at === m1.createdAt, `inbox: 指示の出来事 ${JSON.stringify(me)}`);
+  assert(answeredFor([m1, k1], '/r/main').length === 0 && JSON.stringify(openCounts([m1, ask])) === JSON.stringify({ ask: 1, review: 0, tell: 0 }) && overLimit([m1, m2], 1).n === 0, 'inbox: 指示は answered・ユーザーの未対応の件数に入らない');
+  assert(sortInbox([m1, tell, ask]).map((x) => x.kind).join() === 'ask,tell,message', 'inbox: 指示は並びの最後');
+  assert(buildItem({ kind: 'tell', chief: A, title: 'x', replyTo: 'm' }).replyTo === 'm' && !('replyTo' in tell), 'inbox: replyTo は付けたときだけ');
+
+  // CoS の記録と見張りの印
+  const nowMs = Date.parse('2026-11-25T08:00:00Z');
+  const rec = (sec, pid = 1) => ({ watch: { pid, startedAt: 'S', beatAt: new Date(nowMs - sec * 1000).toISOString() } });
+  assert(watchAlive(rec(10), nowMs, () => true) && !watchAlive(rec(10), nowMs, () => false) && !watchAlive(rec(WATCH_BEAT_STALE_SEC + 1), nowMs, () => true) && !watchAlive({ watch: null }, nowMs, () => true) && !watchAlive({}, nowMs, () => true), 'inbox: 見張りは pid が生きていて印が新しいときだけ動いている');
+  assert(chiefKey('/r/main') === chiefKey('/r/main') && chiefKey('/r/main') !== chiefKey('/r/it') && /^[0-9a-f]{16}$/.test(chiefKey('/r/main')), 'inbox: CoS の記録の鍵');
+  assert(chiefsDir({ COS_CHIEFS_DIR: '/x/c' }) === '/x/c' && chiefsDir({ COS_INBOX_DIR: '/x/inbox' }) === '/x/inbox/.chiefs' && chiefsDir({}).endsWith('/.cos/chiefs'), 'inbox: CoS の記録の置き場所（受け箱を差し替えたらその中）');
+
   // 形の読み分け
   assert(upgradeItem(ask) === ask && throws(() => upgradeItem({ ...ask, v: 2 }), 400) && throws(() => upgradeItem({ id: 'x' }), 400) && throws(() => upgradeItem(null), 400), 'inbox: v が違う項目は読まない');
 
@@ -831,6 +1076,47 @@ export function selfTestInbox(assert) {
     const w2 = createItem(dir, { kind: 'ask', chief: { ...A, dir }, title: '取り下げる問い' });
     assert(throws(() => withdrawItem(dir, w2.id, { chiefDir: '/r/it' }), 400) && withdrawItem(dir, w2.id, { chiefDir: dir }).status === 'withdrawn', 'inbox: 取り下げは自分の CoS の項目だけ');
     assert(api('POST', `/api/items/${w2.id}/answer`, { body: { text: 'x' } }).status === 409, 'inbox API: 取り下げた項目には返せない');
+
+    // CoS の記録（一時ディレクトリ）: 書く・書き足す・見張りの印・消えたディレクトリは出さない
+    const cdir = join(dir, '.chiefs');
+    const dA = join(dir, 'repo-a');
+    const dB = join(dir, 'repo-b');
+    mkdirSync(dA);
+    mkdirSync(dB);
+    noteChief(cdir, { name: 'cos-a', dir: dA }, { stateDir: '/s/a', retroIntervalDays: 7, via: 'ask' });
+    noteChief(cdir, { name: 'cos-b', dir: dB }, { stateDir: '/s/b', watch: { pid: process.pid, startedAt: 'S', beatAt: new Date().toISOString() } });
+    noteChief(cdir, { name: 'gone', dir: join(dir, 'no-such') }, {});
+    noteChief(cdir, { name: 'cos-a', dir: dA }, { via: 'watch' });
+    writeFileSync(join(cdir, 'broken.json'), '{');
+    const cs = listChiefs(cdir);
+    assert(cs.map((c) => c.name).join() === 'cos-a,cos-b' && cs[0].stateDir === '/s/a' && cs[0].retroIntervalDays === 7 && cs[0].watch.alive === false && cs[1].watch.alive === true && cs[1].watch.since === 'S', `inbox: CoS の記録 ${JSON.stringify(cs)}`);
+    noteChief(cdir, { name: 'cos-b', dir: dB }, (r) => ({ ...r, watch: null, watchEndedAt: 'E' }));
+    assert(listChiefs(cdir)[1].watch.alive === false && listChiefs(cdir)[1].watch.lastAt === 'E' && listChiefs(join(dir, 'none')).length === 0, 'inbox: 見張りが終わった印');
+    assert(noteChief(join(dir, 'memo.txt', 'x'), { name: 'n', dir: dA }) === null, 'inbox: 記録に失敗しても投げない');
+
+    // 指示の API: 作る → 宛先の CoS の見張りだけが拾う → ack → 返事（reply-to）
+    const capi = (m, p, o = {}) => handleApi(dir, m, p, { ...o, chiefs: () => listChiefs(cdir), chiefStatus: (c) => (c.name === 'cos-b' ? (() => { throw new Error('台帳が壊れている'); })() : { workers: [{ id: 'w1' }], retro: { due: false } }) });
+    assert(capi('POST', '/api/messages', { body: { to: '/nope', text: 'x' } }).status === 400 && capi('POST', '/api/messages', { body: { to: dA, text: ' ' } }).status === 400 && capi('POST', '/api/messages', { body: {} }).status === 400 && capi('GET', '/api/messages').status === 405, 'inbox API: 宛先が無い・空の指示は断る');
+    const before = listItems(dir).items.length;
+    const pm = capi('POST', '/api/messages', { body: { to: dA, text: 'A への指示\n2行目' } });
+    assert(pm.status === 200 && pm.json.kind === 'message' && pm.json.chief.name === 'cos-a' && pm.json.status === 'open' && pm.json.title === 'A への指示' && listItems(dir).items.length === before + 1, `inbox API: 指示を作る ${JSON.stringify(pm.json)}`);
+    const mid = pm.json.id;
+    assert(messagesFor(listItems(dir).items, dA).map((x) => x.id).join() === mid && messagesFor(listItems(dir).items, dB).length === 0 && messagesFor(listItems(dir).items, dir).length === 0, 'inbox: 指示は宛先の CoS の見張りだけが拾う');
+    const ch = capi('GET', '/api/chiefs').json;
+    assert(ch.chiefs.length === 2 && ch.chiefs[0].unread === 1 && ch.chiefs[1].unread === 0 && ch.chiefs[0].workers[0].id === 'w1' && ch.chiefs[0].error === null && ch.chiefs[1].error === '台帳が壊れている' && ch.chiefs[1].workers.length === 0 && !('stateDir' in ch.chiefs[0]), `inbox API: CoS の状況 ${JSON.stringify(ch)}`);
+    assert(handleApi(dir, 'GET', '/api/chiefs', { chiefs: () => listChiefs(cdir) }).json.chiefs[0].retro === null, 'inbox API: 状況を作る関数が無ければ名前と見張りだけ');
+    assert(api('GET', '/api/items').json.unreadMessages === 1 && JSON.stringify(api('GET', '/api/items').json.counts) === JSON.stringify(openCounts(listItems(dir).items)), 'inbox API: 未読の指示の件数');
+    markDelivered(dir, [mid]);
+    assert(messagesFor(listItems(dir).items, dA).length === 0 && getItem(dir, mid).status === 'open', 'inbox: 渡した指示は二度出ない（既読は ack まで付かない）');
+    assert(api('POST', `/api/items/${mid}/answer`, { body: { text: 'x' } }).status === 400 && api('POST', `/api/items/${mid}/read`).status === 400, 'inbox API: 指示には画面から返事・既読できない');
+    assert(throws(() => ackItem(dir, mid, { chiefDir: dB }), 400) && getItem(dir, mid).status === 'open', 'inbox: 他の CoS 宛ての指示は ack できない');
+    assert(ackItem(dir, mid, { chiefDir: dA }).status === 'read' && ackItem(dir, mid).status === 'read' && capi('GET', '/api/chiefs').json.chiefs[0].unread === 0 && throws(() => ackItem(dir, q2.id), 400), 'inbox: ack（二度目も通る・指示でなければ断る）');
+    const rp = createItem(dir, { kind: 'tell', chief: { name: 'cos-a', dir: dA }, title: '返事', replyTo: mid });
+    assert(getItem(dir, rp.id).replyTo === mid && api('GET', `/api/items/${rp.id}`).json.replyTo === mid, 'inbox: 返事から元の指示をたどれる');
+    assert(throws(() => createItem(dir, { kind: 'tell', chief: { name: 'cos-b', dir: dB }, title: 'x', replyTo: mid }), 400) && throws(() => createItem(dir, { kind: 'tell', chief: { name: 'cos-a', dir: dA }, title: 'x', replyTo: q2.id }), 400) && throws(() => createItem(dir, { kind: 'tell', chief: { name: 'cos-a', dir: dA }, title: 'x', replyTo: 'nope' }), 404), 'inbox: reply-to は自分宛ての指示だけ');
+    const pm2 = capi('POST', '/api/messages', { body: { to: dA, text: '未読のまま返事される指示' } }).json;
+    createItem(dir, { kind: 'ask', chief: { name: 'cos-a', dir: dA }, title: '聞き返し', replyTo: pm2.id });
+    assert(getItem(dir, pm2.id).status === 'read', 'inbox: 返事を出したら元の指示は既読になる');
 
     // 画面のファイルは uiDir の中だけ
     mkdirSync(join(dir, 'ui'));
