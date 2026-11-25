@@ -638,6 +638,53 @@ export function clearServerInfo(dir, pid) {
   }
 }
 
+// ───────── 画面を launchd で常に動かす（macOS） ─────────
+
+export const SERVICE_LABEL = 'local.cos-inbox';
+
+// LaunchAgent の plist。node と cos.mjs は渡されたパスのまま書く（symlink 経由＝dotfiles を更新したら、サービスを再起動すれば新しい版になる）。
+// RunAtLoad でログイン時に起動し、KeepAlive で落ちても起こし直す（ポートが使われているときは ThrottleInterval ごとに試し直し、理由がログに残る）。
+export function servicePlist({ label = SERVICE_LABEL, node, script, port = INBOX_DEFAULT_PORT, log, home, inboxDir: dir = null }) {
+  const x = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const str = (s) => `<string>${x(s)}</string>`;
+  const env = dir ? `  <key>EnvironmentVariables</key>\n  <dict>\n    <key>COS_INBOX_DIR</key>\n    ${str(dir)}\n  </dict>\n` : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  ${str(label)}
+  <key>ProgramArguments</key>
+  <array>
+    ${[node, script, 'inbox', 'serve', '--port', String(port)].map(str).join('\n    ')}
+  </array>
+${env}  <key>WorkingDirectory</key>
+  ${str(home)}
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  ${str(log)}
+  <key>StandardErrorPath</key>
+  ${str(log)}
+</dict>
+</plist>
+`;
+}
+
+// PATH の最初の node（symlink をたどらない＝node を上げても plist を書き直さなくてよい）。無ければ null。
+export function nodeOnPath(pathEnv, exists = existsSync) {
+  for (const d of String(pathEnv ?? '').split(':')) {
+    if (d && isAbsolute(d) && exists(join(d, 'node'))) return join(d, 'node');
+  }
+  return null;
+}
+
 // ───────── 自己テスト（cos self-test から呼ぶ） ─────────
 
 export function selfTestInbox(assert) {
@@ -729,6 +776,14 @@ export function selfTestInbox(assert) {
   assert(nc.length === 2 && nc[0][0] === 'herdr' && nc[0][1].join(' ') === 'notification show 要返事（cos-main） --body どれにするか --sound request' && nc[1][0] === 'osascript', `inbox: 知らせ ${JSON.stringify(nc)}`);
   assert(notifyCommands(review, 'linux').length === 1 && notifyNew(tell, {}).length === 0 && notifyNew(ask, { COS_INBOX_NOTIFY: '0' }).length === 0, 'inbox: tell は知らせない・止められる');
   assert(notifyCommands({ ...ask, title: 'a"b\\c' }, 'darwin')[1][1][1].includes('"a\\"b\\\\c"'), 'inbox: 通知の文のエスケープ');
+
+  // launchd の plist
+  const pl = servicePlist({ node: '/n/bin/node', script: '/h/.claude/skills/chief-of-staff/scripts/cos.mjs', port: 7788, log: '/h/Library/Logs/cos-inbox.log', home: '/h' });
+  assert(pl.includes('<string>local.cos-inbox</string>') && pl.includes('<string>/n/bin/node</string>\n    <string>/h/.claude/skills/chief-of-staff/scripts/cos.mjs</string>\n    <string>inbox</string>\n    <string>serve</string>\n    <string>--port</string>\n    <string>7788</string>'), 'inbox service: plist の起動の引数');
+  assert(/<key>RunAtLoad<\/key>\s*<true\/>/.test(pl) && /<key>KeepAlive<\/key>\s*<true\/>/.test(pl) && pl.split('/h/Library/Logs/cos-inbox.log').length === 3 && !pl.includes('EnvironmentVariables'), 'inbox service: RunAtLoad・KeepAlive・ログ');
+  const pl2 = servicePlist({ node: '/n/a&b/node', script: '/s', log: '/l', home: '/h', inboxDir: '/tmp/<x>' });
+  assert(pl2.includes('/n/a&amp;b/node') && pl2.includes('<key>COS_INBOX_DIR</key>\n    <string>/tmp/&lt;x&gt;</string>'), 'inbox service: XML のエスケープ・受け箱の差し替え');
+  assert(nodeOnPath('rel:/a:/b', (f) => f === '/b/node') === '/b/node' && nodeOnPath('/a', () => false) === null && nodeOnPath('', () => true) === null, 'inbox service: PATH の node');
 
   // 置き場所（一時ディレクトリ）: 作る・置き換える・答える・既読・取り下げ・API
   const dir = mkdtempSync(join(tmpdir(), 'cos-inbox-selftest-'));

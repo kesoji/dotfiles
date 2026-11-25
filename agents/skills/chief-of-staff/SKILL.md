@@ -140,7 +140,8 @@ macOS では、動いている作業セッションがいるあいだ `cos watch
 - `cos ask` には選択肢を `--option key:ラベル[:説明]` で並べ、推すものがあれば `--recommend key`。選択肢の無い問いは `--option` を付けない（文章で返してもらう）。見てほしいものは `--link 名前=URL`（手元のファイルのパスでもよい。画面から開ける）。作業セッションの件なら `--worker <ID>`。
 - 出したら、会話には「受け箱に n 件出しました」の1行だけを書く（題を1行ずつ添える程度まで。本文や選択肢を会話に写さない）。新しい要返事・確認依頼は、コマンドが herdr と macOS の通知を出す（`cos alert` を重ねて打たない）。
 - 問いを書き直すときは、新しい項目を `--supersedes <前の id>` で出す（前の項目は取り下げになる）。要らなくなった問い（ユーザーが会話で答えた・状況が変わった）は `cos withdraw <id>` で引っ込める。**ユーザーが会話で答えたら、受け箱の項目を必ず引っ込める**（残すと二重に答えさせる）。
-- 画面が動いているかは、`cos ask` などの出力と `cos status` の「受け箱」の行に出る。動いていなければ、ユーザーに `cos inbox serve` をどこかのペインで1つ起動してもらう（全 CoS で1つ。127.0.0.1:7788）。
+- 画面（`http://127.0.0.1:7788/`）は、macOS の launchd が常に動かす（`cos inbox service install` で1回入れる。ログイン時に起動し、落ちても起こし直す。全 CoS で1つ）。動いているかは `cos ask` などの出力と `cos status` の「受け箱」の行に出る。動いていなければ `cos inbox service status` で理由を見て（ログは `~/Library/Logs/cos-inbox.log`）、入っていなければ `cos inbox service install`。CoS が `cos inbox serve` を裏で起動して代わりにしない（会話が終わると止まり、launchd のサービスとポートを取り合う）。
+- スキル（dotfiles）を更新したら `cos inbox service install` を打ち直す（入れ直し＝新しい版で起動し直す）。
 - `cos watch` は、報告書が「完了」のまま `staleDoneReviewDays` 日（既定 3）たっても片付いていない作業セッションに、確認依頼を自動で1回出す（承認＝取り込んで片付ける／差し戻し＝コメントに「捨てる」か直す点）。答えは `answered` で届く。
 - 全 CoS の返事待ち（未対応の要返事＋確認依頼）が `inboxMaxOpen` 件（既定 10）を超えていると、`cos spawn` が注意を出す。そのときは、依頼を立てたことと返事待ちが溜まっていることをユーザーに一言伝える。件数は `cos status` にも出る。
 - 作業セッションは受け箱に出せない（コマンドが断る）。作業セッションの質問は、報告書を読んだ CoS が受け箱に出す。
@@ -219,7 +220,8 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos tell --title T (--body-file F \| --body TEXT) [--link ...] [--worker ID] [--supersedes ID]` | 受け箱に「読むだけ」を出す（開いたら既読。通知は出さず、見張りも起こさない） |
 | `cos inbox [--all] [--mine] [--json]` | 受け箱の一覧（全 CoS の未対応。★＝この CoS の項目）。`--all` は済んだものも（返事の中身・取り下げ・置き換えが出る）。git の外でも動く |
 | `cos inbox show <id>` / `cos inbox read <id>` | 項目の JSON を出す／読むだけの項目を CLI で既読にする |
-| `cos inbox serve [--port 7788] [--ui-dir DIR]` | 受け箱の画面と API を 127.0.0.1 に出す（認証なし・全 CoS で1つ）。画面は受け箱の変更を押し出し（SSE）で即座に映す。画面のファイルは `inbox-ui/`、`--ui-dir` で別の画面を指せる。動いている画面は `<受け箱>/.server.json` に記録される |
+| `cos inbox serve [--port 7788] [--ui-dir DIR]` | 受け箱の画面と API を 127.0.0.1 に出す（認証なし・全 CoS で1つ。ふだんは launchd が起動する＝`cos inbox service install`。手で打つのは試すとき）。画面は受け箱の変更を押し出し（SSE）で即座に映す。画面のファイルは `inbox-ui/`、`--ui-dir` で別の画面を指せる。動いている画面は `<受け箱>/.server.json` に記録される |
+| `cos inbox service install [--port 7788]` / `uninstall` / `status` / `plist` | 画面を macOS の launchd で常に動かす。`install` は `~/Library/LaunchAgents/local.cos-inbox.plist` を書いて `launchctl bootstrap gui/<uid>` で読み込む（RunAtLoad・KeepAlive。ログは `~/Library/Logs/cos-inbox.log`）。入っていれば入れ直す。ポートが使われていれば、使っているプロセスを出して終了コード 1（入れない）。起動して画面が応えるまで確かめ、応えなければログの最後を出して終了コード 1。plist の node は PATH の node、cos.mjs は `~/.claude/skills/chief-of-staff/scripts/cos.mjs`（どちらも symlink のまま）。`status` は plist・launchd・画面の状態（どれか欠けていれば終了コード 1）。`plist` は書く中身を標準出力に出すだけ |
 | `cos answer <id> <choice> [テキスト]` | 受け箱の項目に CLI で返す。要返事は選択肢の key（文章だけなら `-`）、確認依頼は `approve`／`reject`（`reject` はテキストが必須） |
 | `cos withdraw <id> [--force]` | 受け箱に出した未対応の項目を取り下げる。この CoS の項目だけ（他の CoS の項目は `--force`） |
 | `cos answer add "<質問の要約>" [--answer "<答えの要点>"]` | （前のやり方。今は `cos tell` を使う）ユーザーの質問への回答を登録する |

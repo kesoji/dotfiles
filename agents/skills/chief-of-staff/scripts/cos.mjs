@@ -22,6 +22,7 @@
 //   cos review --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
 //   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID]
 //   cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port 7788] [--ui-dir DIR]
+//   cos inbox service install [--port 7788] | uninstall | status | plist     画面を launchd で常に動かす（macOS）
 //   cos answer <id> <choice> [テキスト]      受け箱の項目に CLI で返す（cos answer add / read / list / hook は回答の記録）
 //   cos withdraw <id> [--force]
 //   cos self-test
@@ -69,10 +70,10 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, REVIEW_LABEL, STALE_ASK_DAYS,
+  INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, REVIEW_LABEL, SERVICE_LABEL, STALE_ASK_DAYS,
   answerItem, answeredEvent, answeredFor, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
-  notifyNew, openCounts, overLimit, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
-  staleReviewTargets, withdrawItem, writeServerInfo,
+  nodeOnPath, notifyNew, openCounts, overLimit, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
+  servicePlist, staleReviewTargets, withdrawItem, writeServerInfo,
 } from './inbox.mjs';
 
 const ALERT_KINDS_DEFAULT = ['blocked', 'start-blocked', 'deploy-failed', 'stalled', 'gone', 'question'];
@@ -3088,7 +3089,7 @@ function chiefOf(ctx) {
 
 function inboxUrlHint(dir) {
   const sv = serverInfo(dir);
-  return sv ? `画面: ${sv.url}` : '画面は起動していません（どこかのペインで cos inbox serve）';
+  return sv ? `画面: ${sv.url}` : '画面は起動していません（cos inbox service install で常駐させる。確かめるのは cos inbox service status）';
 }
 
 function cmdInboxCreate(kind, argv) {
@@ -3158,6 +3159,7 @@ function cmdInbox(argv) {
   const dir = inboxDir();
   const [sub, ...rest] = argv;
   if (sub === 'serve') return cmdInboxServe(rest);
+  if (sub === 'service') return cmdInboxService(rest);
   if (sub === 'show') {
     if (!rest[0]) throw new UsageError('cos inbox show <id>');
     return inboxGuard(() => console.log(JSON.stringify(getItem(dir, rest[0]), null, 2)));
@@ -3170,7 +3172,7 @@ function cmdInbox(argv) {
     });
   }
   const { pos, opt } = parseArgs(argv, ['all', 'mine', 'json']);
-  if (pos.length) throw new UsageError('cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port N] [--ui-dir DIR]');
+  if (pos.length) throw new UsageError('cos inbox [--all] [--mine] [--json] | show <id> | read <id> | serve [--port N] [--ui-dir DIR] | service (install [--port N]|uninstall|status|plist [--port N])');
   const me = chiefDirSoft();
   const { items, skipped } = listItems(dir);
   let rows = sortInbox(items.filter((x) => opt.all || x.status === 'open'));
@@ -3241,6 +3243,135 @@ function cmdInboxServe(argv) {
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+}
+
+// ── 画面を launchd で常に動かす（cos inbox service install | uninstall | status | plist） ──
+// install は ~/Library/LaunchAgents/<label>.plist を書いて launchctl bootstrap gui/<uid> で読み込む（入っていれば入れ直す）。
+// plist は書く中身を標準出力に出すだけ（何も変えない）。
+
+function serviceCtx(opt = {}) {
+  const home = homedir();
+  const port = Number(opt.port ?? INBOX_DEFAULT_PORT);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new UsageError(`--port が数ではありません: ${opt.port}`);
+  return {
+    home, port,
+    uid: process.getuid(),
+    plist: join(home, 'Library', 'LaunchAgents', `${SERVICE_LABEL}.plist`),
+    log: join(home, 'Library', 'Logs', 'cos-inbox.log'),
+    // symlink のまま書く（たどらない）
+    script: join(home, '.claude', 'skills', 'chief-of-staff', 'scripts', 'cos.mjs'),
+    node: nodeOnPath(process.env.PATH) ?? process.execPath,
+    inboxDir: process.env.COS_INBOX_DIR ? inboxDir() : null,
+  };
+}
+
+function launchctl(args) {
+  try {
+    return { ok: true, out: execFileSync('launchctl', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) };
+  } catch (e) {
+    return { ok: false, out: `${e.stdout ?? ''}${e.stderr ?? ''}`.trim() || e.message };
+  }
+}
+
+function serviceLoaded(S) {
+  const r = launchctl(['print', `gui/${S.uid}/${SERVICE_LABEL}`]);
+  if (!r.ok) return null;
+  return { pid: Number(/^\s*pid = (\d+)/m.exec(r.out)?.[1]) || null, state: /^\s*state = (.+)$/m.exec(r.out)?.[1] ?? '?', lastExit: /^\s*last exit code = (.+)$/m.exec(r.out)?.[1] ?? null };
+}
+
+function serviceBootout(S) {
+  if (!serviceLoaded(S)) return false;
+  launchctl(['bootout', `gui/${S.uid}/${SERVICE_LABEL}`]);
+  for (let i = 0; i < 50 && serviceLoaded(S); i++) sleep(100); // 止まり切るまで待つ（すぐ bootstrap すると失敗する）
+  if (serviceLoaded(S)) die(`サービス ${SERVICE_LABEL} を止められません（launchctl bootout gui/${S.uid}/${SERVICE_LABEL}）`);
+  return true;
+}
+
+// 127.0.0.1:<port> が空いているか（別のプロセスで試しに listen する）。
+function portFree(port) {
+  try {
+    execFileSync(process.execPath, ['-e', `const s=require('net').createServer();s.once('error',()=>process.exit(1));s.listen(${port},'127.0.0.1',()=>s.close(()=>process.exit(0)));`], { stdio: 'ignore', timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function portOwner(port) {
+  try {
+    return execFileSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n').slice(1).map((l) => l.split(/\s+/).slice(0, 2).join(' pid ')).join('・');
+  } catch {
+    return '';
+  }
+}
+
+function logTail(S, n = 5) {
+  try {
+    return readFileSync(S.log, 'utf8').trim().split('\n').slice(-n).join('\n');
+  } catch {
+    return '';
+  }
+}
+
+function cmdInboxService(argv) {
+  const [sub, ...rest] = argv;
+  const usage = 'cos inbox service (install [--port N] | uninstall | status | plist [--port N])';
+  if (!['install', 'uninstall', 'status', 'plist'].includes(sub)) throw new UsageError(usage);
+  const { opt } = parseArgs(rest, []);
+  const S = serviceCtx(opt);
+  const xml = servicePlist({ node: S.node, script: S.script, port: S.port, log: S.log, home: S.home, inboxDir: S.inboxDir });
+  if (sub === 'plist') {
+    process.stdout.write(xml);
+    return;
+  }
+  if (process.platform !== 'darwin') die('cos inbox service は macOS（launchd）だけです。ほかでは cos inbox serve を自分で常駐させてください');
+  if (sub === 'status') {
+    const l = serviceLoaded(S);
+    const sv = serverInfo(inboxDir());
+    console.log(`plist: ${existsSync(S.plist) ? S.plist : 'ありません（cos inbox service install）'}`);
+    console.log(`launchd: ${l ? `読み込み済み（${l.state}${l.pid ? `・pid ${l.pid}` : ''}${l.lastExit ? `・前回の終了 ${l.lastExit}` : ''}）` : '読み込まれていません'}`);
+    console.log(`画面: ${sv ? `${sv.url}（pid ${sv.pid}${l?.pid && l.pid !== sv.pid ? '＝launchd の外で起動したもの' : ''}）` : '動いていません'}`);
+    console.log(`ログ: ${S.log}`);
+    if (l && !l.pid) {
+      const t = logTail(S);
+      if (t) console.log(`ログの最後:\n${t}`);
+    }
+    if (!l || !sv) process.exitCode = 1;
+    return;
+  }
+  if (sub === 'uninstall') {
+    const was = serviceBootout(S);
+    const had = existsSync(S.plist);
+    rmSync(S.plist, { force: true });
+    console.log(was || had ? `外しました: ${SERVICE_LABEL}（${S.plist}）` : `入っていません: ${SERVICE_LABEL}`);
+    return;
+  }
+  // install（入っていれば入れ直す）
+  if (!existsSync(S.script)) die(`${S.script} がありません（スキルの symlink ~/.claude/skills/chief-of-staff を確かめてください）`);
+  if (!existsSync(S.node)) die(`node が見つかりません: ${S.node}`);
+  const again = serviceBootout(S);
+  if (!portFree(S.port)) {
+    const who = portOwner(S.port);
+    die(`ポート ${S.port} は使われています${who ? `（${who}）` : ''}。手で起動した cos inbox serve なら止めてから、もう一度 install してください（別のポートなら --port）。${again ? '前のサービスは止めたままです。' : 'サービスは入れていません。'}`);
+  }
+  mkdirSync(dirname(S.plist), { recursive: true });
+  mkdirSync(dirname(S.log), { recursive: true });
+  writeAtomic(S.plist, xml);
+  const r = launchctl(['bootstrap', `gui/${S.uid}`, S.plist]);
+  if (!r.ok) die(`launchctl bootstrap に失敗しました: ${r.out}\nplist: ${S.plist}`);
+  // 起動して画面が応えるまで待つ（応えなければ、ログの最後を出して失敗にする）
+  const dir = inboxDir();
+  let sv = null;
+  for (let i = 0; i < 50; i++) {
+    sv = serverInfo(dir);
+    if (sv && sv.port === S.port && sv.pid === serviceLoaded(S)?.pid) break;
+    sv = null;
+    sleep(200);
+  }
+  if (!sv) die(`サービスは読み込みましたが、画面が起動していません。ログ ${S.log} の最後:\n${logTail(S) || '（空）'}`);
+  console.log(`${again ? '入れ直しました' : '入れました'}: ${SERVICE_LABEL}（${S.plist}）`);
+  console.log(`画面: ${sv.url}（pid ${sv.pid}・ログイン時に起動し、落ちたら起こし直します）・ログ: ${S.log}`);
+  console.log('dotfiles を更新したら、もう一度 cos inbox service install で新しい版に入れ替わります。');
 }
 
 // cos status の1行（この CoS の未対応と、全 CoS の返事待ち）。
@@ -3957,6 +4088,8 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos inbox [--all] [--mine] [--json]       受け箱の一覧（全 CoS。★＝この CoS の項目）
   cos inbox show <id> | read <id>           項目の JSON を出す／読むだけの項目を既読にする
   cos inbox serve [--port 7788] [--ui-dir DIR]   受け箱の画面を 127.0.0.1 に出す（1つだけ動かす。画面のファイルは --ui-dir で差し替えられる）
+  cos inbox service install [--port 7788] | uninstall | status | plist
+                                            画面を macOS の launchd で常に動かす（LaunchAgent。install は入っていれば入れ直す・plist は書く中身を出すだけ）
   cos answer <id> <choice> [テキスト]         受け箱の項目に CLI で返す（ask は選択肢の key・文章だけなら -。review は approve / reject）
   cos withdraw <id> [--force]               受け箱に出した項目を取り下げる（この CoS の未対応の項目だけ）
   cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
