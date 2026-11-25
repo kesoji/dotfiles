@@ -1,15 +1,16 @@
-// CoS 受け箱の画面。API（/api/items・/api/items/:id/answer・/api/items/:id/read・/api/chiefs・/api/messages・/api/events）だけに依存する。
+// CoS 受け箱の画面。API（/api/items・/api/items/:id/answer・/api/items/:id/read・/api/chiefs・/api/messages・/api/todos・/api/todos/done・/api/events）だけに依存する。
 // 項目の形は ../inbox-schema.md。作り直すときは、このディレクトリを差し替える（cos inbox serve --ui-dir）。
 'use strict';
 
 const $ = (id) => document.getElementById(id);
 const KINDS = ['ask', 'review', 'todo', 'tell'];
+const FILTER_KINDS = [...KINDS, 'tfile']; // 種類の絞り込み（⌥1〜5）。tfile＝TODO ファイルの行（受け箱の項目ではない）
 const state = {
   items: [],
   counts: { ask: 0, review: 0, todo: 0, tell: 0 },
   staleAskDays: 3,
   filter: load('cos-inbox-filter') || '',
-  kind: KINDS.includes(load('cos-inbox-kind')) ? load('cos-inbox-kind') : '', // 種類の絞り込み（CoS の絞り込みとは独立。両方が効く）
+  kind: FILTER_KINDS.includes(load('cos-inbox-kind')) ? load('cos-inbox-kind') : '', // 種類の絞り込み（CoS の絞り込みとは独立。両方が効く）
   drafts: new Map(), // id → { choice, text, rejecting }（描き直しても書きかけを失わない）
   kept: new Set(), // この画面で開いて既読にした「読むだけ」（読んでいる最中に消さない）
   openBodies: new Set(), // 長い本文を全部開いている項目の id（描き直しても開閉を保つ）
@@ -17,6 +18,9 @@ const state = {
   busy: new Set(),
   chiefs: [], // GET /api/chiefs（記録されている CoS と状況）
   compose: { to: '', text: '', sending: false }, // 指示の書きかけ（to は CoS の dir）
+  todos: [], // GET /api/todos の chiefs（TODO ファイルを持つ CoS と、その行）
+  todosLoaded: false,
+  today: '', // サーバーの今日（YYYY-MM-DD）
 };
 
 function load(key) {
@@ -67,8 +71,12 @@ function refresh() { // 全件を取り直す。取り直している最中に�
   loading = (async () => {
     try {
       // CoS の状況は取れなくても受け箱は出す（古い版のサーバーには /api/chiefs が無い）
-      const [j, c] = await Promise.all([api('GET', '/api/items'), api('GET', '/api/chiefs').catch(() => null)]);
+      // TODO も同じ（古い版のサーバーには /api/todos が無い＝TODO の欄を出さない）
+      const [j, c, t] = await Promise.all([api('GET', '/api/items'), api('GET', '/api/chiefs').catch(() => null), api('GET', '/api/todos').catch(() => null)]);
       if (c) state.chiefs = c.chiefs || [];
+      state.todos = t ? t.chiefs || [] : [];
+      state.today = t ? t.today : '';
+      state.todosLoaded = true;
       state.items = j.items;
       state.counts = j.counts;
       state.staleAskDays = j.staleAskDays ?? 3;
@@ -236,7 +244,8 @@ function metaBlock(item) {
     h('span', { text: '・' }),
     h('span', { class: 'age' }),
     h('span', { class: 'badge', text: `${state.staleAskDays}日以上`, hidden: true }),
-    replyOf(item));
+    replyOf(item),
+    item.todoLine ? h('span', { class: 'reply-to', text: `☑ TODO「${item.todoLine.title}」から（「やった」で TODO も済になる）` }) : null);
 }
 
 function draftOf(id) {
@@ -311,7 +320,7 @@ function todoCard(item) {
       h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' }));
   };
   draw();
-  return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
+  return h('article', { class: 'card', id: `item-${item.id}` }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
 }
 
 const CHOICE_JA = { review: { approve: '承認', reject: '差し戻し' }, todo: { done: 'やった', cannot: 'できない' } };
@@ -511,13 +520,14 @@ document.addEventListener('keydown', (e) => {
   if (chip.getAttribute('aria-pressed') !== 'true') chip.click();
 });
 
-// ⌥1〜4 で種類の絞り込み（押している種類をもう一度で解除）。⌘数字（CoS の切り替え）とはぶつけない。Mac では ⌥数字が別の文字になるので e.code で見る。
+// ⌥1〜5 で種類の絞り込み（5 は TODO）（押している種類をもう一度で解除）。⌘数字（CoS の切り替え）とはぶつけない。Mac では ⌥数字が別の文字になるので e.code で見る。
 document.addEventListener('keydown', (e) => {
   if (e.isComposing || e.keyCode === 229 || e.repeat || !e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
-  const m = /^Digit([1-4])$/.exec(e.code);
+  const m = /^Digit([1-5])$/.exec(e.code);
   if (!m) return;
+  const k = FILTER_KINDS[Number(m[1]) - 1];
+  if (k === 'tfile' && !state.todos.length) return; // TODO ファイルを持つ CoS がいなければ何もしない
   e.preventDefault();
-  const k = KINDS[Number(m[1]) - 1];
   setKind(state.kind === k ? '' : k);
 });
 
@@ -562,6 +572,111 @@ const compose = (() => {
       ? `${t.name} は見張り（cos watch）を張っていません。指示は、次に見張りを張ったときに届きます。`
       : '';
     $('compose-note').hidden = !$('compose-note').textContent;
+    sync();
+  }
+  return { form, update };
+})();
+
+// ───── TODO（CoS の TODO ファイルの行。受け箱の項目とは別で、足しても済にしても CoS は起きない） ─────
+// 行は { key, chief, dir, file, label, t }（t は GET /api/todos の行）。並びはサーバーの state と期日で決める。
+const TF_RANK = { overdue: 0, today: 0, future: 0, anytime: 1, unreadable: 2, done: 3 };
+function todoRows(boards) {
+  const rows = boards.flatMap((b) => b.files.flatMap((f) => f.todos.map((t) => ({ id: `${b.dir}\n${f.path}\n${t.id}`, chief: b.name, dir: b.dir, file: f.path, label: f.label, t }))));
+  return rows.sort((a, b) => TF_RANK[a.t.state] - TF_RANK[b.t.state]
+    || (a.t.done ? String(b.t.doneOn || '').localeCompare(String(a.t.doneOn || '')) : String(a.t.due || '').localeCompare(String(b.t.due || '')))
+    || a.chief.localeCompare(b.chief) || a.t.n - b.t.n);
+}
+// 期日の添え書き（「3日過ぎ」「今日」「明日」「あと5日」）。日付の読み取りはサーバーがする（due は YYYY-MM-DD）。
+function dueNote(t) {
+  if (!t.due || !state.today) return '';
+  const d = Math.round((Date.parse(`${t.due}T00:00:00Z`) - Date.parse(`${state.today}T00:00:00Z`)) / 86400000);
+  return d < 0 ? `${-d}日過ぎ` : d === 0 ? '今日' : d === 1 ? '明日' : d <= 14 ? `あと${d}日` : '';
+}
+async function todoAct(r, done, box) {
+  if (state.busy.has(r.id)) return;
+  state.busy.add(r.id);
+  box.disabled = true;
+  try {
+    const j = await api('POST', '/api/todos/done', { to: r.dir, file: r.file, id: r.t.id, done });
+    if (j.commit && j.commit.reason) showError(`TODO は書き換えましたが、コミットできませんでした: ${j.commit.reason}`);
+  } catch (e) {
+    showError(e.message);
+    box.checked = !done;
+    box.disabled = false;
+  } finally {
+    state.busy.delete(r.id);
+    refresh();
+  }
+}
+function jumpToItem(id) {
+  const el = document.getElementById(`item-${id}`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1800);
+}
+function todoRow(r) {
+  const t = r.t;
+  const box = h('input', { type: 'checkbox', checked: t.done, 'aria-label': t.done ? `未完了に戻す: ${t.title}` : `済にする: ${t.title}`, title: t.done ? '未完了に戻す' : '済にする', onchange: () => todoAct(r, box.checked, box) });
+  const note = dueNote(t);
+  const due = t.state === 'unreadable' ? h('span', { class: 'tf-due', text: '期日が読めない', title: '頭の太字が期日でも「いつでも」でもない行です。TODO ファイルを手で直すと期日で並びます（この行の文字は変えません）' })
+    : h('span', { class: 'tf-due' }, t.dueText || 'いつでも', !t.done && note && note !== t.dueText ? h('b', { text: note }) : null);
+  const linked = (t.items || []).filter((id) => document.getElementById(`item-${id}`) || state.items.some((x) => x.id === id && x.status === 'open'));
+  return h('div', { class: 'tf-row', 'data-state': t.state },
+    h('label', { class: 'tf-box' }, box),
+    due,
+    h('span', { class: 'tf-main' },
+      h('span', { class: 'tf-title' }, inline(t.title, null)),
+      t.note ? h('span', { class: 'tf-note' }, inline(t.note, null)) : null,
+      t.done && t.doneOn ? h('span', { class: 'tf-note', text: `済 ${t.doneOn}${t.doneNote ? `: ${t.doneNote}` : ''}` }) : null,
+      linked.length ? h('button', { class: 'jump', type: 'button', text: 'やることに出ている ↓', title: 'この行から CoS が出した「やること」へ移る', onclick: () => jumpToItem(linked[0]) }) : null),
+    state.todos.length > 1 && !state.filter ? chiefTag(r.chief) : null);
+}
+const todoSig = (r) => JSON.stringify([r.id, r.t, state.todos.length > 1 && !state.filter, state.today]);
+
+// TODO を足す入力欄（1つだけ作って使い回す）。1行で、Enter で足す。文頭の日付（11/28・2026-12-01・明日）が期日になり、無ければ「いつでも」。
+const todoAdd = (() => {
+  const d = { text: '', file: '', sending: false, board: null };
+  const file = h('select', { 'aria-label': 'TODO ファイル', onchange: () => { d.file = file.value; } });
+  const text = h('input', { type: 'text', autocomplete: 'off', enterkeyhint: 'done', 'aria-label': 'TODO を足す', oninput: () => { d.text = text.value; sync(); } });
+  const send = h('button', { class: 'btn', type: 'button', text: '足す', onclick: () => add() });
+  function sync() { send.disabled = d.sending || !d.board || !d.text.trim(); }
+  async function add() {
+    if (d.sending || !d.board || !d.text.trim()) return;
+    d.sending = true; sync();
+    try {
+      const j = await api('POST', '/api/todos', { to: d.board.dir, file: d.file || undefined, text: d.text });
+      d.text = ''; text.value = '';
+      if (j.commit && j.commit.reason) showError(`TODO は足しましたが、コミットできませんでした: ${j.commit.reason}`);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      d.sending = false; sync(); refresh();
+    }
+  }
+  // Enter で足す。日本語の変換を確定する Enter（isComposing / keyCode 229）では足さない。フォームの既定の送信は使わない。
+  text.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    add();
+  });
+  const form = h('form', { class: 'tf-add', onsubmit: (e) => e.preventDefault() }, file, text, send);
+  // 足す先: CoS を選んでいればその CoS、選んでいなくても TODO ファイルを持つ CoS が1つだけならその CoS。それ以外は出さない。
+  function update() {
+    const b = state.filter ? state.todos.find((x) => x.name === state.filter) : state.todos.length === 1 ? state.todos[0] : null;
+    d.board = b && b.files.length ? b : null;
+    form.hidden = !d.board;
+    if (!d.board) return;
+    const want = JSON.stringify(b.files.map((f) => f.path));
+    if (file.dataset.sig !== want) {
+      file.dataset.sig = want;
+      file.replaceChildren(...b.files.map((f) => h('option', { value: f.path, text: f.label })));
+      d.file = b.files.some((f) => f.path === d.file) ? d.file : b.files[0].path;
+      file.value = d.file;
+    }
+    file.hidden = b.files.length < 2;
+    text.placeholder = `${b.name} の TODO に足す（例: 11/28 請求書を出す）`;
+    text.title = '文頭の日付（11/28・2026-12-01・今日・明日）が期日になります。無ければ「いつでも」。Enter で足す';
     sync();
   }
   return { form, update };
@@ -617,7 +732,7 @@ function reconcile(container, items, make, sigOf, touchOf = touch) {
   }
 }
 
-const cardSig = (x) => JSON.stringify([x.id, x.title, x.body, x.options, x.recommend, x.freeText, x.links, x.worker, x.chief.name, x.replyTo, x.repo]);
+const cardSig = (x) => JSON.stringify([x.id, x.title, x.body, x.options, x.recommend, x.freeText, x.links, x.worker, x.chief.name, x.replyTo, x.repo, x.todoLine]);
 const rowSig = (x) => JSON.stringify([x.id, x.title, x.body, x.links, x.worker, x.chief.name, x.replyTo, x.repo]);
 
 function render() {
@@ -634,10 +749,15 @@ function render() {
   // todo は、知らない版のサーバー（counts に無い）でも画面が数える
   const nTodo = c.todo ?? open.filter((x) => x.kind === 'todo').length;
   // 件数は押せる＝その種類だけを全 CoS ぶん並べる（もう一度押すと外れる）。CoS も選んでいるときは「この CoS では n」を添える
-  const kindN = { ask: c.ask, review: c.review, todo: nTodo, tell: c.tell };
-  const kindLabel = { ask: '要返事', review: '確認', todo: 'やること', tell: '読むだけ' };
-  const hereN = (k) => open.filter((x) => x.kind === k && x.chief.name === state.filter).length;
-  $('counts').replaceChildren(...KINDS.flatMap((k, i) => [
+  // TODO（TODO ファイルの未完了の行。受け箱の項目ではないので、返事待ちには数えない）
+  if (state.kind === 'tfile' && state.todosLoaded && !state.todos.length) state.kind = '';
+  const tfAll = todoRows(state.todos);
+  const tfOpenN = (name) => tfAll.filter((r) => !r.t.done && (!name || r.chief === name)).length;
+  const tfDueN = tfAll.filter((r) => r.t.state === 'overdue' || r.t.state === 'today').length;
+  const kindN = { ask: c.ask, review: c.review, todo: nTodo, tell: c.tell, tfile: tfOpenN('') };
+  const kindLabel = { ask: '要返事', review: '確認', todo: 'やること', tell: '読むだけ', tfile: 'TODO' };
+  const hereN = (k) => (k === 'tfile' ? tfOpenN(state.filter) : open.filter((x) => x.kind === k && x.chief.name === state.filter).length);
+  $('counts').replaceChildren(...FILTER_KINDS.filter((k) => k !== 'tfile' || state.todos.length).flatMap((k, i) => [
     i ? ' ・ ' : null,
     h('button', {
       class: 'kind', type: 'button', 'aria-pressed': String(state.kind === k), 'data-kind': k,
@@ -645,6 +765,7 @@ function render() {
       'aria-keyshortcuts': `Alt+${i + 1}`,
       onclick: () => setKind(state.kind === k ? '' : k),
     }, `${kindLabel[k]} `, h('b', { text: String(kindN[k]) }),
+    k === 'tfile' && tfDueN ? h('span', { class: 'due-n', title: '期日が今日か、過ぎている TODO', text: `期日 ${tfDueN}` }) : null,
     state.kind === k && state.filter ? h('span', { class: 'here', text: `（${state.filter} では ${hereN(k)}）` }) : null,
     h('kbd', { class: 'key', 'aria-hidden': 'true', text: `${IS_MAC ? '⌥' : 'Alt+'}${i + 1}` })),
   ]).filter(Boolean));
@@ -711,7 +832,28 @@ function render() {
   $('sec-tell').hidden = !tells.length;
   $('sec-done').hidden = !done.length;
   $('done-count').textContent = done.length ? `（直近 ${done.length} 件）` : '';
-  $('empty').hidden = Boolean(asks.length || reviews.length || todos.length || tells.length);
+
+  // TODO の欄: 絞り込んだ CoS の TODO ファイルの行。未完了を期日の近い順に、済んだものは畳んで下に。
+  const boards = kindOk('tfile') ? state.todos.filter((b) => !state.filter || b.name === state.filter) : [];
+  const tfRows = todoRows(boards);
+  const tfOpen = tfRows.filter((r) => !r.t.done);
+  const tfDone = tfRows.filter((r) => r.t.done);
+  const noTouch = () => {};
+  reconcile($('list-tfile'), tfOpen, todoRow, todoSig, noTouch);
+  reconcile($('list-tfile-done'), tfDone, todoRow, todoSig, noTouch);
+  if (!$('tfile-add-slot').firstChild) $('tfile-add-slot').append(todoAdd.form);
+  todoAdd.update();
+  $('sec-tfile').hidden = !boards.length;
+  $('list-tfile').hidden = !tfOpen.length;
+  $('tfile-empty').hidden = Boolean(tfOpen.length);
+  $('tfile-done').hidden = !tfDone.length;
+  $('tfile-done-count').textContent = `（${tfDone.length} 件）`;
+  $('tfile-sub').textContent = boards.flatMap((b) => b.files.map((f) => `${boards.length > 1 ? `${b.name} の ` : ''}${f.label}`)).join('・');
+  const tfErr = boards.flatMap((b) => b.files.filter((f) => f.error).map((f) => `${b.name} の ${f.label} が読めません（${f.error}）`));
+  $('tfile-error').textContent = tfErr.join('・');
+  $('tfile-error').hidden = !tfErr.length;
+
+  $('empty').hidden = Boolean(asks.length || reviews.length || todos.length || tells.length || boards.length);
   $('empty').textContent = state.kind ? `${kindLabel[state.kind]}で待っているものはありません。` : 'いま待っているものはありません。';
 
   // 消えた項目の書きかけは捨てる

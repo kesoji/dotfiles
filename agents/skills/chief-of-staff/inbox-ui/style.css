@@ -90,6 +90,7 @@ h2 small { font-weight: normal; color: var(--sub); }
 .dot-review { background: var(--review); }
 .dot-todo { background: var(--todo); }
 .dot-tell { border: 1.5px solid var(--tell); }
+.dot-tfile { border-radius: 2px; border: 1.5px solid var(--ok); }
 
 .list { display: grid; gap: 10px; }
 .card {
@@ -192,7 +193,7 @@ textarea.auto, .reply textarea.auto { min-height: 0; max-height: 14em; resize: n
 main { display: flex; flex-wrap: wrap; column-gap: 20px; align-items: flex-start; }
 main > section { flex: 2 1 var(--col-min); min-width: 0; }
 
-main > #sec-tell { flex: 1 1 var(--col-min-narrow); }
+main > #sec-tell, main > #sec-tfile { flex: 1 1 var(--col-min-narrow); }
 main.by-kind > section:not(.chiefs), main.by-kind > #sec-tell { flex: 1 1 100%; } /* 種類で絞っているときは、その列を全幅で */
 main > .error, main > .empty, main > .done { flex: 1 1 100%; }
 main > section[hidden], main > .error[hidden], main > .empty[hidden], main > .done[hidden] { display: none; }
@@ -296,3 +297,36 @@ main > .chiefs[hidden] { display: none; }
 .rows > .thread:first-child { border-top: 0; }
 .jump { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 0 9px; font-size: 12px; cursor: pointer; color: var(--accent); white-space: nowrap; }
 .jump:hover { border-color: var(--accent); }
+
+/* TODO（CoS の TODO ファイルの行。app.js の todoRow）: チェック・期日・やること。過ぎた期日は赤、今日の分は地色を付けて目立たせる */
+.counts .kind .due-n { margin-left: 5px; color: var(--danger); font-weight: 600; }
+.counts .kind[aria-pressed="true"] .due-n { color: inherit; }
+.tf-add { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.tf-add input[type="text"], .tf-add select { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-height: 34px; }
+.tf-add input[type="text"] { flex: 1; min-width: 12em; }
+.tf-row { display: flex; gap: 4px 10px; align-items: baseline; padding: 6px 12px 6px 4px; border-top: 1px solid var(--line); min-width: 0; }
+.tf-row:first-child { border-top: 0; }
+.tf-box { flex: none; align-self: stretch; display: flex; align-items: flex-start; padding: 3px 4px 0 8px; cursor: pointer; }
+.tf-box input { width: 17px; height: 17px; margin: 0; accent-color: var(--ok); cursor: pointer; }
+.tf-due { flex: none; min-width: 4.2em; font-size: 12.5px; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tf-due b { margin-left: 5px; font-weight: 600; }
+.tf-main { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.tf-title a, .tf-note a { color: var(--accent); }
+.tf-title code, .tf-note code { background: var(--code); border-radius: 4px; padding: .05em .35em; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.tf-note { color: var(--sub); font-size: 13px; margin-left: 8px; }
+.tf-main .jump { margin-left: 8px; }
+.tf-row > .tag { flex: none; font-size: 12px; }
+.tf-row[data-state="overdue"] { box-shadow: inset 3px 0 0 var(--danger); }
+.tf-row[data-state="overdue"] .tf-due { color: var(--danger); font-weight: 600; }
+.tf-row[data-state="today"] { background: color-mix(in srgb, var(--ask) 11%, transparent); box-shadow: inset 3px 0 0 var(--ask); }
+.tf-row[data-state="today"] .tf-due { color: var(--ask); font-weight: 600; }
+.tf-row[data-state="today"] .tf-title { font-weight: 650; }
+.tf-row[data-state="unreadable"] .tf-due { font-style: italic; }
+.tf-row[data-state="done"] .tf-title { color: var(--sub); text-decoration: line-through; }
+.tf-done { margin-top: 8px; }
+.tf-done > summary { cursor: pointer; color: var(--sub); font-size: 13px; margin-bottom: 6px; }
+.card.flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px) {
+  .tf-row { flex-wrap: wrap; }
+  .tf-main { flex-basis: 100%; padding-left: 37px; }
+}

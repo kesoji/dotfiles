@@ -76,8 +76,12 @@ import {
   INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, SERVICE_LABEL, STALE_ASK_DAYS,
   ackItem, answerItem, answerLabel, duplicateOpen, replyTarget, threadHint, isStaleItem, tellMisuse, answeredEvent, answeredFor, chiefsDir, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
   messageEvent, messagesFor, nodeOnPath, noteChief, notifyNew, openCounts, overLimit, githubRepoFromUrl, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
-  servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo,
+  servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo, closeTodoLine, todoLineRef, selfTestTodoApi,
 } from './inbox.mjs';
+import {
+  TodoError, addTodoToFile, dueDayFromHead, dueState, findTodo, readTodoFile, resolveTodoPath, setTodoDoneInFile, selfTestTodoFile, sortTodos, todoFilesOf,
+} from './todofile.mjs';
+export { resolveTodoPath };
 
 const ALERT_KINDS_DEFAULT = ['blocked', 'start-blocked', 'deploy-failed', 'stalled', 'gone', 'question'];
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -431,21 +435,11 @@ export function localDay(ms) {
 
 // TODO の行の期日（YYYY-MM-DD）。未完了の行（`- [ ]`）の頭の太字が日付で始まるときだけ読む。
 // 「2026-11-22」「11/22」「11/22 16:30 以降」「11/21(金) 以降」など。読めなければ null。
-// 年が無ければ today の年とみなす。ただし年の境目では、today から半年より先なら去年、300 日より前なら来年とみなす
-// （1月に読む「12/30」は去年の約束＝期日が来ている。12月に読む「1/5」は来年＝まだ先）。来年とみなす側を狭くするのは、
-// 期日を大きく過ぎた古い約束を「まだ先」と取り違えて黙って消すより、出しすぎる方がましだから。
+// 年の扱い（年が無ければ今年・年の境目）と日付の読み方は todofile.mjs の dueDayFromHead（cos todo-file・受け箱の画面と同じ関数）。
 // 太字の途中の日付（「…は 11/4 本番済み」のような経緯）は期日でないので読まない。
 export function todoDueDay(line, today) {
-  const m = String(line).match(/^\s*[-*+]\s+\[ \]\s+\*\*\s*(?:(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})\/(\d{1,2}))(?![\d/])/);
-  if (!m) return null;
-  let [y, mo, d] = m[1] ? [Number(m[1]), Number(m[2]), Number(m[3])] : [Number(today.slice(0, 4)), Number(m[4]), Number(m[5])];
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  if (!m[1]) {
-    const diffDays = (Date.UTC(y, mo - 1, d) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS;
-    if (diffDays > 183) y -= 1;
-    else if (diffDays < -300) y += 1;
-  }
-  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const m = String(line).match(/^\s*[-*+]\s+\[ \]\s+\*\*(.*)$/);
+  return m ? dueDayFromHead(m[1], today) : null;
 }
 
 // TODO の本文から、期日が today（YYYY-MM-DD）か過去の未完了の行を返す（行の頭から最大 width 文字）。
@@ -460,13 +454,6 @@ export function dueTodos(text, today, width = 200) {
     (due === today ? now : past).push(t.length > width ? `${t.slice(0, width)}…` : t);
   }
   return [...now, ...past];
-}
-
-// cos.json の todoFiles の1つを絶対パスにする（`~` は家・相対は base から）。
-export function resolveTodoPath(p, base, home) {
-  if (p === '~') return home;
-  if (p.startsWith('~/')) return join(home, p.slice(2));
-  return isAbsolute(p) ? p : join(base, p);
 }
 
 // 振り返りの期限。since（今の期間の始まり＝前回の振り返りを終えた時）から intervalDays 日。
@@ -3187,13 +3174,14 @@ function inboxUrlHint(dir) {
 }
 
 function cmdInboxCreate(kind, argv) {
-  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--no-supersede] [--reply-to ID] [--repo owner/name]${kind === 'tell' ? ' [--force]' : ''}`;
+  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--no-supersede] [--reply-to ID] [--repo owner/name]${kind === 'tell' ? ' [--force]' : ''}${kind === 'todo' ? ' [--todo-line <TODO の行の id>]' : ''}`;
   const { multi, rest } = takeMulti(argv, ['option', 'link']);
   const { pos, opt } = parseArgs(rest, ['no-free-text', 'force', 'no-supersede']);
   if (pos.length || !opt.title) throw new UsageError(usage);
   if (process.env.COS_WORKER_ID) die(`受け箱に出せるのは CoS だけです（ここは作業セッション ${process.env.COS_WORKER_ID}。CoS への連絡は報告書で）`);
   if (kind !== 'ask' && (multi.option.length || opt.recommend || opt['no-free-text'])) throw new UsageError(`選択肢を持てるのは cos ask だけです\n${usage}`);
   if (opt.force && kind !== 'tell') throw new UsageError(`--force は cos tell だけです\n${usage}`);
+  if (opt['todo-line'] && kind !== 'todo') throw new UsageError(`--todo-line は cos todo だけです\n${usage}`);
   let body = opt.body ?? '';
   if (opt['body-file']) {
     try {
@@ -3255,6 +3243,7 @@ ${show(hits)}
       supersedes,
       replyTo,
       repo: opt.repo ?? githubRepoFor(ctx, w),
+      todoLine: opt['todo-line'] ? todoLineRef(todoFilesOf(ctx.root, homedir()), opt['todo-line'], localDay(Date.now())) : null,
     });
     // --worker と --reply-to の両方を付けて出したら、その指示を作業セッションに覚える（spawn で付け忘れても、次からは自動で継ぐ）。
     let remembered = false;
@@ -3360,6 +3349,7 @@ function cmdInboxAnswer(argv) {
   const [id, choice, ...text] = argv;
   if (!id || choice === undefined) throw new UsageError('cos answer <id> <choice> [テキスト]（ask は選択肢の key・文章だけなら -。review は approve / reject。todo は done / cannot）');
   const x = answerItem(inboxDir(), id, { choice, text: text.join(' ') || null, via: 'cli' });
+  if (closeTodoLine(x)?.changed) console.log(`もとの TODO の行も済にしました: ${x.todoLine.title}（${x.todoLine.file}）`);
   console.log(`返事を付けました: ${x.id}「${x.title}」→ ${answerText(x)}（${x.chief?.name} の cos watch が answered で拾います）`);
 }
 
@@ -3590,6 +3580,113 @@ function autoStaleReviews(ctx, led) {
   return out;
 }
 
+// ───────── TODO ファイル（cos todo-file list / add / done / undo） ─────────
+// cos.json の todoFiles（Markdown）を、手で書き換えずにコマンドで触る。本体は todofile.mjs（受け箱の画面の /api/todos と同じ関数）。
+// 受け箱の「やること」（cos todo）とは別物: こちらはユーザーの TODO の行で、足しても済にしても CoS も見張りも起こさない。
+
+const TODO_FILE_USAGE = `cos todo-file list [--due] [--all] [--json] [--file F]
+cos todo-file add "<やること>" [--due 11/28|2026-12-01|いつでも] [--note 補足] [--file F] [--no-commit]
+cos todo-file done <id か番号> [--note 一言] [--file F] [--no-commit]
+cos todo-file undo <id か番号> [--file F] [--no-commit]`;
+
+function todoGuard(fn) {
+  try {
+    return fn();
+  } catch (e) {
+    if (e instanceof TodoError) die(e.message);
+    throw e;
+  }
+}
+
+// この CoS の TODO ファイル（絶対パス）。--file があればその1つ（todoFiles にあるものだけ。名前だけでもよい）。
+function todoFilesFor(ctx, pick = null) {
+  const files = todoFilesOf(ctx.root, homedir());
+  if (files.length === 0) die(`この CoS に TODO ファイルがありません（${ctx.cfgFile} の todoFiles に書く。例: "todoFiles": ["TODO.md"]）`);
+  if (!pick) return files;
+  const abs = resolveTodoPath(pick, process.cwd(), homedir());
+  const hit = files.filter((f) => f === abs || sameDir(f, abs) || basename(f) === pick || relative(ctx.root, f) === pick);
+  if (hit.length !== 1) die(`--file ${pick} は、この CoS の TODO ファイルではありません（${files.join('・')}）`);
+  return hit;
+}
+
+export function todoRowText(t, today) {
+  const st = dueState(t, today);
+  const mark = t.done ? '' : { overdue: '過ぎた', today: '今日', future: '', anytime: '', unreadable: '読めない行' }[st];
+  const due = t.readable ? t.dueText : '';
+  return `${String(`#${t.n}`).padEnd(4)} ${t.id.padEnd(8)}  ${t.done ? '[x]' : '[ ]'} ${mark ? `【${mark}】` : ''}${due ? `${due}: ` : ''}${t.title}${t.note ? ` ${t.note}` : ''}${t.doneOn ? `（済 ${t.doneOn}${t.doneNote ? `: ${t.doneNote}` : ''}）` : ''}`;
+}
+
+function cmdTodoFile(argv) {
+  const [sub = 'list', ...rest] = argv;
+  const today = localDay(Date.now());
+  if (sub === 'list' || sub === 'ls') {
+    // list の --due は「期日の来たものだけ」（値を取らない）
+    const { pos, opt } = parseArgs(rest, ['due', 'all', 'json']);
+    if (pos.length) throw new UsageError(TODO_FILE_USAGE);
+    const ctx = repoCtx();
+    const files = todoFilesFor(ctx, opt.file ?? null);
+    registerChief(ctx, 'todo-file');
+    const out = files.map((file) => {
+      let todos = [];
+      let error = null;
+      try {
+        todos = sortTodos(readTodoFile(file, today));
+      } catch (e) {
+        error = e.code || e.message;
+      }
+      if (!opt.all) todos = todos.filter((t) => !t.done);
+      if (opt.due) todos = todos.filter((t) => !t.done && ['overdue', 'today'].includes(dueState(t, today)));
+      return { file, error, todos: todos.map((t) => ({ ...t, state: t.done ? 'done' : dueState(t, today) })) };
+    });
+    if (opt.json) return console.log(JSON.stringify({ today, files: out }, null, 2));
+    for (const f of out) {
+      console.log(`${f.file}${f.error ? `（読めません: ${f.error}）` : `・${opt.due ? '期日の来た' : opt.all ? '全部で' : '未完了'} ${f.todos.length} 件`}`);
+      for (const t of f.todos) console.log(`  ${todoRowText(t, today)}`);
+    }
+    console.log('（済にする: cos todo-file done <id か #番号>・足す: cos todo-file add "<やること>" --due 11/28。番号は行を足す・消すとずれるので、直前の list のものを使う）');
+    return undefined;
+  }
+  if (!['add', 'done', 'undo'].includes(sub)) throw new UsageError(TODO_FILE_USAGE);
+  const { pos, opt } = parseArgs(rest, ['no-commit']);
+  if (process.env.COS_WORKER_ID) die(`TODO ファイルを書き換えられるのは CoS だけです（ここは作業セッション ${process.env.COS_WORKER_ID}）`);
+  const ctx = repoCtx();
+  const files = todoFilesFor(ctx, opt.file ?? null);
+  registerChief(ctx, 'todo-file');
+  const commit = !opt['no-commit'];
+  const tail = (r, file) => `${file}${r.commit.committed ? `・コミット ${r.commit.sha}` : r.commit.reason ? `・コミットできませんでした（書き換えは残っています）: ${r.commit.reason}` : ''}`;
+  return todoGuard(() => {
+    if (sub === 'add') {
+      if (pos.length !== 1) throw new UsageError(TODO_FILE_USAGE);
+      if (files.length > 1) die(`TODO ファイルが複数あります。--file で選んでください（${files.join('・')}）`);
+      const r = addTodoToFile(files[0], { title: pos[0], due: opt.due ?? null, note: opt.note ?? null }, { today, commit });
+      console.log(r.todo.id);
+      console.error(`TODO に足しました: ${r.todo.dueText}: ${r.todo.title}（${tail(r, files[0])}）`);
+      return undefined;
+    }
+    if (pos.length !== 1) throw new UsageError(TODO_FILE_USAGE);
+    // どのファイルの行か: 1つに決まるファイルを探す（番号は、ファイルが複数あるなら --file が要る）
+    let file = files[0];
+    if (files.length > 1) {
+      if (/^#?\d{1,4}$/.test(pos[0])) die(`TODO ファイルが複数あるときは、番号ではなく id を使うか --file で選んでください（${files.join('・')}）`);
+      const hit = files.filter((f) => {
+        try {
+          findTodo(readTodoFile(f, today), pos[0]);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+      if (hit.length !== 1) die(hit.length ? `${pos[0]} は複数のファイルにあります。--file で選んでください（${hit.join('・')}）` : `その行はありません: ${pos[0]}（cos todo-file list で見直す）`);
+      file = hit[0];
+    }
+    const done = sub === 'done';
+    const r = setTodoDoneInFile(file, pos[0], done, { today, note: done ? opt.note ?? null : null, commit });
+    console.log(r.todo.id);
+    console.error(r.changed ? `${done ? '済にしました' : '未完了に戻しました'}: ${r.todo.title}（${tail(r, file)}）` : `もう${done ? '済' : '未完了'}です: ${r.todo.title}（${file}）`);
+    return undefined;
+  });
+}
+
 function cmdRoot(argv) {
   const { opt } = parseArgs(argv, ['sub']);
   const ctx = repoCtx();
@@ -3728,6 +3825,8 @@ function selfTest() {
   selfTestAlert(assert);
   selfTestLand(assert);
   selfTestInbox(assert);
+  selfTestTodoFile(assert);
+  selfTestTodoApi(assert);
   assert(watchStep({ events: [answeredEvent({ id: 'i1', kind: 'ask', title: 't', options: [], answer: { choice: null, text: 'はい', at: 'T' } })], retroNotify: false, timedOut: false }) === 'events', 'inbox: 答えが付いたら見張りが終わる');
   assert(watchStep({ events: [answeredEvent({ id: 'i2', kind: 'todo', title: 't', options: null, answer: { choice: 'cannot', text: '権限が無い', at: 'T' } })], retroNotify: false, timedOut: false }) === 'events' && answeredLine(answeredEvent({ id: 'i2', kind: 'todo', title: 't', options: null, answer: { choice: 'done', text: null, at: 'T' } })).includes('（やること）「t」にユーザーが答えた: done（やった）'), 'inbox: やることに答えが付いたら見張りが終わる');
   assert(alertFor(answeredEvent({ id: 'i1', kind: 'ask', title: 't', options: [], answer: { choice: null, text: 'はい', at: 'T' } })) === null, 'inbox: answered は鳴らさない（ユーザーが自分で答えた）');
@@ -4256,6 +4355,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
                                             受け箱に「確認依頼」を出す（ユーザーは承認か、コメント付きの差し戻し）
   cos todo --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
                                             受け箱に「やること」を出す（ユーザーが手を動かす作業。「やった」か、コメント付きの「できない」で answered＝choice: done / cannot）
+                                            --todo-line <id か番号>: TODO ファイルの行から出すとき（画面で行とつながり、「やった」でその行も済になる）
   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID] [--force]
                                             受け箱に「読むだけ」を出す（開いたら既読・見張りは起こさない）
                                             題や本文にユーザーへの作業・返事の求めがあれば、出さずに終了コード 1（todo / ask / review で出し直す。本当に読むだけなら --force）
@@ -4272,6 +4372,13 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
                                             画面を macOS の launchd で常に動かす（LaunchAgent。install は入っていれば入れ直す・plist は書く中身を出すだけ）
   cos answer <id> <choice> [テキスト]         受け箱の項目に CLI で返す（ask は選択肢の key・文章だけなら -。review は approve / reject。todo は done / cannot）
   cos withdraw <id> [--force]               受け箱に出した項目を取り下げる（この CoS の未対応の項目だけ）
+  cos todo-file list [--due] [--all] [--json] [--file F]
+                                            この CoS の TODO ファイル（cos.json の todoFiles）の行。既定は未完了（期日の近い順）・--due は期日の来たものだけ・--all は済も
+  cos todo-file add "<やること>" [--due 11/28|2026-12-01|いつでも] [--note 補足] [--file F] [--no-commit]
+                                            TODO に1行足す（id を標準出力に出す）。--due が無ければ文頭の期日（「11/28 …」「明日 …」）を拾い、無ければ いつでも
+  cos todo-file done <id か番号> [--note 一言] | undo <id か番号>   [--file F] [--no-commit]
+                                            済にする（- [x] と（済 日付））・未完了に戻す。書き換えたら、git が追っているファイルならそのファイルだけをコミットする（push はしない）
+                                            受け箱の「やること」（cos todo）とは別物。CoS も見張りも起こさない。画面（受け箱の「TODO」の欄）にはすぐ出る
   cos root [--sub]                          この場所の CoS のディレクトリ（cos.json を上へ探す）。--sub は最上位からの相対
   cos self-test`;
 
@@ -4283,7 +4390,7 @@ if (isMain) {
     report: cmdReport, read: cmdRead, check: cmdCheck, land: cmdLand, close: cmdClose, rename: cmdRename, reorient: cmdReorient, retro: cmdRetro, root: cmdRoot, answer: cmdAnswer,
     'self-test': selfTest, alert: cmdAlert,
     ask: (a) => cmdInboxCreate('ask', a), review: (a) => cmdInboxCreate('review', a), todo: (a) => cmdInboxCreate('todo', a), tell: (a) => cmdInboxCreate('tell', a),
-    inbox: cmdInbox, withdraw: cmdWithdraw,
+    inbox: cmdInbox, withdraw: cmdWithdraw, 'todo-file': cmdTodoFile,
   };
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
     console.log(HELP);

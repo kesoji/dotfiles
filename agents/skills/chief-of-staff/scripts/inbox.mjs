@@ -15,6 +15,7 @@ import { createServer } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
 import { basename, extname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { TodoError, addTodoToFile, dueState, findTodo, parseTodos, setTodoDoneInFile, sortTodos, todoFilesOf, watchTodoFiles } from './todofile.mjs';
 
 export const INBOX_V = 1;
 export const INBOX_DEFAULT_PORT = 7788;
@@ -198,6 +199,12 @@ export function buildItem(input, { nowMs = Date.now(), rand = Math.random } = {}
   };
   if (input.tag) item.tag = String(input.tag);
   if (input.replyTo) item.replyTo = String(input.replyTo);
+  // もとになった TODO ファイルの行（cos todo --todo-line）。画面が TODO の行とこの項目をつないで出し、「やった」でその行も済にする。
+  if (input.todoLine) {
+    const t = input.todoLine;
+    if (!t.file || !t.id) throw new InboxError(400, `todoLine の形が違います: ${JSON.stringify(t)}`);
+    item.todoLine = { file: String(t.file), id: String(t.id), title: String(t.title ?? '') };
+  }
   // その件の GitHub のリポジトリ（画面が #123 やコミットをリンクにする宛先）。分からなければ持たない。
   if (input.repo) {
     if (!REPO_RE.test(String(input.repo))) throw new InboxError(400, `--repo は GitHub の owner/name の形です: ${input.repo}`);
@@ -744,11 +751,36 @@ function closedAt(x) {
 //   POST /api/items/:id/read
 //   GET  /api/chiefs                      記録されている CoS と今の状況（作業セッション・見張り・振り返りの期限・未読の指示）
 //   POST /api/messages  { to, text }      CoS 宛ての指示を作る（to は GET /api/chiefs の dir）
-//   GET  /api/events                      （serveInbox が出す）押し出し。SSE で、受け箱が変わるたびに `change` が届く
+//   GET  /api/todos                       TODO ファイル（cos.json の todoFiles）を持つ CoS と、その行（未完了は期日の近い順・済は最後）
+//   POST /api/todos  { to, text, due?, note?, file? }      TODO に1行足す（to は GET /api/chiefs の dir。期日は due か、text の文頭から拾う）
+//   POST /api/todos/done  { to, file, id, done, note? }    行を済にする（done: true）・未完了に戻す（false）
+//   GET  /api/events                      （serveInbox が出す）押し出し。SSE で、受け箱か TODO ファイルが変わるたびに `change` が届く
 // chiefs は記録されている CoS を返す関数（既定は listChiefs）。chiefStatus は CoS 1件 → 状況（cos.mjs が台帳を読んで作る。無ければ状況なし）。
-export function handleApi(dir, method, pathname, { query = new URLSearchParams(), body = null, chiefs = () => listChiefs(chiefsDir()), chiefStatus = null } = {}) {
+// todoFiles は CoS 1件 → TODO ファイルの絶対パス（既定はその CoS の .claude/cos.json の todoFiles）。today はローカルの今日（YYYY-MM-DD）。
+export function handleApi(dir, method, pathname, {
+  query = new URLSearchParams(), body = null, chiefs = () => listChiefs(chiefsDir()), chiefStatus = null,
+  todoFiles = (c) => todoFilesOf(c.dir, homedir()), today = localDay(Date.now()), commit = true,
+} = {}) {
   try {
     const seg = pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    if (seg[0] === 'api' && seg[1] === 'todos') {
+      if (seg.length === 2 && method === 'GET') {
+        const { items } = listItems(dir);
+        return { status: 200, json: { v: INBOX_V, now: new Date().toISOString(), today, chiefs: todoBoards(chiefs(), todoFiles, today, items) } };
+      }
+      if (method !== 'POST' || seg.length > 3 || (seg.length === 3 && seg[2] !== 'done')) throw new InboxError(seg.length > 3 ? 404 : 405, 'そういう API はありません');
+      const chief = chiefs().find((c) => sameDir(c.dir, body?.to));
+      if (!chief) throw new InboxError(400, `CoS が見つかりません（to は GET /api/todos の dir）: ${body?.to ?? '(なし)'}`);
+      const files = todoFiles(chief);
+      if (files.length === 0) throw new InboxError(400, `${chief.name} には TODO ファイルがありません（.claude/cos.json の todoFiles）`);
+      // 書き換えられるのは、その CoS の todoFiles に書かれたファイルだけ
+      const file = body?.file ? files.find((f) => f === body.file) : files[0];
+      if (!file) throw new InboxError(400, `${chief.name} の TODO ファイルではありません: ${body.file}`);
+      const r = seg.length === 2
+        ? addTodoToFile(file, { title: body?.text, due: body?.due ?? null, note: body?.note ?? null }, { today, commit })
+        : setTodoDoneInFile(file, body?.id, body?.done !== false, { today, note: body?.note ?? null, commit });
+      return { status: 200, json: { file, changed: r.changed, commit: r.commit, todo: publicTodo(r.todo, today) } };
+    }
     if (seg[0] === 'api' && seg[1] === 'chiefs' && seg.length === 2) {
       if (method !== 'GET') throw new InboxError(405, 'そういう API はありません');
       const { items } = listItems(dir);
@@ -814,14 +846,85 @@ export function handleApi(dir, method, pathname, { query = new URLSearchParams()
       return { status: 200, text: readFileSync(file, 'utf8'), type: 'text/plain; charset=utf-8' };
     }
     if (seg.length === 4 && method === 'POST' && seg[3] === 'answer') {
-      return { status: 200, json: publicItem(answerItem(dir, id, { choice: body?.choice ?? null, text: body?.text ?? null, via: 'ui' })) };
+      const done = answerItem(dir, id, { choice: body?.choice ?? null, text: body?.text ?? null, via: 'ui' });
+      closeTodoLine(done, { today, commit });
+      return { status: 200, json: publicItem(done) };
     }
     if (seg.length === 4 && method === 'POST' && seg[3] === 'read') return { status: 200, json: publicItem(readItem(dir, id)) };
     throw new InboxError(seg.length >= 3 ? 405 : 404, 'そういう API はありません');
   } catch (e) {
-    if (e instanceof InboxError) return { status: e.status, json: { error: e.message } };
+    if (e instanceof InboxError || e instanceof TodoError) return { status: e.status, json: { error: e.message } };
     return { status: 500, json: { error: String(e.message ?? e) } };
   }
+}
+
+// ───────── TODO ファイル（cos.json の todoFiles） ─────────
+// 本体は todofile.mjs（cos todo-file と同じ関数）。ここは、どの CoS がどのファイルを持つかと、画面に渡す形だけ。
+
+function localDay(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 画面に渡す行。state は overdue（過ぎた）・today・future・anytime・unreadable（読めない行）・done。
+export function publicTodo(t, today) {
+  return {
+    id: t.id, n: t.n, done: t.done, state: t.done ? 'done' : dueState(t, today), due: t.due, dueText: t.dueText, title: t.title, note: t.note,
+    doneOn: t.doneOn, doneNote: t.doneNote, items: [],
+  };
+}
+
+// TODO ファイルを持つ CoS と、その行。items は受け箱の項目（todoLine でその行から出た、未対応の「やること」などをつなぐ）。
+// 読めないファイルは error を入れて出す（消えた・権限が無い）。
+export function todoBoards(chiefList, todoFiles, today, items = [], read = (f) => readFileSync(f, 'utf8')) {
+  const out = [];
+  for (const c of chiefList) {
+    const files = todoFiles(c);
+    if (files.length === 0) continue;
+    const linked = items.filter((x) => x.todoLine && x.status === 'open' && sameDir(x.chief?.dir, c.dir));
+    out.push({
+      name: c.name,
+      dir: c.dir,
+      files: files.map((path) => {
+        const label = path.startsWith(c.dir + sep) ? path.slice(c.dir.length + 1) : basename(path);
+        try {
+          const todos = sortTodos(parseTodos(read(path), today).todos).map((t) => ({
+            ...publicTodo(t, today),
+            items: linked.filter((x) => x.todoLine.id === t.id && x.todoLine.file === path).map((x) => x.id),
+          }));
+          return { path, label, error: null, todos };
+        } catch (e) {
+          return { path, label, error: String(e.code || e.message), todos: [] };
+        }
+      }),
+    });
+  }
+  return out;
+}
+
+// 「やること」に「やった」と返したら、もとになった TODO の行（todoLine）も済にする。できなくても返事は付いている（投げない）。
+export function closeTodoLine(item, { today = localDay(Date.now()), commit = true } = {}) {
+  if (item?.kind !== 'todo' || item.answer?.choice !== 'done' || !item.todoLine) return null;
+  try {
+    return setTodoDoneInFile(item.todoLine.file, item.todoLine.id, true, { today, note: item.answer.text ?? null, commit });
+  } catch {
+    return null;
+  }
+}
+
+// cos todo --todo-line <id か番号>: その CoS の TODO ファイルから行を探して、項目に持たせる形にする。
+export function todoLineRef(files, key, today, read = (f) => readFileSync(f, 'utf8')) {
+  const hits = [];
+  for (const file of files) {
+    try {
+      const t = findTodo(parseTodos(read(file), today).todos, key);
+      hits.push({ file, id: t.id, title: t.title });
+    } catch {
+      // このファイルには無い
+    }
+  }
+  if (hits.length !== 1) throw new InboxError(400, hits.length ? `--todo-line ${key} は複数の TODO ファイルにあります（id で指す）` : `--todo-line ${key} の行が TODO ファイルにありません（cos todo-file list で見直す）`);
+  return hits[0];
 }
 
 const MIME = {
@@ -903,10 +1006,13 @@ export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.
   const clients = new Set();
   let rev = 0;
   const push = (res, event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  const stopWatch = watchInbox(dir, () => {
+  const changed = () => {
     rev++;
     for (const res of clients) push(res, 'change', { rev });
-  });
+  };
+  const stopWatch = watchInbox(dir, changed);
+  // TODO ファイル（CoS がコマンドで・ユーザーが手で書き換える）の変更も同じ change で知らせる
+  const stopTodoWatch = watchTodoFiles(() => (chiefs ?? (() => listChiefs(chiefsDir())))().flatMap((c) => todoFilesOf(c.dir, homedir())), changed);
   const beat = setInterval(() => {
     for (const res of clients) res.write(': ping\n\n');
   }, 20_000);
@@ -958,6 +1064,7 @@ export function serveInbox({ dir, port = INBOX_DEFAULT_PORT, uiDir, host = '127.
   });
   server.on('close', () => {
     stopWatch();
+    stopTodoWatch();
     clearInterval(beat);
     for (const res of clients) res.end();
   });
@@ -1409,5 +1516,73 @@ export function selfTestInbox(assert) {
     assert(staticFile(join(dir, 'ui'), '/../memo.txt') === null && staticFile(join(dir, 'ui'), '/%2e%2e/memo.txt') === null && staticFile(join(dir, 'ui'), '/.secret') === null && staticFile(join(dir, 'ui'), '/none.js') === null, 'inbox: uiDir の外・隠しファイルは出さない');
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// TODO ファイルの API（/api/todos）と、受け箱の項目とのつながり（todoLine）。cos self-test から呼ぶ。
+export function selfTestTodoApi(assert) {
+  const D = '2026-11-25';
+  const root = mkdtempSync(join(tmpdir(), 'cos-todoapi-'));
+  try {
+    const dir = join(root, 'inbox');
+    const hub = join(root, 'hub');
+    const other = join(root, 'other');
+    mkdirSync(join(hub, '.claude'), { recursive: true });
+    mkdirSync(other, { recursive: true });
+    const file = join(hub, 'TODO.md');
+    const file2 = join(hub, 'notes', 'T2.md');
+    mkdirSync(join(hub, 'notes'));
+    writeFileSync(join(hub, '.claude', 'cos.json'), JSON.stringify({ todoFiles: ['TODO.md', 'notes/T2.md', 'none.md'] }));
+    writeFileSync(file, '## 未完了\n\n- [ ] **いつでも: 机**\n- [ ] **11/20: 請求書**（封筒）\n- [ ] **11/25: 今日の分**\n- [ ] 読めない行\n- [x] **11/1: 済んだ**（済 2026-11-02）\n');
+    writeFileSync(file2, '- [ ] **12/1: 二つ目**\n');
+    const H = { name: 'hub', dir: hub };
+    const O = { name: 'other', dir: other };
+    const opts = (body = null) => ({ body, chiefs: () => [H, O], today: D, commit: false });
+    const get = () => handleApi(dir, 'GET', '/api/todos', opts());
+    const g0 = get();
+    assert(g0.status === 200 && g0.json.today === D && g0.json.chiefs.length === 1 && g0.json.chiefs[0].name === 'hub', `todo api: TODO ファイルを持つ CoS だけを返す ${JSON.stringify(g0.json).slice(0, 200)}`);
+    const [f1, f2, f3] = g0.json.chiefs[0].files;
+    assert(f1.label === 'TODO.md' && f2.label === 'notes/T2.md' && f3.error === 'ENOENT' && f3.todos.length === 0, `todo api: ファイルごと・読めないファイルは error ${JSON.stringify([f1.label, f2.label, f3.error])}`);
+    assert(f1.todos.map((t) => t.state).join() === 'overdue,today,anytime,unreadable,done' && f1.todos[0].title === '請求書' && f1.todos[0].note === '（封筒）' && f1.todos[4].doneOn === '2026-11-02', `todo api: 期日の近い順・state ${f1.todos.map((t) => t.state)}`);
+    // 足す
+    const a1 = handleApi(dir, 'POST', '/api/todos', opts({ to: hub, text: '11/28 銀行に行く' }));
+    assert(a1.status === 200 && a1.json.file === file && a1.json.todo.due === '2026-11-28' && a1.json.todo.state === 'future' && readFileSync(file, 'utf8').includes('- [ ] **11/28: 銀行に行く**\n'), `todo api: 足す（文頭の期日） ${JSON.stringify(a1.json)}`);
+    const a2 = handleApi(dir, 'POST', '/api/todos', opts({ to: hub, file: file2, text: '靴', due: '12/2', note: '黒' }));
+    assert(a2.status === 200 && readFileSync(file2, 'utf8') === '- [ ] **12/1: 二つ目**\n- [ ] **12/2: 靴**（黒）\n', 'todo api: ファイルを選んで足す');
+    assert(handleApi(dir, 'POST', '/api/todos', opts({ to: hub, text: ' ' })).status === 400 && handleApi(dir, 'POST', '/api/todos', opts({ to: hub, text: 'x', due: '来週' })).status === 400, 'todo api: 空・読めない期日は 400');
+    assert(handleApi(dir, 'POST', '/api/todos', opts({ to: other, text: 'x' })).status === 400 && handleApi(dir, 'POST', '/api/todos', opts({ to: '/nowhere', text: 'x' })).status === 400, 'todo api: TODO ファイルの無い CoS・知らない CoS には足せない');
+    writeFileSync(join(root, 'secret.md'), '- [ ] **いつでも: x**\n');
+    assert(handleApi(dir, 'POST', '/api/todos', opts({ to: hub, file: join(root, 'secret.md'), text: 'x' })).status === 400 && handleApi(dir, 'POST', '/api/todos/done', opts({ to: hub, file: join(root, 'secret.md'), id: '1', done: true })).status === 400 && readFileSync(join(root, 'secret.md'), 'utf8') === '- [ ] **いつでも: x**\n', 'todo api: todoFiles に無いファイルは書き換えない');
+    // 済にする・戻す
+    const id = f1.todos[0].id;
+    const d1 = handleApi(dir, 'POST', '/api/todos/done', opts({ to: hub, file, id, done: true }));
+    assert(d1.status === 200 && d1.json.changed && d1.json.todo.state === 'done' && d1.json.todo.doneOn === D && readFileSync(file, 'utf8').includes('- [x] **11/20: 請求書**（封筒）（済 2026-11-25）\n'), `todo api: 済にする ${JSON.stringify(d1.json)}`);
+    const d2 = handleApi(dir, 'POST', '/api/todos/done', opts({ to: hub, file, id, done: false }));
+    assert(d2.status === 200 && d2.json.todo.state === 'overdue' && readFileSync(file, 'utf8').includes('- [ ] **11/20: 請求書**（封筒）\n'), 'todo api: 戻す');
+    assert(handleApi(dir, 'POST', '/api/todos/done', opts({ to: hub, file, id: 'zzzzzz', done: true })).status === 404 && handleApi(dir, 'GET', '/api/todos/done', opts()).status === 405 && handleApi(dir, 'POST', '/api/todos/x/y', opts({})).status === 404, 'todo api: 無い行は 404・形の違う呼び出しは断る');
+    assert(listItems(dir).items.length === 0, 'todo api: TODO を足しても済にしても、受け箱の項目（＝CoS を起こすもの）は作らない');
+    // 受け箱の「やること」とのつながり（cos todo --todo-line）
+    const ref = todoLineRef([file, file2], id.slice(0, 5), D);
+    assert(ref.file === file && ref.id === id && ref.title === '請求書', `todo api: --todo-line は行を探して持たせる ${JSON.stringify(ref)}`);
+    let bad = null;
+    try {
+      todoLineRef([file, file2], 'zzzzzz', D);
+    } catch (e) {
+      bad = e;
+    }
+    assert(bad instanceof InboxError && bad.status === 400, 'todo api: --todo-line の行が無ければ断る');
+    const it = createItem(dir, { kind: 'todo', chief: { ...H, session: null }, title: '請求書を郵送する', body: 'b', todoLine: ref });
+    const it2 = createItem(dir, { kind: 'todo', chief: { ...H, session: null }, title: '別の件', body: 'b' });
+    assert(it.todoLine.id === id && it2.todoLine === undefined, 'todo api: 項目に todoLine を持たせる（無ければ持たない）');
+    assert(get().json.chiefs[0].files[0].todos.find((t) => t.id === id).items.join() === it.id, 'todo api: 行に、そこから出た未対応の項目をつなぐ');
+    const no = handleApi(dir, 'POST', `/api/items/${it.id}/answer`, opts({ choice: 'cannot', text: '切手が無い' }));
+    assert(no.status === 200 && !readFileSync(file, 'utf8').includes('[x] **11/20'), 'todo api: 「できない」では TODO の行は済にしない');
+    const it3 = createItem(dir, { kind: 'todo', chief: { ...H, session: null }, title: '請求書を郵送する（もう一度）', body: 'b', todoLine: ref });
+    const yes = handleApi(dir, 'POST', `/api/items/${it3.id}/answer`, opts({ choice: 'done', text: '郵送した' }));
+    assert(yes.status === 200 && readFileSync(file, 'utf8').includes('- [x] **11/20: 請求書**（封筒）（済 2026-11-25: 郵送した）\n'), `todo api: 「やった」で、もとの TODO の行も済にする ${readFileSync(file, 'utf8')}`);
+    assert(get().json.chiefs[0].files[0].todos.find((t) => t.id === id).items.length === 0, 'todo api: 済んだ項目はつながない');
+    assert(closeTodoLine({ kind: 'todo', answer: { choice: 'done' }, todoLine: { file: join(root, 'gone.md'), id: 'x' } }) === null && closeTodoLine(it2) === null, 'todo api: もとの行が無くても投げない');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 }
