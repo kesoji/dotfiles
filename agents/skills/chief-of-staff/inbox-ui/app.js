@@ -10,6 +10,8 @@ const state = {
   filter: load('cos-inbox-filter') || '',
   drafts: new Map(), // id → { choice, text, rejecting }（描き直しても書きかけを失わない）
   kept: new Set(), // この画面で開いて既読にした「読むだけ」（読んでいる最中に消さない）
+  openBodies: new Set(), // 長い本文を全部開いている項目の id（描き直しても開閉を保つ）
+  threads: new Map(), // 指示の id → スレッド（thread.js の buildThreads。render のたびに作り直す）
   busy: new Set(),
   chiefs: [], // GET /api/chiefs（記録されている CoS と状況）
   compose: { to: '', text: '', sending: false }, // 指示の書きかけ（to は CoS の dir）
@@ -178,14 +180,28 @@ function whoBlock(item) {
   return h('span', { class: 'who' }, chiefTag(item.chief.name), item.worker ? ` / ${item.worker}` : null);
 }
 
-function bodyBlock(item) {
+// 本文。長い本文は、カードでは最初の約2行だけを出し、2行目の途中から下へ透明にしていく（題と選択肢を先に見せる）。
+// 「本文を開く」か薄くなっている本文を押すと全部が開き、「閉じる」で戻る。開閉は state.openBodies に覚える（描き直しても保つ）。
+// preview: false（1行の項目を開いたときの本文）は、開いた時点で全部を出す。
+function bodyBlock(item, preview = true) {
   if (!item.body || !item.body.trim()) return null;
   const body = h('div', { class: 'body' }, markdown(item.body, item.repo));
-  // 長い本文は折りたたむ（題と選択肢を先に見せる）
-  if (item.body.length > 700 || item.body.split('\n').length > 14) {
-    return h('details', { class: 'fold' }, h('summary', { text: '本文を開く' }), body);
-  }
-  return body;
+  if (!preview || !(item.body.length > 700 || item.body.split('\n').length > 14)) return body;
+  const btn = h('button', { class: 'fold-btn', type: 'button' });
+  const wrap = h('div', { class: 'fold' }, body, btn);
+  const set = (open) => {
+    wrap.classList.toggle('open', open);
+    btn.textContent = open ? '閉じる' : '本文を開く';
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) state.openBodies.add(item.id); else state.openBodies.delete(item.id);
+  };
+  btn.addEventListener('click', () => set(!wrap.classList.contains('open')));
+  body.addEventListener('click', (e) => { // 薄くなっている本文を押しても開く（中のリンクはそのまま開く）
+    if (wrap.classList.contains('open') || e.target.closest('a')) return;
+    set(true);
+  });
+  set(state.openBodies.has(item.id));
+  return wrap;
 }
 
 // 手元のファイルのリンクは、もう片方のホスト名（127.0.0.1 ⇄ localhost）の URL で開く。同じサーバーだがオリジンが別なので、
@@ -306,14 +322,15 @@ function answerSummary(item) {
 }
 
 // 1行の項目（読むだけ・済んだもの）。開くと本文。読むだけは開いたら既読にする。
-function row(item) {
-  const el = h('details', { class: 'row' },
+// compact はスレッドの中の小さい行（CoS の名前と元の指示は見出しにあるので出さず、種類を出す）。
+function row(item, compact = false) {
+  const el = h('details', { class: compact ? 'row compact' : 'row' },
     h('summary', {},
-      whoBlock(item),
+      compact ? h('span', { class: 'who', text: `${KIND_JA[item.kind] || item.kind}${item.worker ? ` / ${item.worker}` : ''}` }) : whoBlock(item),
       h('span', { class: 't' }, refLinks(item.title, item.repo)),
       h('span', { class: 'state' }),
       h('span', { class: 'age' })),
-    h('div', { class: 'inner' }, item.replyTo ? h('p', { class: 'meta' }, replyOf(item)) : null, bodyBlock(item) || h('p', { class: 'body', text: '（本文なし）' }), linksBlock(item), h('p', { class: 'answer', hidden: true })));
+    h('div', { class: 'inner' }, item.replyTo && !compact ? h('p', { class: 'meta' }, replyOf(item)) : null, bodyBlock(item, false) || h('p', { class: 'body', text: '（本文なし）' }), linksBlock(item), h('p', { class: 'answer', hidden: true })));
   el.addEventListener('toggle', () => {
     const cur = state.items.find((x) => x.id === item.id);
     if (el.open && cur && cur.kind === 'tell' && cur.status === 'open') {
@@ -324,9 +341,52 @@ function row(item) {
   return el;
 }
 
+// ───── スレッド（1つの指示から続く項目のまとまり） ─────
+// 元の指示を見出しにし、前の「読むだけ」や済んだ項目は小さい行で上に、手が要る項目（要返事・確認依頼・やること）はカードで下に出す。
+const CARD_OF = { ask: askCard, review: reviewCard, todo: todoCard };
+function threadCard(t) {
+  const parts = []; // [要素, 項目の id]（touchThread が経過・既読の印を進める）
+  const part = (el, x) => { parts.push([el, x.id]); return el; };
+  const el = h('article', { class: 'thread', id: `thread-${t.id}` },
+    h('details', { class: 'thread-head' },
+      h('summary', { title: '押すと指示の全文' },
+        h('span', { class: 'th-mark', text: '↩ 指示' }),
+        chiefTag(t.root.chief.name),
+        h('span', { class: 'tt', text: t.root.title }),
+        h('span', { class: 'th-n', text: `続き ${t.items.length} 件` }),
+        h('span', { class: 'th-age' })),
+      h('p', { class: 'body plain', text: t.root.body })),
+    t.prev.length ? h('div', { class: 'thread-prev' }, t.prev.map((x) => part(row(x, true), x))) : null,
+    t.focus.map((x) => part(CARD_OF[x.kind](x), x)));
+  el._parts = parts;
+  return el;
+}
+function touchThread(el, t) {
+  el.querySelector('.th-age').textContent = `${ago(t.root.createdAt)}の指示`;
+  for (const [pe, id] of el._parts) {
+    const x = t.items.find((y) => y.id === id);
+    if (x) touch(pe, x);
+  }
+}
+const threadSig = (t) => JSON.stringify([t.id, t.root.title, t.root.body, t.root.chief.name, t.focus.map(cardSig), t.prev.map((x) => [x.kind, rowSig(x)])]);
+// 「送った指示」の行から、そのスレッドへ飛ぶ
+function jumpToThread(id) {
+  const el = document.getElementById(`thread-${id}`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1800);
+}
+// 列に出すもの（つながっていない項目と、その列に入るスレッド）を古い順に並べる
+function entriesOf(items, threads) {
+  return [...items.map((x) => ({ id: x.id, at: x.createdAt, item: x })), ...threads.map((t) => ({ id: `thread-${t.id}`, at: t.at, thread: t }))]
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+}
+
 // ───── CoS への指示と CoS の状況 ─────
 const repliesOf = (id) => state.items.filter((x) => x.replyTo === id);
 const KIND_JA = { ask: '要返事', review: '確認依頼', todo: 'やること', tell: '読むだけ' };
+const activeThread = (id) => { const t = state.threads.get(id); return t && t.column ? t : null; };
 
 // 送った指示の1行。開くと全文と、CoS の返事（--reply-to で出された項目）。
 function msgRow(item) {
@@ -335,13 +395,14 @@ function msgRow(item) {
     h('summary', {},
       h('span', { class: 'who' }, '→ ', chiefTag(item.chief.name)),
       h('span', { class: 't', text: item.title }),
+      activeThread(item.id) ? h('button', { class: 'jump', type: 'button', text: `${KIND_JA[activeThread(item.id).column]}のスレッドへ ↓`, title: 'この指示から続く項目へ移る', onclick: (e) => { e.preventDefault(); jumpToThread(item.id); } }) : null,
       h('span', { class: 'state' }),
       h('span', { class: 'age' })),
     h('div', { class: 'inner' },
       h('p', { class: 'body plain', text: item.body }),
       replies.length ? h('ul', { class: 'replies' }, replies.map((r) => h('li', { text: `CoS の返事（${KIND_JA[r.kind] || r.kind}）: ${r.title}` }))) : null));
 }
-const msgSig = (x) => JSON.stringify([x.id, x.body, x.chief.name, repliesOf(x.id).map((r) => [r.id, r.title])]);
+const msgSig = (x) => JSON.stringify([x.id, x.body, x.chief.name, repliesOf(x.id).map((r) => [r.id, r.title]), activeThread(x.id)?.column ?? null]);
 
 const WORKER_STATUS = { working: '作業中', idle: 'ターン終了', done: 'ターン終了', blocked: '承認待ち', gone: 'いない' };
 const workerStatusText = (w) => (w.state !== 'running' ? w.state : (WORKER_STATUS[w.status] || w.status || '?'));
@@ -515,7 +576,7 @@ function touch(el, item) {
 
 // 項目の並びを DOM に反映する。変わっていない項目の要素は作り直さない・動かさない（入力中の文字とフォーカスを保つ）。
 const built = new Map(); // `${場所}:${id}` → { el, sig }
-function reconcile(container, items, make, sigOf) {
+function reconcile(container, items, make, sigOf, touchOf = touch) {
   const want = [];
   for (const item of items) {
     const key = `${container.id}:${item.id}`;
@@ -525,7 +586,7 @@ function reconcile(container, items, make, sigOf) {
       b = { el: make(item), sig };
       built.set(key, b);
     }
-    touch(b.el, item);
+    touchOf(b.el, item);
     want.push(b.el);
   }
   const keep = new Set(want);
@@ -575,6 +636,12 @@ function render() {
   $('chips').replaceChildren(chip('', '全部', mine.length, 0), ...chiefs.map((n, i) => chip(n, n, mine.filter((x) => x.chief.name === n).length, i + 1)));
   $('chips').hidden = chiefs.length < (state.chiefs.length ? 1 : 2);
 
+  // スレッド: 指示（message）に replyTo でつながる項目をまとめる。列に出ているスレッドの項目は、列にそのままは出さない。
+  const T = buildThreads(all, { kept: state.kept });
+  state.threads = T.byRoot;
+  const loose = (x) => !T.inThread.has(x.id);
+  const threadsIn = (col) => T.threads.filter((t) => t.column === col && seen(t.root));
+
   // CoS の状況と、指示の入力欄・送った指示
   const cards = state.chiefs.filter((c) => !state.filter || c.name === state.filter);
   $('chief-cards').replaceChildren(...cards.map(chiefCard));
@@ -587,17 +654,22 @@ function render() {
   $('sec-chiefs').hidden = !state.chiefs.length && !msgs.length;
   $('compose-box').hidden = !state.chiefs.length;
 
-  const asks = open.filter((x) => x.kind === 'ask' && seen(x));
-  const reviews = open.filter((x) => x.kind === 'review' && seen(x));
-  const todos = open.filter((x) => x.kind === 'todo' && seen(x));
-  const tells = all.filter((x) => x.kind === 'tell' && (x.status === 'open' || (state.kept.has(x.id) && x.status === 'read')) && seen(x))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const done = all.filter((x) => x.status !== 'open' && x.kind !== 'message' && !tells.includes(x) && seen(x)).slice(0, 30);
+  const asks = entriesOf(open.filter((x) => x.kind === 'ask' && seen(x) && loose(x)), threadsIn('ask'));
+  const reviews = entriesOf(open.filter((x) => x.kind === 'review' && seen(x) && loose(x)), threadsIn('review'));
+  const todos = entriesOf(open.filter((x) => x.kind === 'todo' && seen(x) && loose(x)), threadsIn('todo'));
+  const looseTells = all.filter((x) => x.kind === 'tell' && (x.status === 'open' || (state.kept.has(x.id) && x.status === 'read')) && seen(x) && loose(x));
+  const tells = entriesOf(looseTells, threadsIn('tell'));
+  const done = all.filter((x) => x.status !== 'open' && x.kind !== 'message' && !looseTells.includes(x) && seen(x) && loose(x)).slice(0, 30);
 
-  reconcile($('list-ask'), asks, askCard, cardSig);
-  reconcile($('list-review'), reviews, reviewCard, cardSig);
-  reconcile($('list-todo'), todos, todoCard, cardSig);
-  reconcile($('list-tell'), tells, row, rowSig);
+  // 列の1件は、つながっていない項目（カードか1行）か、スレッド
+  const col = (list, entries, make) => reconcile(list, entries,
+    (e) => (e.thread ? threadCard(e.thread) : make(e.item)),
+    (e) => (e.thread ? threadSig(e.thread) : (make === row ? rowSig : cardSig)(e.item)),
+    (el, e) => (e.thread ? touchThread(el, e.thread) : touch(el, e.item)));
+  col($('list-ask'), asks, askCard);
+  col($('list-review'), reviews, reviewCard);
+  col($('list-todo'), todos, todoCard);
+  col($('list-tell'), tells, row);
   reconcile($('list-done'), done, row, rowSig);
   $('sec-ask').hidden = !asks.length;
   $('sec-review').hidden = !reviews.length;
@@ -609,6 +681,7 @@ function render() {
 
   // 消えた項目の書きかけは捨てる
   for (const id of [...state.drafts.keys()]) if (!open.some((x) => x.id === id)) state.drafts.delete(id);
+  for (const id of [...state.openBodies]) if (!all.some((x) => x.id === id)) state.openBodies.delete(id);
 }
 
 connect();

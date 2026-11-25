@@ -106,7 +106,18 @@ h2 small { font-weight: normal; color: var(--sub); }
 .body pre { background: var(--code); border-radius: 6px; padding: 8px 10px; overflow-x: auto; }
 .body pre code { background: none; padding: 0; }
 .body a, .links a { color: var(--accent); }
-details.fold > summary { cursor: pointer; color: var(--sub); font-size: 13px; margin-bottom: 4px; }
+/* 長い本文（app.js の bodyBlock）: 畳んでいるあいだは最初の約2行だけを出し、2行目の途中から下へ透明にする。
+   mask で本文そのものを透かすので、カードの背景色（ライト・ダーク）がそのまま出る。 */
+.fold:not(.open) > .body {
+  max-height: 3.3em; overflow: hidden; cursor: pointer;
+  -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+}
+.fold:not(.open) > .body > :first-child { margin-top: 0; }
+.fold-btn { border: 0; background: none; padding: 2px 0; margin-top: 2px; cursor: pointer; color: var(--sub); font-size: 13px; }
+.fold-btn::before { content: "▸ "; }
+.fold.open > .fold-btn::before { content: "▾ "; }
+.fold-btn:hover { color: var(--accent); }
 
 .links { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 0; }
 .links a {
@@ -245,3 +256,31 @@ main > .chiefs[hidden] { display: none; }
   gap: 6px 18px; padding-left: 0; list-style: none;
 }
 .chief-card.picked .workers > li { border-left: 3px solid var(--line); padding-left: 8px; margin: 0; }
+
+/* スレッド（1つの指示から続く項目のまとまり。app.js の threadCard）: 見出し＝元の指示、小さい行＝前の読むだけ・済んだ項目、カード＝手が要る項目 */
+.thread { background: var(--card); border: 1px solid var(--line); border-radius: 8px; min-width: 0; overflow: hidden; }
+.thread.flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+.thread-head > summary {
+  list-style: none; cursor: pointer; padding: 6px 14px; display: flex; gap: 4px 8px; align-items: baseline; flex-wrap: wrap;
+  background: var(--code); font-size: 12.5px; color: var(--sub);
+}
+.thread-head > summary::-webkit-details-marker { display: none; }
+.thread-head .th-mark { white-space: nowrap; }
+.thread-head .tt { flex: 1 1 12em; min-width: 0; color: var(--ink); font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; }
+.thread-head .th-n, .thread-head .th-age { white-space: nowrap; }
+.thread-head > .body { padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.thread-prev { border-bottom: 1px solid var(--line); }
+.thread > .thread-prev:last-child { border-bottom: 0; }
+.row.compact { font-size: 13px; }
+.row.compact > summary { padding: 4px 14px; flex-wrap: nowrap; }
+.row.compact > summary .who { flex: none; white-space: nowrap; font-size: 12px; }
+.row.compact > summary .t { order: 0; flex: 1 1 auto; min-width: 0; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.compact.unread > summary .t, .row.compact[open] > summary .t { color: var(--ink); }
+.row.compact[open] > summary .t { white-space: normal; overflow-wrap: anywhere; }
+.thread > .card { border: 0; border-radius: 0; }
+.thread > .card + .card { border-top: 1px solid var(--line); }
+.thread .card .reply-to { display: none; } /* 元の指示は見出しに出ている */
+.rows > .thread { border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.rows > .thread:first-child { border-top: 0; }
+.jump { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 0 9px; font-size: 12px; cursor: pointer; color: var(--accent); white-space: nowrap; }
+.jump:hover { border-color: var(--accent); }

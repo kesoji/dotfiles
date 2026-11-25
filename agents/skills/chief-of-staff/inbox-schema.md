@@ -56,7 +56,8 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 | `withdrawnAt` | 取り下げた時刻 |
 | `supersededBy` | 置き換えられた項目に、新しい項目の `id` |
 | `deliveredAt` | `cos watch` が `answered`（`message` の項目なら `message`）の出来事として CoS に渡した時刻（同じ答え・同じ指示で二度起こさない印） |
-| `replyTo` | ユーザーからの指示への返事として出した項目に、元の指示（`message`）の `id`（`--reply-to`） |
+| `replyTo` | ユーザーからの指示への返事・続きとして出した項目に、元の指示（`message`）の `id`。`--reply-to` で明示するか、`--worker` の作業セッションに記録された指示を継ぐ（下の「スレッド」） |
+| `readVia` | `"thread"`＝同じ指示への続きの項目が出たために、機械が既読にした `tell`（ユーザーが開いて既読にしたものには付かない） |
 | `repo` | その件の GitHub のリポジトリ（`owner/name`）。画面が `#123` やコミットをリンクにする宛先。分からなければ持たない（前からある項目にも無い） |
 | `tag` | 機械が出した項目の重複よけの鍵（例 `stale-done:<作業セッションの ID>`） |
 
@@ -93,6 +94,27 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 - CoS の返事は普通の項目（`ask`／`review`／`tell`）で、`replyTo` に元の指示の `id` を持つ。`replyTo` に書けるのは、同じ CoS 宛ての `message` だけ。返事を出すと、元の指示が `open` なら `read` になる。
 - `counts`（未対応の件数）と返事待ちの上限（`inboxMaxOpen`）には数えない（ユーザーの番ではないため）。
 - **`v` は 1 のまま。** `kind: "message"` と `replyTo` は足しただけで、前からある項目の読み方は変わらない。`message` を知らない前の版は、一覧の最後に並べるだけで、`answered` の出来事や件数には入れない。
+
+### スレッド（1つの指示から続く項目）
+
+同じ指示（`message`）を `replyTo` に持つ項目を、画面は1つのまとまり（スレッド）として出す。項目の形は変えていない（`replyTo` を使うだけ。`readVia` は足しただけなので `v` は 1 のまま）。
+
+つながりの残し方（CoS の書き忘れに頼らない）:
+
+- `cos spawn <ID> --reply-to <指示の id>` は、その指示を台帳の作業セッションに記録する（`ledger.json` の `workers.<ID>.replyTo`。この CoS 宛ての `message` だけ。指示が未読なら既読にする）。
+- `cos ask` / `review` / `todo` / `tell` の `--worker <ID>` は、その作業セッションに記録された指示を `replyTo` として継ぐ。`--reply-to` を明示すればそちらが先。記録された指示がもう無い・この CoS 宛てでないときは、継がずに出す。取り込み待ちの自動の確認依頼も継ぐ。
+- `--worker` と `--reply-to` の両方を付けて出すと、作業セッションにまだ記録が無ければ、その指示を記録する（`cos spawn` で付け忘れても、次からは継ぐ）。
+- `replyTo` を持つ項目を作ると、同じ指示への前の未読の `tell`（受け取りました・始めました）は `read` になる（`readAt` は新しい項目の `createdAt`、`readVia: "thread"`）。
+- `replyTo` が付かずに出るとき、この CoS 宛ての「CoS が読んでいて（`read`）、届いてから 24 時間以内で、取り下げていない返事が無いか `tell` だけ」の指示があれば、`cos ask` / `review` / `todo` / `tell` と `cos spawn` は標準エラーに注意を出す（止めない。`pendingThreads`・`threadHint`）。
+- 同じ CoS が、同じ種類・同じ題・同じ `worker` の未対応の項目をもう出しているときは、新しい項目が前を置き換える（`supersedes` を自動で入れる。`--no-supersede` で両方残す。`duplicateOpen`）。
+
+画面の組み立て（`inbox-ui/thread.js` の `buildThreads`。DOM に触らない関数で、`cos self-test` も同じファイルを読んで試す）:
+
+- スレッドに入るのは、`replyTo` が受け箱にある `message` を指していて、取り下げていない項目。
+- 手が要る項目（未対応の `ask`・`review`・`todo`）はカードで出す。それ以外（`tell`・済んだ項目）は、小さい行にして上に並べる。見出しは元の指示（押すと全文）。
+- スレッドを置く列は、手が要る項目があれば `ask` → `review` → `todo` の先にあるもの。無くて未読の `tell` があれば読むだけの列。どれも無ければ済んだスレッドで、項目は「済んだもの」に1件ずつ出る。
+- 列に出ているスレッドの項目は、ほかの列・「済んだもの」には出さない（二重に出さない）。見出しの件数（`counts`）は項目の数のまま。
+- 「送った指示」の行には、列に出ているスレッドへ移るボタンが出る。
 
 ### `v` の扱い
 
@@ -151,12 +173,13 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 
 ## 画面を作り直すとき
 
-画面は `inbox-ui/`（`index.html`・`style.css`・`app.js`・`md.js`、報告書の表示の `view.html`・`view.js`、PWA の `manifest.webmanifest`・`icon.svg`・`icon-192.png`・`icon-512.png`。ビルド不要）。上の API だけを使っている。
+画面は `inbox-ui/`（`index.html`・`style.css`・`app.js`・`md.js`・`thread.js`＝スレッドの組み立て、報告書の表示の `view.html`・`view.js`、PWA の `manifest.webmanifest`・`icon.svg`・`icon-192.png`・`icon-512.png`。ビルド不要）。上の API だけを使っている。
 
 - GitHub へのリンクは画面（`md.js` の `inline`）が作る。題・本文・報告書の表示（`view.html?src=…&repo=owner/name`）で同じ決まり:
   - 項目に `repo` があるときだけ: `PR #123`・`PR#123` → `/pull/123`、`#123`・`Issue #123` → `/issues/123`（PR なら GitHub が転送する）、コミットの SHA（7〜40 桁の16進で、数字と a-f の両方を含むもの）→ `/commit/<sha>`。
   - `owner/name#123` は、項目の `repo` と関係なくいつもリンクにする。
   - コード（`` `…` ``・```` ``` ````）の中と、すでにリンクになっている文字はリンクにしない。`repo` が無い項目では `owner/name#123` のほかは何もリンクにしない。
+- 長い本文（700 字か 14 行を超える）は、カードでは最初の約2行だけを出し、2行目の途中から下へ透明にする（CSS の `mask-image`。背景色を重ねないので、ライト・ダークのどちらでもカードの色のまま薄くなる）。「本文を開く」か薄くなった本文を押すと全部が開き、「閉じる」で戻る。開閉は項目ごとに画面が覚え、描き直しても保つ（再読み込みで戻る）。1行の項目（読むだけ・済んだもの・スレッドの中の小さい行）は、行を開いた時点で本文を全部出す。
 - PWA として入れられるように、`index.html` が `manifest.webmanifest`（`display: standalone`・`id` と `start_url` は `/`）を指している。service worker は置いていない（Chrome は無くても入れられる。サーバーが常に動いているので、オフライン用のキャッシュは要らない）。アイコンを変えるなら `icon.svg` を直して PNG を作り直す（`qlmanage -t -s 512 -o <出力先> icon.svg` → `sips -z 192 192`）。
 - 返事待ち（`counts.ask + counts.review + counts.todo`）を、タイトルの `(n)`・favicon の赤丸・アプリのアイコンのバッジ（`navigator.setAppBadge`）に出している。`counts.todo` を返さない前の版のサーバーでは、画面が未対応の `todo` を自分で数える。
 

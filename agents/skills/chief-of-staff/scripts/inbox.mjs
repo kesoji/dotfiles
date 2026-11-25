@@ -30,6 +30,8 @@ export const WAITING_KINDS = ['ask', 'review', 'todo'];
 export const MAX_MESSAGE_CHARS = 4000;
 // 見張りの印（~/.cos/chiefs/ の watch.beatAt）がこの秒数より古ければ、見張りは動いていないとみなす。
 export const WATCH_BEAT_STALE_SEC = 120;
+// 指示が届いてからこの時間のあいだ、続きに見える項目・作業セッションを --reply-to 無しで出すと注意する（threadHint）。
+export const THREAD_HINT_HOURS = 24;
 const STATUS_LABEL = { open: '未対応', answered: '返事済み', read: '既読', withdrawn: '取り下げ' };
 const REVIEW_CHOICES = { approve: 'approve', ok: 'approve', 承認: 'approve', reject: 'reject', ng: 'reject', 差し戻し: 'reject', 差戻し: 'reject' };
 export const REVIEW_LABEL = { approve: '承認', reject: '差し戻し' };
@@ -369,6 +371,43 @@ export function answeredEvent(item) {
   return { event: 'answered', id: item.id, kind: item.kind, worker: item.worker ?? undefined, title: item.title, choice: c, label: label ?? undefined, text: item.answer?.text ?? undefined, at: item.answer?.at };
 }
 
+// ───── スレッド（1つの指示から続く項目のつながり） ─────
+
+// この CoS 宛ての指示のうち、続きがまだ出そうなもの（新しい順）:
+// CoS が読んでいて（ack 済み）、届いてから hours 時間以内で、返事がまだ無いか「受け取りました・始めました」の tell だけのもの。
+// 要返事・確認依頼・やることが --reply-to 付きで出ていれば、その指示は結果まで届いているとみなして入れない。取り下げた返事は数えない。
+export function pendingThreads(items, chiefDir, nowMs = Date.now(), hours = THREAD_HINT_HOURS) {
+  return items
+    .filter((m) => m.kind === 'message' && m.status === 'read' && nowMs - Date.parse(m.createdAt) < hours * 3600000 && sameDir(m.chief?.dir, chiefDir))
+    .filter((m) => items.every((x) => x.replyTo !== m.id || x.status === 'withdrawn' || x.kind === 'tell'))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+// --reply-to を付け忘れていそうなときの注意の文（無ければ null）。what は「この項目」「この作業セッション」など。
+export function threadHint(items, chiefDir, what, nowMs = Date.now()) {
+  const ms = pendingThreads(items, chiefDir, nowMs);
+  if (ms.length === 0) return null;
+  const list = ms.slice(0, 3).map((m) => `  ・${m.id}「${m.title}」`).join('\n');
+  return `注意: ${what}が次の指示の続きなら、--reply-to <指示の id> を付けてください（付けないと、画面で元の指示とつながらず、別々の項目に見えます）:\n${list}${ms.length > 3 ? `\n  ほか ${ms.length - 3} 件` : ''}`;
+}
+
+// 同じ CoS が、同じ種類・同じ題・同じ作業セッションで出した未対応の項目（いちばん新しいもの。無ければ null）。
+// cos ask などが、--supersedes の付け忘れで同じ問いが2つ並ぶのを防ぐために使う。
+export function duplicateOpen(items, { chiefDir, kind, title, worker = null }) {
+  const t = String(title ?? '').trim();
+  return items
+    .filter((x) => x.status === 'open' && x.kind === kind && x.title === t && (x.worker ?? null) === (worker ?? null) && sameDir(x.chief?.dir, chiefDir))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] ?? null;
+}
+
+// --reply-to に書ける指示か確かめて返す（この CoS 宛ての message だけ）。
+export function replyTarget(dir, id, chiefDir) {
+  const msg = getItem(dir, id);
+  if (msg.kind !== 'message') throw new InboxError(400, `${msg.id} はユーザーからの指示ではありません（--reply-to は指示の id）`);
+  if (!sameDir(msg.chief?.dir, chiefDir)) throw new InboxError(400, `${msg.id} は別の CoS（${msg.chief?.name}）宛ての指示です`);
+  return msg;
+}
+
 // 並び: 要返事 → 確認依頼 → やること → 読むだけ。各群の中は古い順（待たせている順）。
 export function sortInbox(items) {
   return [...items].sort((a, b) => (SORT_ORDER[a.kind] ?? 9) - (SORT_ORDER[b.kind] ?? 9) || String(a.createdAt).localeCompare(String(b.createdAt)));
@@ -504,18 +543,19 @@ export function createItem(dir, input, opts = {}) {
       item = buildItem(input, { ...opts, rand: Math.random });
     }
     // 返事の元の指示（--reply-to）: この CoS 宛ての指示だけ。まだ既読でなければ、返事を出した時点で既読にする。
-    let msg = null;
-    if (item.replyTo) {
-      msg = getItem(dir, item.replyTo);
-      if (msg.kind !== 'message') throw new InboxError(400, `${msg.id} はユーザーからの指示ではありません（--reply-to は指示の id）`);
-      if (!sameDir(msg.chief?.dir, item.chief.dir)) throw new InboxError(400, `${msg.id} は別の CoS（${msg.chief?.name}）宛ての指示です`);
-    }
+    const msg = item.replyTo ? replyTarget(dir, item.replyTo, item.chief.dir) : null;
     if (item.supersedes) {
       const old = getItem(dir, item.supersedes);
       if (!sameDir(old.chief?.dir, item.chief.dir)) throw new InboxError(400, `${old.id} は別の CoS（${old.chief?.name}）の項目なので置き換えられません`);
       writeItem(dir, applyWithdraw(old, item.createdAt, { supersededBy: item.id }));
     }
     if (msg?.status === 'open') writeItem(dir, applyAck(msg, item.createdAt));
+    // 同じ指示への前の「読むだけ」（受け取りました・始めました）は、続きが出た時点で既読にする（画面ではスレッドの中に小さく残る）。
+    if (msg) {
+      for (const x of listItems(dir).items) {
+        if (x.replyTo === msg.id && x.kind === 'tell' && x.status === 'open' && x.id !== item.supersedes) writeItem(dir, { ...applyRead(x, item.createdAt), readVia: 'thread' });
+      }
+    }
     writeItem(dir, item);
     return item;
   });
@@ -1276,6 +1316,64 @@ export function selfTestInbox(assert) {
     const pm2 = capi('POST', '/api/messages', { body: { to: dA, text: '未読のまま返事される指示' } }).json;
     createItem(dir, { kind: 'ask', chief: { name: 'cos-a', dir: dA }, title: '聞き返し', replyTo: pm2.id });
     assert(getItem(dir, pm2.id).status === 'read', 'inbox: 返事を出したら元の指示は既読になる');
+
+    // スレッド: 指示 → tell（開始）→ 作業セッションの件として ask。前の tell は既読になり、画面の組み立てで1つにまとまる
+    {
+      const cA = { name: 'cos-a', dir: dA };
+      const tm = capi('POST', '/api/messages', { body: { to: dA, text: 'ここ1ヶ月の動きも調べられる？' } }).json;
+      const now0 = Date.parse(tm.createdAt);
+      assert(pendingThreads(listItems(dir).items, dA, now0).every((m) => m.id !== tm.id), 'inbox thread: 未読の指示は注意の対象にしない（まだ読んでいない）');
+      ackItem(dir, tm.id, { chiefDir: dA });
+      assert(pendingThreads(listItems(dir).items, dA, now0)[0].id === tm.id && pendingThreads(listItems(dir).items, dB, now0).length === 0, 'inbox thread: ack 済みで返事の無い指示は続きが出そう（宛先の CoS だけ）');
+      const st = createItem(dir, { kind: 'tell', chief: cA, title: '調査を始めました', replyTo: tm.id });
+      assert(pendingThreads(listItems(dir).items, dA, now0)[0].id === tm.id, 'inbox thread: 返事が tell だけならまだ続きが出そう');
+      const hint = threadHint(listItems(dir).items, dA, 'この項目', now0);
+      assert(hint.includes(tm.id) && hint.includes('--reply-to') && hint.includes('ここ1ヶ月の動きも調べられる？') && threadHint(listItems(dir).items, dB, 'この項目', now0) === null, `inbox thread: 付け忘れの注意 ${hint}`);
+      assert(pendingThreads(listItems(dir).items, dA, now0 + THREAD_HINT_HOURS * 3600000 + 1).every((m) => m.id !== tm.id), 'inbox thread: 24 時間を過ぎた指示は注意しない');
+      assert(replyTarget(dir, tm.id, dA).id === tm.id && throws(() => replyTarget(dir, tm.id, dB), 400) && throws(() => replyTarget(dir, st.id, dA), 400) && throws(() => replyTarget(dir, 'nope', dA), 404), 'inbox thread: reply-to に書けるのは自分宛ての指示だけ');
+      const res = createItem(dir, { kind: 'ask', chief: cA, worker: 'w9', title: '調査結果', replyTo: tm.id, options: [{ key: 'a', label: 'A' }] });
+      const st2 = getItem(dir, st.id);
+      assert(st2.status === 'read' && st2.readVia === 'thread' && st2.readAt === res.createdAt, 'inbox thread: 続きが出たら、同じ指示への前の tell は既読になる');
+      assert(pendingThreads(listItems(dir).items, dA, now0).every((m) => m.id !== tm.id), 'inbox thread: 要返事が reply-to 付きで出たら注意しない');
+      // 同じ題の未対応の項目
+      const li = listItems(dir).items;
+      assert(duplicateOpen(li, { chiefDir: dA, kind: 'ask', title: ' 調査結果 ', worker: 'w9' })?.id === res.id, 'inbox thread: 同じ CoS・種類・題・作業セッションの未対応の項目を見つける');
+      assert(duplicateOpen(li, { chiefDir: dA, kind: 'ask', title: '調査結果' }) === null && duplicateOpen(li, { chiefDir: dA, kind: 'review', title: '調査結果', worker: 'w9' }) === null && duplicateOpen(li, { chiefDir: dB, kind: 'ask', title: '調査結果', worker: 'w9' }) === null && duplicateOpen(li, { chiefDir: dA, kind: 'ask', title: '別の題', worker: 'w9' }) === null, 'inbox thread: 作業セッション・種類・CoS・題のどれかが違えば別の項目');
+      assert(duplicateOpen(li.map((x) => (x.id === res.id ? { ...x, status: 'answered' } : x)), { chiefDir: dA, kind: 'ask', title: '調査結果', worker: 'w9' }) === null, 'inbox thread: 済んだ項目は置き換えの対象にしない');
+
+      // 画面の組み立て（inbox-ui/thread.js。画面と同じ関数を読んで試す）
+      const buildThreads = new Function(`${readFileSync(fileURLToPath(new URL('../inbox-ui/thread.js', import.meta.url)), 'utf8')}\nreturn buildThreads;`)();
+      const loose = createItem(dir, { kind: 'tell', chief: cA, title: '指示と関係ない知らせ' });
+      const T1 = buildThreads(listItems(dir).items);
+      const th = T1.threads.find((t) => t.id === tm.id);
+      assert(th && th.column === 'ask' && th.focus.map((x) => x.id).join() === res.id && th.prev.map((x) => x.id).join() === st.id && th.items.length === 2 && th.at === res.createdAt, `inbox thread: 要返事のあるスレッドは要返事の列・前の tell は畳む側 ${JSON.stringify(th && [th.column, th.focus.length, th.prev.length])}`);
+      assert(T1.inThread.has(st.id) && T1.inThread.has(res.id) && !T1.inThread.has(loose.id) && !T1.inThread.has(tm.id), 'inbox thread: スレッドの項目は列に二重に出さない（つながっていない項目はそのまま）');
+      assert(T1.byRoot.get(tm.id) === th && T1.byRoot.get(mid).column === 'tell' && T1.inThread.has(rp.id), 'inbox thread: 未読の tell だけのスレッドは読むだけの列');
+      readItem(dir, rp.id);
+      assert(buildThreads(listItems(dir).items).byRoot.get(mid).column === null && !buildThreads(listItems(dir).items).inThread.has(rp.id), 'inbox thread: 済んだスレッド（既読の tell だけ）は列に出さない');
+      // tell だけのスレッド: 未読があれば読むだけの列。この画面で開いて既読にした直後（kept）も残す
+      const m3 = capi('POST', '/api/messages', { body: { to: dA, text: '状況を教えて' } }).json;
+      const t3a = createItem(dir, { kind: 'tell', chief: cA, title: '受け取りました', replyTo: m3.id });
+      const t3b = createItem(dir, { kind: 'tell', chief: cA, title: '答えです', replyTo: m3.id });
+      const T2 = buildThreads(listItems(dir).items).byRoot.get(m3.id);
+      assert(T2.column === 'tell' && T2.focus.length === 0 && T2.prev.map((x) => x.id).join() === [t3a.id, t3b.id].join() && getItem(dir, t3a.id).status === 'read' && T2.at === t3b.createdAt, 'inbox thread: tell だけのスレッドは読むだけの列（前の tell は既読）');
+      readItem(dir, t3b.id);
+      assert(buildThreads(listItems(dir).items).byRoot.get(m3.id).column === null && buildThreads(listItems(dir).items, { kept: new Set([t3b.id]) }).byRoot.get(m3.id).column === 'tell', 'inbox thread: 読み終えたら列から外す（開いている最中は残す）');
+      // 答えたらスレッドは済み。取り下げた項目・元の指示が無い項目は入れない
+      answerItem(dir, res.id, { choice: 'a' });
+      const T3 = buildThreads(listItems(dir).items);
+      assert(T3.byRoot.get(tm.id).column === null && !T3.inThread.has(res.id), 'inbox thread: 要返事に答えたらスレッドは済んだものへ');
+      const rv2 = createItem(dir, { kind: 'review', chief: cA, title: '直しました', replyTo: tm.id });
+      const td3 = createItem(dir, { kind: 'todo', chief: cA, title: '試す', replyTo: tm.id });
+      const T4 = buildThreads(listItems(dir).items).byRoot.get(tm.id);
+      assert(T4.column === 'review' && T4.focus.map((x) => x.kind).join() === 'review,todo' && T4.prev.map((x) => x.id).join() === [st.id, res.id].join(), 'inbox thread: 手が要る項目が複数あれば、要返事 → 確認依頼 → やること の先の列にまとめる');
+      withdrawItem(dir, rv2.id);
+      withdrawItem(dir, td3.id);
+      const orphan = { ...loose, id: 'orphan', replyTo: 'no-such-message' };
+      const T5 = buildThreads([...listItems(dir).items, orphan]);
+      assert(T5.byRoot.get(tm.id).items.length === 2 && T5.byRoot.get(tm.id).column === null && !T5.inThread.has('orphan') && T5.threads.every((t) => t.root.kind === 'message'), 'inbox thread: 取り下げた項目・元の指示が見つからない項目はスレッドに入れない');
+      withdrawItem(dir, loose.id);
+    }
 
     // 画面のファイルは uiDir の中だけ
     mkdirSync(join(dir, 'ui'));

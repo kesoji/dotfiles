@@ -3,7 +3,7 @@
 // 依頼書を渡し、状態の変化を見張り、終わったら片付けるための CLI。依存は node・git・herdr だけ。
 //
 //   cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF]
-//                  [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- <エージェントへの引数>]
+//                  [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [--reply-to <指示の id>] [-- <エージェントへの引数>]
 //   cos rename <ID> <短い名前>
 //   cos send <ID> (<text> | --file <file> | --first) [--seen]
 //   cos watch [--timeout 秒(既定 3000)] [--interval 秒(既定 5)]
@@ -18,7 +18,8 @@
 //   cos reorient [--hook]   （フック用）起動時は振り返りの期限を、要約・/clear のあとは CoS の立て直しの手順を文脈に戻す
 //   cos reorient --hook --known-only   （ユーザー全体の設定のフック用）chief.json にあるセッションを `cos chief` 無しで再開したときだけ戻す
 //   cos alert "<件>" "<一言>" [--level urgent|info] [--window 分]
-//   cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--worker ID] [--link 名前=URL ...] [--supersedes ID] [--reply-to ID] [--no-free-text]
+//   cos spawn … [--reply-to <指示の id>]   ユーザーの指示（受け箱の message）から立てた依頼。以後 --worker <ID> の項目がその指示を継ぐ
+//   cos ask --title T (--body-file F | --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--worker ID] [--link 名前=URL ...] [--supersedes ID] [--no-supersede] [--reply-to ID] [--no-free-text]
 //   cos review --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
 //   cos todo --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
 //   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID] [--force]
@@ -73,7 +74,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, SERVICE_LABEL, STALE_ASK_DAYS,
-  ackItem, answerItem, answerLabel, isStaleItem, tellMisuse, answeredEvent, answeredFor, chiefsDir, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
+  ackItem, answerItem, answerLabel, duplicateOpen, replyTarget, threadHint, isStaleItem, tellMisuse, answeredEvent, answeredFor, chiefsDir, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
   messageEvent, messagesFor, nodeOnPath, noteChief, notifyNew, openCounts, overLimit, githubRepoFromUrl, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
   servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo,
 } from './inbox.mjs';
@@ -1291,9 +1292,17 @@ function cmdSpawn(argv) {
     const stale = staleWorkers(ctx, active).map((x) => x.id);
     die(`同時に動かす作業セッションは ${ctx.cfg.maxWorkers} 本まで（いま ${active.length} 本）。超えるなら --force${stale.length ? `\n片付けの候補: ${stale.join(', ')}（報告書が「完了」のまま ${ctx.cfg.staleDoneHours} 時間以上。取り込んで cos close）` : ''}`);
   }
+  // --reply-to <指示の id>: この依頼が、ユーザーが画面から出した指示の続きであることを台帳に残す。
+  // 以後、cos ask / review / todo / tell --worker <ID> は、その指示を replyTo として自動で継ぐ（画面で1つのスレッドになる）。
+  const replyMsg = opt['reply-to'] ? inboxGuard(() => replyTarget(inboxDir(), opt['reply-to'], chiefOf(ctx).dir)) : null;
   // 返事待ちが溜まっているときは、新しい依頼を立てる前にユーザーに一言断る（止めはしない）。
   try {
-    const { n, over } = overLimit(listItems(inboxDir()).items, ctx.cfg.inboxMaxOpen);
+    const inboxItems = listItems(inboxDir()).items;
+    if (!replyMsg) {
+      const hint = threadHint(inboxItems, chiefOf(ctx).dir, 'この作業セッション');
+      if (hint) console.error(`${hint}\n  このまま立てた後でも、cos ask / review / todo / tell --worker ${id} --reply-to <指示の id> を1回出せば、その指示がこの作業セッションに記録されます。`);
+    }
+    const { n, over } = overLimit(inboxItems, ctx.cfg.inboxMaxOpen);
     if (over) console.error(`注意: 受け箱の返事待ち（要返事＋確認依頼＋やること）が全 CoS で ${n} 件あります（上限 ${ctx.cfg.inboxMaxOpen}）。ユーザーが答えきれていません。この依頼を立てたことと、返事待ちが溜まっていることをユーザーに一言伝えてください（一覧は cos inbox）。`);
   } catch {
     // 受け箱が読めなくても依頼は立てる
@@ -1368,10 +1377,18 @@ function cmdSpawn(argv) {
     briefChars: [...brief].length, briefLines: brief.split('\n').length, chiefSession,
     createdAt: now(), state: 'starting', lastSeen: null,
   };
+  if (replyMsg) entry.replyTo = replyMsg.id; // この依頼の元の指示（受け箱の message の id）
   updateLedger(ctx, (l) => {
     l.workers[id] = entry;
   });
-  logEvent(ctx, { id, kind: 'spawned', where, agent, pane });
+  logEvent(ctx, { id, kind: 'spawned', where, agent, pane, replyTo: replyMsg?.id });
+  if (replyMsg?.status === 'open') {
+    try {
+      ackItem(inboxDir(), replyMsg.id, { chiefDir: chiefOf(ctx).dir }); // 指示を受けて立てた＝読んだ
+    } catch {
+      // 既読にできなくても依頼は立てる
+    }
+  }
   noteChiefSession(ctx, chiefSession, 'spawn');
   registerChief(ctx, 'spawn');
 
@@ -1416,6 +1433,7 @@ function cmdSpawn(argv) {
 
   console.log(`立てました: ${id} → エージェント ${agent}（ワークスペース「${label}」${fitted.cut ? `＝幅 ${ctx.cfg.labelWidth} に切りました（cos rename で付け直せます）` : ''}・ワークスペース ${workspace}・タブ ${tab}・ペイン ${pane}）`);
   if (R.name) console.log(`  リポジトリ: ${R.name}（${R.main}）`);
+  if (replyMsg) console.log(`  元の指示: ${replyMsg.id}「${replyMsg.title}」（この作業セッションの件を --worker ${id} で受け箱に出すと、同じスレッドにつながります）`);
   if (startCwd !== cwd) console.log(`  起動した場所: ${startCwd}（サブディレクトリの CoS）`);
   if (where === 'worktree') console.log(`  作業ツリー: ${cwd}（ブランチ ${branch}・base ${base.slice(0, 10)}）`);
   else console.log(`  作業ツリー: ${cwd}（ブランチなし・detached ${base.slice(0, 10)}・準備 ${setup === 'true' ? 'なし' : setup}）`);
@@ -3153,15 +3171,25 @@ function githubRepoFor(ctx, w = null) {
   }
 }
 
+// 作業セッションに記録された元の指示（cos spawn --reply-to）のうち、いまも --reply-to に書けるもの。無い・書けなければ null（継ぐのを黙ってやめる）。
+function workerReplyTo(dir, w, chiefDir) {
+  if (!w?.replyTo) return null;
+  try {
+    return replyTarget(dir, w.replyTo, chiefDir).id;
+  } catch {
+    return null;
+  }
+}
+
 function inboxUrlHint(dir) {
   const sv = serverInfo(dir);
   return sv ? `画面: ${sv.url}` : '画面は起動していません（cos inbox service install で常駐させる。確かめるのは cos inbox service status）';
 }
 
 function cmdInboxCreate(kind, argv) {
-  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--reply-to ID] [--repo owner/name]${kind === 'tell' ? ' [--force]' : ''}`;
+  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--no-supersede] [--reply-to ID] [--repo owner/name]${kind === 'tell' ? ' [--force]' : ''}`;
   const { multi, rest } = takeMulti(argv, ['option', 'link']);
-  const { pos, opt } = parseArgs(rest, ['no-free-text', 'force']);
+  const { pos, opt } = parseArgs(rest, ['no-free-text', 'force', 'no-supersede']);
   if (pos.length || !opt.title) throw new UsageError(usage);
   if (process.env.COS_WORKER_ID) die(`受け箱に出せるのは CoS だけです（ここは作業セッション ${process.env.COS_WORKER_ID}。CoS への連絡は報告書で）`);
   if (kind !== 'ask' && (multi.option.length || opt.recommend || opt['no-free-text'])) throw new UsageError(`選択肢を持てるのは cos ask だけです\n${usage}`);
@@ -3193,9 +3221,30 @@ ${show(hits)}
   const ctx = repoCtx();
   const dir = inboxDir();
   inboxGuard(() => {
+    const chief = chiefOf(ctx);
+    const w = opt.worker ? readLedger(ctx).workers[opt.worker] ?? null : null;
+    const before = listItems(dir).items;
+    // 元の指示（スレッド）: 明示（--reply-to）が先。無ければ、作業セッションに記録された指示（cos spawn --reply-to）を継ぐ。
+    let replyTo = opt['reply-to'] ?? null;
+    let inherited = false;
+    if (!replyTo) {
+      replyTo = workerReplyTo(dir, w, chief.dir);
+      inherited = Boolean(replyTo);
+    }
+    if (!replyTo) {
+      const hint = threadHint(before, chief.dir, 'この項目');
+      if (hint) console.error(`${hint}\n  付け忘れて出したときは、cos withdraw <出た id> で引っ込めて出し直す。`);
+    }
+    // 同じ題の未対応の項目（同じ種類・同じ作業セッション）がもうあれば、前を置き換える（--supersedes の付け忘れで同じ項目が2つ並ばないように）。
+    let supersedes = opt.supersedes ?? null;
+    let autoSuperseded = false;
+    if (!supersedes && !opt['no-supersede']) {
+      supersedes = duplicateOpen(before, { chiefDir: chief.dir, kind, title: opt.title, worker: opt.worker ?? null })?.id ?? null;
+      autoSuperseded = Boolean(supersedes);
+    }
     const item = createItem(dir, {
       kind,
-      chief: chiefOf(ctx),
+      chief,
       worker: opt.worker ?? null,
       title: opt.title,
       body,
@@ -3203,17 +3252,23 @@ ${show(hits)}
       recommend: opt.recommend ?? null,
       freeText: !opt['no-free-text'],
       links: multi.link.map((l) => parseLink(l, process.cwd())),
-      supersedes: opt.supersedes ?? null,
-      replyTo: opt['reply-to'] ?? null,
-      repo: opt.repo ?? githubRepoFor(ctx, opt.worker ? readLedger(ctx).workers[opt.worker] ?? null : null),
+      supersedes,
+      replyTo,
+      repo: opt.repo ?? githubRepoFor(ctx, w),
     });
+    // --worker と --reply-to の両方を付けて出したら、その指示を作業セッションに覚える（spawn で付け忘れても、次からは自動で継ぐ）。
+    let remembered = false;
+    if (w && item.replyTo && !w.replyTo && w.state !== 'closed') {
+      setWorker(ctx, w.id, { replyTo: item.replyTo });
+      remembered = true;
+    }
     noteChiefSession(ctx, chiefSessionFromEnv(), kind);
     registerChief(ctx, kind);
     logEvent(ctx, { kind: 'inbox', item: item.id, itemKind: kind, worker: item.worker ?? undefined, supersedes: item.supersedes ?? undefined, replyTo: item.replyTo ?? undefined });
     const via = notifyNew(item);
     console.log(item.id);
     const c = openCounts(listItems(dir).items);
-    console.error(`受け箱に出しました（${KIND_LABEL[kind]}）: ${item.title}${item.supersedes ? `・${item.supersedes} を置き換え` : ''}${item.replyTo ? `・指示 ${item.replyTo} への返事` : ''}${via.length ? `・知らせ ${via.join('＋')}` : ''}`);
+    console.error(`受け箱に出しました（${KIND_LABEL[kind]}）: ${item.title}${item.supersedes ? `・${item.supersedes} を置き換え${autoSuperseded ? '（同じ題の未対応の項目があったため。別の件として両方残すなら、cos withdraw して題を変えるか --no-supersede で出し直す）' : ''}` : ''}${item.replyTo ? `・指示 ${item.replyTo} への返事${inherited ? `（作業セッション ${w.id} の元の指示を継いだ）` : ''}${remembered ? `（以後、--worker ${w.id} の項目はこの指示を継ぐ）` : ''}` : ''}${via.length ? `・知らせ ${via.join('＋')}` : ''}`);
     console.error(`全 CoS の未対応: 要返事 ${c.ask}・確認 ${c.review}・やること ${c.todo}・読むだけ ${c.tell}。${inboxUrlHint(dir)}`);
     if (kind === 'todo') console.error('ユーザーが「やった」「できない」を押すと cos watch が answered（choice: done / cannot）で終わります（張っていなければ張る）。会話には「受け箱に n 件出しました」の1行だけを書く。');
     else if (kind !== 'tell') console.error('答えが付くと cos watch が answered で終わります（張っていなければ張る）。会話には「受け箱に n 件出しました」の1行だけを書く。');
@@ -3517,6 +3572,7 @@ function autoStaleReviews(ctx, led) {
       chief: chiefOf(ctx),
       worker: w.id,
       tag: `stale-done:${w.id}`,
+      replyTo: workerReplyTo(dir, w, chiefOf(ctx).dir),
       title: `${w.id}${w.title && w.title !== w.id ? `（${w.title}）` : ''}: 完了から ${Math.floor(s.ms / DAY_MS)} 日、取り込まれていません`,
       body: [
         `作業セッション **${w.id}** の報告書が「完了」になってから ${Math.floor(s.ms / DAY_MS)} 日たちましたが、取り込み（マージ・片付け）が済んでいません。`,
@@ -4166,7 +4222,7 @@ function selfTest() {
 }
 
 const HELP = `cos — chief of staff の作業セッション管理（herdr）
-  cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [-- 引数]
+  cos spawn <ID> --brief <file> --label <短い名前> [--title T] [--model M] [--kind claude] [--base REF] [--repo <名前|パス>] [--no-worktree] [--no-setup] [--setup] [--force] [--reply-to <指示の id>] [-- 引数]
                                             --repo: 作業ツリーを別のリポジトリに作る（台帳はこのリポジトリ・cos.json の repos で名前を付けられる）
   cos rename <ID> <短い名前>                サイドバーの名前を付け直す
   cos send <ID> (<text> | --file <file> | --first) [--seen]   作業中の相手には画面を出して止まる（見たら --seen）
@@ -4204,6 +4260,9 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
                                             受け箱に「読むだけ」を出す（開いたら既読・見張りは起こさない）
                                             題や本文にユーザーへの作業・返事の求めがあれば、出さずに終了コード 1（todo / ask / review で出し直す。本当に読むだけなら --force）
                                             --reply-to: ユーザーからの指示（画面で書かれた message）への返事。元の指示が未読なら既読にする
+                                            　　--worker <ID> の作業セッションが cos spawn --reply-to で立っていれば、書かなくてもその指示を継ぐ（画面で1つのスレッドになる）
+                                            　　同じ指示への前の「読むだけ」は、続きを出した時点で既読になる
+                                            同じ題の未対応の項目（同じ種類・同じ --worker）がもうあれば、前を置き換える（両方残すなら --no-supersede）
                                             --repo owner/name: その件の GitHub のリポジトリ（画面が #123・コミットをリンクにする宛先）。付けなければ git の origin から入れる（--worker の件はその対象のリポジトリ）
   cos inbox [--all] [--mine] [--json]       受け箱の一覧（全 CoS。★＝この CoS の項目）
   cos inbox show <id> | read <id>           項目の JSON を出す／読むだけの項目を既読にする
