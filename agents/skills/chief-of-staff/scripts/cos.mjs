@@ -3611,7 +3611,7 @@ function todoFilesFor(ctx, pick = null) {
 
 export function todoRowText(t, today) {
   const st = dueState(t, today);
-  const mark = t.done ? '' : { overdue: '過ぎた', today: '今日', future: '', anytime: '', unreadable: '読めない行' }[st];
+  const mark = t.done ? '' : { overdue: '過ぎた', today: '今日', startable: '着手できる', future: '', noted: '', anytime: '', unreadable: '読めない行' }[st];
   const due = t.readable ? t.dueText : '';
   return `${String(`#${t.n}`).padEnd(4)} ${t.id.padEnd(8)}  ${t.done ? '[x]' : '[ ]'} ${mark ? `【${mark}】` : ''}${due ? `${due}: ` : ''}${t.title}${t.note ? ` ${t.note}` : ''}${t.doneOn ? `（済 ${t.doneOn}${t.doneNote ? `: ${t.doneNote}` : ''}）` : ''}`;
 }
@@ -3620,7 +3620,7 @@ function cmdTodoFile(argv) {
   const [sub = 'list', ...rest] = argv;
   const today = localDay(Date.now());
   if (sub === 'list' || sub === 'ls') {
-    // list の --due は「期日の来たものだけ」（値を取らない）
+    // list の --due は「期日の来たものだけ」（値を取らない）。締切が今日か過ぎたものと、着手日が来たもの（後で確かめる約束は着手日で書くため）
     const { pos, opt } = parseArgs(rest, ['due', 'all', 'json']);
     if (pos.length) throw new UsageError(TODO_FILE_USAGE);
     const ctx = repoCtx();
@@ -3630,12 +3630,12 @@ function cmdTodoFile(argv) {
       let todos = [];
       let error = null;
       try {
-        todos = sortTodos(readTodoFile(file, today));
+        todos = sortTodos(readTodoFile(file, today), today);
       } catch (e) {
         error = e.code || e.message;
       }
       if (!opt.all) todos = todos.filter((t) => !t.done);
-      if (opt.due) todos = todos.filter((t) => !t.done && ['overdue', 'today'].includes(dueState(t, today)));
+      if (opt.due) todos = todos.filter((t) => !t.done && ['overdue', 'today', 'startable'].includes(dueState(t, today)));
       return { file, error, todos: todos.map((t) => ({ ...t, state: t.done ? 'done' : dueState(t, today) })) };
     });
     if (opt.json) return console.log(JSON.stringify({ today, files: out }, null, 2));
@@ -4373,7 +4373,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos answer <id> <choice> [テキスト]         受け箱の項目に CLI で返す（ask は選択肢の key・文章だけなら -。review は approve / reject。todo は done / cannot）
   cos withdraw <id> [--force]               受け箱に出した項目を取り下げる（この CoS の未対応の項目だけ）
   cos todo-file list [--due] [--all] [--json] [--file F]
-                                            この CoS の TODO ファイル（cos.json の todoFiles）の行。既定は未完了（期日の近い順）・--due は期日の来たものだけ・--all は済も
+                                            この CoS の TODO ファイル（cos.json の todoFiles）の行。既定は未完了（期日の近い順）・--due は期日の来たもの（締切が今日か過ぎた・着手日が来た）だけ・--all は済も
   cos todo-file add "<やること>" [--due 11/28|2026-12-01|いつでも] [--note 補足] [--file F] [--no-commit]
                                             TODO に1行足す（id を標準出力に出す）。--due が無ければ文頭の期日（「11/28 …」「明日 …」）を拾い、無ければ いつでも
   cos todo-file done <id か番号> [--note 一言] | undo <id か番号>   [--file F] [--no-commit]

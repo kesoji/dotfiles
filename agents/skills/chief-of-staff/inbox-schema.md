@@ -151,11 +151,13 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 
 - **読む行**: チェックボックスの行（`- [ ]`・`- [x]`。`*`・`+`・字下げも可）だけ。見出しや説明の行は読まないし、変えない。
 - **期日**: 頭の太字が日付で始まれば期日（`11/28`・`2026-12-01`。後ろに `16:30 以降`・`(金)`・`〜` が付いてもよい）。年が無ければ今年。年の境目では、今日から半年より先なら去年、300 日より前なら来年とみなす（1月に読む `12/30` は去年＝過ぎている。12月に読む `1/5` は来年）。`いつでも` で始まれば期日なし。太字の中の最初の `:`／`：`（時刻の `16:30` の `:` は除く）の前が期日、後ろがやること。太字の後ろは補足。
+- **期日の種類**（`dueKind`。書式は変えず、期日の文字から決める）: `after`（着手日）＝`以降` を含む、または日付（と曜日）のすぐ後が `〜`／`~` でその後に日付が続かない（`11/6〜`・`12/1(月)〜 毎月…`。`10/29〜11/5` のような期間は含めない）。`deadline`（締切）＝`まで` を含む・日付だけ・時刻や曜日・`朝`・`頃` などそれ以外の語が付いたもの・期間。`since`（起きた日）＝`見つかった`・`見つけた`・`判明`・`発覚`・`発生`・`起きた`・`済` を含む（`以降` と `〜` を先に見る）。`いつでも`・読めない行は `null`。
+- **期日の様子**（`state`）: 締切は過ぎたら `overdue`・当日は `today`・先は `future`。着手日は当日から `startable`（赤くしない）・先は `future`。起きた日は `noted`。
 - **読めない行**: チェックボックスはあるが、頭の太字が日付でも `いつでも` でもない行（太字が無い・`**11月初め: …**`）。一覧の最後（済の前）に「読めない行」として行の中身をそのまま出す。済にする・戻すはできる（チェックの1文字と済の印だけを変える）。
 - **済**: `- [x]`。コマンドと画面は行末に `（済 YYYY-MM-DD）` か `（済 YYYY-MM-DD: 一言）` を足す。戻すときは、この形の印だけを外す（手で書いた日付は消さない）。
 - **行の id**: `- [ ] <行の中身>`（チェックの有無と済の印を除き、前後の空白を取ったもの）の SHA-1 の頭 8 桁。行を足す・並べ替える・済にする・戻すでは変わらない。**行の文字を直すと変わる**（別の行になる）。同じ中身の行が複数あれば、ファイルの上から2つ目以降に `-2`・`-3` が付く。id はファイルの中だけで一意（別のファイルの行と同じ id になりうるので、API はファイルも指す）。
 - **番号（`#n`）**: チェックボックスの行のファイルの上からの通し番号。行を足す・消すとずれるので、直前の `cos todo-file list` のものを使う。
-- **並び**: 未完了を期日の近い順（過ぎたものが先）→ `いつでも` → 読めない行、そのあと済んだもの（終えた日の新しい順）。同じならファイルの順。
+- **並び**: 未完了を `overdue` → `today` → `startable` → `future` → `noted` → `いつでも` → 読めない行（それぞれ期日の近い順）、そのあと済んだもの（終えた日の新しい順）。同じならファイルの順。
 - **足す場所**: 「済」の見出し（`## 済`）より前の、最後のチェックボックスの行の次。行がまだ無ければ「未完了」の見出しの下、見出しも無ければ（「済」の見出しの前の）末尾。ほかの行は1文字も変えない。
 - **書き換え**: ファイルごとのロック（隣の `.<名前>.lock`・30 秒で古いものは片付ける）の中で読み直してから当て、一時ファイル → rename で置き換える。本文が変わったら、git が追っているファイルならそのファイルだけをコミットする（`git commit --only`。メッセージは `TODO: 足す: …`／`TODO: 済にする: …`／`TODO: 戻す: …`。ほかのファイルのステージ済みの変更は残る。追っていないファイル・git の外では何もしない）。コミットできなくても書き換えは残り、理由を返す。push はしない。
 
@@ -193,7 +195,7 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 | `POST /api/items/:id/read` | `tell` を既読にして、項目を返す（もう既読なら何も変えない） |
 | `GET /api/chiefs` | `{ v, now, chiefs: [{ name, dir, seenAt, watch: { alive, since, lastAt }, unread, workers: [...], retro, error }] }`。記録されている CoS（名前順）と今の状況。`watch.alive` は見張りが動いているか、`since` は動いている見張りの開始、`lastAt` は最後に見張りが動いていた時刻。`unread` はその CoS 宛ての未読の指示の件数。`workers` は閉じていない作業セッション `{ id, label, title, state, status, statusAt, report, reportUpdated, createdAt, staleDone? }`（`state` は台帳の状態、`status` は見張りが最後に見た herdr の状態＝`working`／`idle`／`done`／`blocked`／`gone`、`report` は報告書の「状態」、`staleDone` は取り込み待ちの経過ミリ秒）。`retro` は `{ dueAt, due, intervalDays }`。その CoS の台帳が読めないときは `error` に理由（ほかの CoS は出す） |
 | `POST /api/messages` | 本文 `{ "to": CoS の dir, "text": 指示 }`。`to` は `GET /api/chiefs` の `dir`。指示（`kind: "message"`）を作って、項目を返す。宛先が記録に無い・空・長すぎる（4000 字超）は 400 |
-| `GET /api/todos` | `{ v, now, today, chiefs: [{ name, dir, files: [{ path, label, error, todos: [...] }] }] }`。TODO ファイルを持つ CoS だけ（記録されている CoS の `dir` の `.claude/cos.json` の `todoFiles`）。`today` はサーバーのローカルの今日。`label` は CoS のディレクトリからの相対パス。読めないファイルは `error` に理由が入り `todos` は空。行は `{ id, n, done, state, due, dueText, title, note, doneOn, doneNote, items }`。`state` は `overdue`（過ぎた）・`today`・`future`・`anytime`・`unreadable`（読めない行。`title` は行の中身そのまま）・`done`。`due` は `YYYY-MM-DD`（無ければ `null`）、`dueText` は書かれている期日の文字、`items` はその行から出た未対応の受け箱の項目の id。並びは上の「並び」 |
+| `GET /api/todos` | `{ v, now, today, chiefs: [{ name, dir, files: [{ path, label, error, todos: [...] }] }] }`。TODO ファイルを持つ CoS だけ（記録されている CoS の `dir` の `.claude/cos.json` の `todoFiles`）。`today` はサーバーのローカルの今日。`label` は CoS のディレクトリからの相対パス。読めないファイルは `error` に理由が入り `todos` は空。行は `{ id, n, done, state, due, dueKind, dueText, title, note, doneOn, doneNote, items }`。`state` は `overdue`（締切を過ぎた）・`today`（締切が今日）・`startable`（着手日が来た）・`future`・`noted`（起きた日だけ）・`anytime`・`unreadable`（読めない行。`title` は行の中身そのまま）・`done`。`due` は `YYYY-MM-DD`（無ければ `null`）、`dueText` は書かれている期日の文字、`items` はその行から出た未対応の受け箱の項目の id。並びは上の「並び」 |
 | `POST /api/todos` | 本文 `{ "to": CoS の dir, "text": やること, "due"?: 期日, "note"?: 補足, "file"?: path }`。1行足して `{ file, changed, commit, todo }` を返す。`due` が無ければ `text` の文頭の期日（`11/28 …`・`2026-12-01: …`・`今日`・`明日`・`あさって`）を拾い、無ければ `いつでも`。`file` が無ければその CoS の最初の TODO ファイル。`commit` は `{ committed, sha }` か `{ committed: false, reason }`（`reason` が `null` ならコミットするものが無い） |
 | `POST /api/todos/done` | 本文 `{ "to": CoS の dir, "file": path, "id": 行の id, "done": true \| false, "note"?: 一言 }`。済にする・未完了に戻す。返すものは上と同じ。もうその状態なら `changed: false` |
 | `GET /api/events` | 押し出し（SSE）。つないだときに `hello`、受け箱か TODO ファイルが変わるたびに `change` が届く（データは `{ "rev": 数 }`）。受け取ったら `GET /api/items`・`GET /api/todos` で全件を取り直す |

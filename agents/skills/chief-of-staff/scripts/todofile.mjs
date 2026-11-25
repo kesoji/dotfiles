@@ -42,6 +42,20 @@ export function dueDayFromHead(head, today) {
   return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+// 期日の種類（太字の期日の文字 dueText から決める。ファイルの書式は変えない）:
+//   after     着手日（その日まではやらない）。「以降」を含む、または `11/6〜`・`12/1(月)〜 毎月…` のように日付のすぐ後が 〜／~ で、
+//             その後に日付が続かない（`10/29〜11/5` のような期間は after にしない）
+//   since     起きた日（約束ではなく経緯）。「見つかった」「判明」「発覚」「発生」「起きた」「済」を含む
+//   deadline  締切。「まで」を含むもの・日付だけ（時刻や曜日、「朝」「頃」が付くだけ）・それ以外の語が付いたもの
+export function dueKindOf(dueText) {
+  const s = String(dueText ?? '');
+  if (/以降/.test(s)) return 'after';
+  if (/^\s*(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s*[（(][月火水木金土日][）)])?\s*[〜~](?!\s*\d)/.test(s)) return 'after';
+  if (/まで/.test(s)) return 'deadline';
+  if (/見つかった|見つけた|判明|発覚|発生|起きた|済/.test(s)) return 'since';
+  return 'deadline';
+}
+
 // cos.json の todoFiles の1つを絶対パスにする（`~` は家・相対は base から）。
 export function resolveTodoPath(p, base, home) {
   if (p === '~') return home;
@@ -72,6 +86,7 @@ function idSource(line) {
 //   line     ファイルの中の行（0 から）
 //   readable 頭の太字が期日か「いつでも」で始まる（false は「読めない行」。title は行の中身そのまま）
 //   due      期日（YYYY-MM-DD）。いつでも・読めない行は null
+//   dueKind  期日の種類（dueKindOf: after＝着手日・deadline＝締切・since＝起きた日）。いつでも・読めない行は null
 //   dueText  書かれている期日の文字（「11/22 16:30 以降」など）
 //   note     太字の後ろの文字（補足。済の印は除く）
 export function parseTodos(text, today) {
@@ -94,7 +109,7 @@ export function parseTodos(text, today) {
       doneNote = dm[2] ?? null;
       rest = rest.slice(0, dm.index);
     }
-    const t = { id: k === 1 ? base : `${base}-${k}`, n: todos.length + 1, line, done, readable: false, anytime: false, due: null, dueText: null, title: rest.trim(), note: '', doneOn, doneNote, raw };
+    const t = { id: k === 1 ? base : `${base}-${k}`, n: todos.length + 1, line, done, readable: false, anytime: false, due: null, dueKind: null, dueText: null, title: rest.trim(), note: '', doneOn, doneNote, raw };
     const b = rest.match(/^\*\*\s*(.+?)\s*\*\*(.*)$/);
     if (b) {
       const bold = b[1];
@@ -106,6 +121,7 @@ export function parseTodos(text, today) {
         t.anytime = anytime;
         t.due = due;
         t.dueText = sep < 0 ? (anytime ? ANYTIME : bold) : bold.slice(0, sep).trim();
+        t.dueKind = anytime ? null : dueKindOf(t.dueText);
         t.title = sep < 0 ? (anytime ? bold.slice(ANYTIME.length).trim() || bold : bold) : bold.slice(sep + 1).trim();
         t.note = b[2].replace(/^\s*[:：]\s*/, '').trim();
       }
@@ -115,19 +131,31 @@ export function parseTodos(text, today) {
   return { lines, todos, eol: /\r\n/.test(text) ? '\r\n' : '\n' };
 }
 
-// 並び: 未完了を先に（期日の近い順 → いつでも → 読めない行）、済んだものは最後（終えた日の新しい順）。同じならファイルの順。
-export function sortTodos(todos) {
-  const rank = (t) => (t.done ? 3 : !t.readable ? 2 : t.anytime ? 1 : 0);
-  return [...todos].sort((a, b) => rank(a) - rank(b)
-    || (a.done ? String(b.doneOn ?? '').localeCompare(String(a.doneOn ?? '')) : String(a.due ?? '').localeCompare(String(b.due ?? '')))
-    || a.n - b.n);
-}
-
-// 期日の様子: overdue（過ぎた）・today・future・anytime・unreadable。
+// 期日の様子（未完了の行）:
+//   overdue（締切を過ぎた）・today（締切が今日）・startable（着手日が今日か過ぎた＝着手できる。急ぎではない）・
+//   future（締切も着手日もまだ先）・noted（起きた日が書いてあるだけ）・anytime・unreadable
 export function dueState(t, today) {
   if (!t.readable) return 'unreadable';
   if (t.anytime) return 'anytime';
+  if (t.dueKind === 'since') return 'noted';
+  if (t.dueKind === 'after') return t.due <= today ? 'startable' : 'future';
   return t.due < today ? 'overdue' : t.due === today ? 'today' : 'future';
+}
+
+// 並びの順（画面の app.js の TF_RANK も同じ）。
+export const STATE_RANK = { overdue: 0, today: 1, startable: 2, future: 3, noted: 4, anytime: 5, unreadable: 6, done: 7 };
+
+// 並び: 未完了を先に（締切を過ぎた → 今日 → 着手できる → 先のもの → 起きた日だけ → いつでも → 読めない行）、それぞれ期日の近い順。
+// 済んだものは最後（終えた日の新しい順）。同じならファイルの順。today が無ければ過ぎた・今日・着手・先を分けず期日の順。
+export function sortTodos(todos, today = null) {
+  const rank = (t) => {
+    if (t.done) return STATE_RANK.done;
+    const st = dueState(t, today ?? '');
+    return !today && ['overdue', 'today', 'startable', 'future'].includes(st) ? 0 : STATE_RANK[st];
+  };
+  return [...todos].sort((a, b) => rank(a) - rank(b)
+    || (a.done ? String(b.doneOn ?? '').localeCompare(String(a.doneOn ?? '')) : String(a.due ?? '').localeCompare(String(b.due ?? '')))
+    || a.n - b.n);
 }
 
 function addDays(today, n) {
@@ -448,8 +476,31 @@ export function selfTestTodoFile(assert) {
   const d2 = by('印つきの用事');
   assert(d1.done && d1.due === '2026-11-10' && d1.doneOn === null && d1.note === '11/11', 'todofile: 手で書いた済の行');
   assert(d2.done && d2.doneOn === '2026-11-13' && d2.doneNote === '電話で済んだ' && d2.note === '', `todofile: 済の印（終えた日と一言） ${JSON.stringify(d2)}`);
-  assert(['overdue', 'today', 'future', 'anytime', 'unreadable'].join() === [by('請求書を出す'), c, by('歯医者の予約'), a, u1].map((t) => dueState(t, D)).join(), 'todofile: 期日の様子');
-  assert(sortTodos(P.todos).map((t) => t.n).join() === '2,3,4,1,5,6,8,7', `todofile: 期日の近い順 → いつでも → 読めない行 → 済（終えた日の新しい順） ${sortTodos(P.todos).map((t) => t.n).join()}`);
+  assert(['overdue', 'startable', 'future', 'anytime', 'unreadable'].join() === [by('請求書を出す'), c, by('歯医者の予約'), a, u1].map((t) => dueState(t, D)).join(), 'todofile: 期日の様子');
+  assert(sortTodos(P.todos).map((t) => t.n).join() === '2,3,4,1,5,6,8,7' && sortTodos(P.todos, D).map((t) => t.n).join() === '2,3,4,1,5,6,8,7', `todofile: 期日の近い順 → いつでも → 読めない行 → 済（終えた日の新しい順） ${sortTodos(P.todos).map((t) => t.n).join()}`);
+  // 期日の種類（着手日・締切・起きた日）。書式は変えずに、太字の期日の文字から決める
+  const K = parseTodos([
+    '- [ ] **12/01 以降: 古い設定を消す**',
+    '- [ ] **11/6〜 新しい版の公開後: 様子を見る**',
+    '- [ ] **12/1(月)〜 毎月の最初の平日: 請求をまとめる**',
+    '- [ ] **11/28 まで: 書類を出す**',
+    '- [ ] **11/28: 本を返す**',
+    '- [ ] **11/27(金) 10:00: 電話する**',
+    '- [ ] **11/26 朝: 鉢に水をやる**',
+    '- [ ] **10/29〜11/5 の平日: 窓口に行く**',
+    '- [ ] **11/4 見つかった: 表示の崩れ**',
+    '- [ ] **11/9 確認済み: 古い通知**',
+    '- [ ] **11/20 以降: 着手済みの片付け**',
+    '- [ ] **いつでも: 机を片付ける**',
+  ].join('\n'), D).todos;
+  assert(K.map((t) => t.dueKind ?? '-').join() === 'after,after,after,deadline,deadline,deadline,deadline,deadline,since,since,after,-', `todofile: 期日の種類（以降・〜は着手日、まで・日付だけ・期間は締切、見つかった・済は起きた日） ${K.map((t) => t.dueKind)}`);
+  assert(dueKindOf('11/6 〜') === 'after' && dueKindOf('11/6~11/8') === 'deadline' && dueKindOf('2026-12-01〜') === 'after' && dueKindOf('11/30 以降に再開') === 'after' && dueKindOf('12/1 から 12/5 まで') === 'deadline', 'todofile: 〜の後に日付が無ければ着手日・あれば期間');
+  // D は 2026-11-25。着手日は当日から startable（赤くしない）、締切は過ぎたら overdue、起きた日は noted
+  const KS = K.map((t) => dueState(t, D));
+  assert(KS.join() === 'future,startable,future,future,future,future,future,overdue,noted,noted,startable,anytime', `todofile: 種類ごとの様子 ${KS}`);
+  assert(dueState(parseTodos('- [ ] **11/25 以降: 今日から**', D).todos[0], D) === 'startable' && dueState(parseTodos('- [ ] **11/25: 今日まで**', D).todos[0], D) === 'today', 'todofile: 着手日の当日は startable・締切の当日は today');
+  const KO = sortTodos(K, D).map((t) => t.n).join();
+  assert(KO === '8,2,11,7,6,4,5,1,3,9,10,12', `todofile: 締切を過ぎた → 今日 → 着手できる → 先のもの → 起きた日 → いつでも ${KO}`);
   // 年の境目（cos reorient と同じ読み方）
   assert(parseTodos('- [ ] **12/30: 年末**\n- [ ] **1/5: 年明け**', '2027-01-02').todos.map((t) => t.due).join() === '2026-12-30,2027-01-05', 'todofile: 1月に読む 12/30 は去年・1/5 は今年');
   assert(parseTodos('- [ ] **1/5: 年明け**', '2026-12-20').todos[0].due === '2027-01-05', 'todofile: 12月に読む 1/5 は来年');

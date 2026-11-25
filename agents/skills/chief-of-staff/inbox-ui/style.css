@@ -298,36 +298,45 @@ main > .chiefs[hidden] { display: none; }
 .jump { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 0 9px; font-size: 12px; cursor: pointer; color: var(--accent); white-space: nowrap; }
 .jump:hover { border-color: var(--accent); }
 
-/* TODO（CoS の TODO ファイルの行。app.js の todoRow）: チェック・期日・やること。過ぎた期日は赤、今日の分は地色を付けて目立たせる */
+/* TODO（CoS の TODO ファイルの行。app.js の todoRow）: チェック・期日・やること。締切を過ぎたものは赤、今日の分は地色を付けて目立たせる。
+   着手日が来たもの（startable）は控えめな地色だけ。行ごとに grid の固定幅の列（チェック・期日・本文）にして、本文の始まりを全行で揃える */
 .counts .kind .due-n { margin-left: 5px; color: var(--danger); font-weight: 600; }
 .counts .kind[aria-pressed="true"] .due-n { color: inherit; }
 .tf-add { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .tf-add input[type="text"], .tf-add select { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-height: 34px; }
 .tf-add input[type="text"] { flex: 1; min-width: 12em; }
-.tf-row { display: flex; gap: 4px 10px; align-items: baseline; padding: 6px 12px 6px 4px; border-top: 1px solid var(--line); min-width: 0; }
+.tf-row { display: grid; grid-template-columns: auto 8.5em minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; padding: 6px 12px 6px 4px; border-top: 1px solid var(--line); min-width: 0; }
 .tf-row:first-child { border-top: 0; }
-.tf-box { flex: none; align-self: stretch; display: flex; align-items: flex-start; padding: 3px 4px 0 8px; cursor: pointer; }
+.tf-box { grid-column: 1; grid-row: 1; align-self: stretch; display: flex; align-items: flex-start; padding: 3px 4px 0 8px; cursor: pointer; }
 .tf-box input { width: 17px; height: 17px; margin: 0; accent-color: var(--ok); cursor: pointer; }
-.tf-due { flex: none; min-width: 4.2em; font-size: 12.5px; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tf-due b { margin-left: 5px; font-weight: 600; }
-.tf-main { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.tf-due { grid-column: 2; grid-row: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; color: var(--sub); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tf-due b { display: block; font-weight: 600; }
+.tf-main { grid-column: 3; grid-row: 1; min-width: 0; overflow-wrap: anywhere; }
 .tf-title a, .tf-note a { color: var(--accent); }
 .tf-title code, .tf-note code { background: var(--code); border-radius: 4px; padding: .05em .35em; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tf-note { color: var(--sub); font-size: 13px; margin-left: 8px; }
 .tf-main .jump { margin-left: 8px; }
-.tf-row > .tag { flex: none; font-size: 12px; }
+.tf-row > .tag { grid-column: 4; grid-row: 1; font-size: 12px; }
 .tf-row[data-state="overdue"] { box-shadow: inset 3px 0 0 var(--danger); }
 .tf-row[data-state="overdue"] .tf-due { color: var(--danger); font-weight: 600; }
 .tf-row[data-state="today"] { background: color-mix(in srgb, var(--ask) 11%, transparent); box-shadow: inset 3px 0 0 var(--ask); }
 .tf-row[data-state="today"] .tf-due { color: var(--ask); font-weight: 600; }
 .tf-row[data-state="today"] .tf-title { font-weight: 650; }
+.tf-row[data-state="startable"] { background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.tf-row[data-state="startable"] .tf-due b { color: var(--ok); }
+.tf-row[data-state="noted"] .tf-due b { font-weight: 400; }
 .tf-row[data-state="unreadable"] .tf-due { font-style: italic; }
 .tf-row[data-state="done"] .tf-title { color: var(--sub); text-decoration: line-through; }
 .tf-done { margin-top: 8px; }
 .tf-done > summary { cursor: pointer; color: var(--sub); font-size: 13px; margin-bottom: 6px; }
 .card.flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 狭い画面: 期日を本文の上に1行で出す（チェックの右の列に、期日 → 本文の順） */
 @media (max-width: 520px) {
-  .tf-row { flex-wrap: wrap; }
-  .tf-main { flex-basis: 100%; padding-left: 37px; }
+  .tf-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .tf-box { grid-row: 1 / span 2; }
+  .tf-due { grid-column: 2; grid-row: 1; }
+  .tf-due b { display: inline; margin-left: 6px; }
+  .tf-main { grid-column: 2 / -1; grid-row: 2; }
+  .tf-row > .tag { grid-column: 3; grid-row: 1; }
 }
 .tf-add-hint { color: var(--sub); font-size: 12.5px; margin: 4px 0 8px; }

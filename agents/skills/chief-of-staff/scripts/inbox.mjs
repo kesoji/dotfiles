@@ -866,10 +866,11 @@ function localDay(ms) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// 画面に渡す行。state は overdue（過ぎた）・today・future・anytime・unreadable（読めない行）・done。
+// 画面に渡す行。state は overdue（締切を過ぎた）・today（締切が今日）・startable（着手日が来た）・future・noted（起きた日だけ）・
+// anytime・unreadable（読めない行）・done。dueKind は after（着手日）・deadline（締切）・since（起きた日）・null。
 export function publicTodo(t, today) {
   return {
-    id: t.id, n: t.n, done: t.done, state: t.done ? 'done' : dueState(t, today), due: t.due, dueText: t.dueText, title: t.title, note: t.note,
+    id: t.id, n: t.n, done: t.done, state: t.done ? 'done' : dueState(t, today), due: t.due, dueKind: t.dueKind, dueText: t.dueText, title: t.title, note: t.note,
     doneOn: t.doneOn, doneNote: t.doneNote, items: [],
   };
 }
@@ -888,7 +889,7 @@ export function todoBoards(chiefList, todoFiles, today, items = [], read = (f) =
       files: files.map((path) => {
         const label = path.startsWith(c.dir + sep) ? path.slice(c.dir.length + 1) : basename(path);
         try {
-          const todos = sortTodos(parseTodos(read(path), today).todos).map((t) => ({
+          const todos = sortTodos(parseTodos(read(path), today).todos, today).map((t) => ({
             ...publicTodo(t, today),
             items: linked.filter((x) => x.todoLine.id === t.id && x.todoLine.file === path).map((x) => x.id),
           }));
@@ -1534,7 +1535,7 @@ export function selfTestTodoApi(assert) {
     mkdirSync(join(hub, 'notes'));
     writeFileSync(join(hub, '.claude', 'cos.json'), JSON.stringify({ todoFiles: ['TODO.md', 'notes/T2.md', 'none.md'] }));
     writeFileSync(file, '## 未完了\n\n- [ ] **いつでも: 机**\n- [ ] **11/20: 請求書**（封筒）\n- [ ] **11/25: 今日の分**\n- [ ] 読めない行\n- [x] **11/1: 済んだ**（済 2026-11-02）\n');
-    writeFileSync(file2, '- [ ] **12/1: 二つ目**\n');
+    writeFileSync(file2, '- [ ] **12/1: 二つ目**\n- [ ] **11/6〜 公開後: 様子を見る**\n- [ ] **11/4 見つかった: 表示の崩れ**\n- [ ] **12/3 以降: 古い設定を消す**\n- [ ] **11/22 まで: 書類**\n');
     const H = { name: 'hub', dir: hub };
     const O = { name: 'other', dir: other };
     const opts = (body = null) => ({ body, chiefs: () => [H, O], today: D, commit: false });
@@ -1544,6 +1545,10 @@ export function selfTestTodoApi(assert) {
     const [f1, f2, f3] = g0.json.chiefs[0].files;
     assert(f1.label === 'TODO.md' && f2.label === 'notes/T2.md' && f3.error === 'ENOENT' && f3.todos.length === 0, `todo api: ファイルごと・読めないファイルは error ${JSON.stringify([f1.label, f2.label, f3.error])}`);
     assert(f1.todos.map((t) => t.state).join() === 'overdue,today,anytime,unreadable,done' && f1.todos[0].title === '請求書' && f1.todos[0].note === '（封筒）' && f1.todos[4].doneOn === '2026-11-02', `todo api: 期日の近い順・state ${f1.todos.map((t) => t.state)}`);
+    // 期日の種類: 着手日（以降・〜）は来ても赤くしない（startable）、締切は過ぎたら overdue、起きた日は noted。並びは 過ぎた → 着手できる → 先 → 起きた日
+    assert(f2.todos.map((t) => `${t.state}:${t.dueKind}`).join() === 'overdue:deadline,startable:after,future:deadline,future:after,noted:since', `todo api: dueKind と state ${f2.todos.map((t) => `${t.state}:${t.dueKind}`)}`);
+    assert(f1.todos[2].dueKind === null && f1.todos[3].dueKind === null, 'todo api: いつでも・読めない行の dueKind は null');
+    writeFileSync(file2, '- [ ] **12/1: 二つ目**\n');
     // 足す
     const a1 = handleApi(dir, 'POST', '/api/todos', opts({ to: hub, text: '11/28 銀行に行く' }));
     assert(a1.status === 200 && a1.json.file === file && a1.json.todo.due === '2026-11-28' && a1.json.todo.state === 'future' && readFileSync(file, 'utf8').includes('- [ ] **11/28: 銀行に行く**\n'), `todo api: 足す（文頭の期日） ${JSON.stringify(a1.json)}`);

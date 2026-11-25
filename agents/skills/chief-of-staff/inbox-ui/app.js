@@ -579,19 +579,27 @@ const compose = (() => {
 
 // ───── TODO（CoS の TODO ファイルの行。受け箱の項目とは別で、足しても済にしても CoS は起きない） ─────
 // 行は { key, chief, dir, file, label, t }（t は GET /api/todos の行）。並びはサーバーの state と期日で決める。
-const TF_RANK = { overdue: 0, today: 0, future: 0, anytime: 1, unreadable: 2, done: 3 };
+// 締切を過ぎた → 今日 → 着手できる → 先のもの → 起きた日だけ → いつでも → 読めない行 → 済（todofile.mjs の STATE_RANK と同じ）。知らない state は先のものと同じに
+const TF_RANK = { overdue: 0, today: 1, startable: 2, future: 3, noted: 4, anytime: 5, unreadable: 6, done: 7 };
+const tfRank = (t) => TF_RANK[t.state] ?? TF_RANK.future;
 function todoRows(boards) {
   const rows = boards.flatMap((b) => b.files.flatMap((f) => f.todos.map((t) => ({ id: `${b.dir}\n${f.path}\n${t.id}`, chief: b.name, dir: b.dir, file: f.path, label: f.label, t }))));
-  return rows.sort((a, b) => TF_RANK[a.t.state] - TF_RANK[b.t.state]
+  return rows.sort((a, b) => tfRank(a.t) - tfRank(b.t)
     || (a.t.done ? String(b.t.doneOn || '').localeCompare(String(a.t.doneOn || '')) : String(a.t.due || '').localeCompare(String(b.t.due || '')))
     || a.chief.localeCompare(b.chief) || a.t.n - b.t.n);
 }
-// 期日の添え書き（「3日過ぎ」「今日」「明日」「あと5日」）。日付の読み取りはサーバーがする（due は YYYY-MM-DD）。
+// 期日の添え書き。日付の読み取りと種類（dueKind）はサーバーがする（due は YYYY-MM-DD）。
+//   締切: 「3日過ぎ」「今日」「明日」「あと5日」
+//   着手日（after）: 来る前は「明日」「あと5日」、当日は「今日から」、過ぎたら「着手できる」（赤くしない）
+//   起きた日（since）: 「3日前」
 function dueNote(t) {
   if (!t.due || !state.today) return '';
   const d = Math.round((Date.parse(`${t.due}T00:00:00Z`) - Date.parse(`${state.today}T00:00:00Z`)) / 86400000);
+  if (t.dueKind === 'since') return d < 0 ? `${-d}日前` : '';
+  if (t.dueKind === 'after' && d <= 0) return d === 0 ? '今日から' : '着手できる';
   return d < 0 ? `${-d}日過ぎ` : d === 0 ? '今日' : d === 1 ? '明日' : d <= 14 ? `あと${d}日` : '';
 }
+const DUE_KIND_JA = { after: '着手日（この日から）', deadline: '締切', since: '起きた日' };
 async function todoAct(r, done, box) {
   if (state.busy.has(r.id)) return;
   state.busy.add(r.id);
@@ -620,7 +628,7 @@ function todoRow(r) {
   const box = h('input', { type: 'checkbox', checked: t.done, 'aria-label': t.done ? `未完了に戻す: ${t.title}` : `済にする: ${t.title}`, title: t.done ? '未完了に戻す' : '済にする', onchange: () => todoAct(r, box.checked, box) });
   const note = dueNote(t);
   const due = t.state === 'unreadable' ? h('span', { class: 'tf-due', text: '期日が読めない', title: '頭の太字が期日でも「いつでも」でもない行です。TODO ファイルを手で直すと期日で並びます（この行の文字は変えません）' })
-    : h('span', { class: 'tf-due' }, t.dueText || 'いつでも', !t.done && note && note !== t.dueText ? h('b', { text: note }) : null);
+    : h('span', { class: 'tf-due', title: t.dueKind ? DUE_KIND_JA[t.dueKind] : '' }, h('span', { class: 'tf-due-text', text: t.dueText || 'いつでも' }), !t.done && note && note !== t.dueText ? h('b', { text: note }) : null);
   const linked = (t.items || []).filter((id) => document.getElementById(`item-${id}`) || state.items.some((x) => x.id === id && x.status === 'open'));
   return h('div', { class: 'tf-row', 'data-state': t.state },
     h('label', { class: 'tf-box' }, box),
