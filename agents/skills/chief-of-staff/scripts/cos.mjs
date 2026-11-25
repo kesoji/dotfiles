@@ -79,7 +79,7 @@ import {
   servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo, closeTodoLine, todoLineRef, selfTestTodoApi,
 } from './inbox.mjs';
 import {
-  TodoError, addTodoToFile, dueDayFromHead, dueState, findTodo, readTodoFile, resolveTodoPath, setTodoDoneInFile, selfTestTodoFile, sortTodos, todoFilesOf,
+  TodoError, addTodoToFile, dueState, findTodo, parseTodos, readTodoFile, resolveTodoPath, setTodoDoneInFile, selfTestTodoFile, sortTodos, todoFilesOf,
 } from './todofile.mjs';
 export { resolveTodoPath };
 
@@ -435,23 +435,24 @@ export function localDay(ms) {
 
 // TODO の行の期日（YYYY-MM-DD）。未完了の行（`- [ ]`）の頭の太字が日付で始まるときだけ読む。
 // 「2026-11-22」「11/22」「11/22 16:30 以降」「11/21(金) 以降」など。読めなければ null。
-// 年の扱い（年が無ければ今年・年の境目）と日付の読み方は todofile.mjs の dueDayFromHead（cos todo-file・受け箱の画面と同じ関数）。
+// 行の読み方・年の扱い・期日の種類は todofile.mjs の parseTodos（cos todo-file・受け箱の画面と同じ関数）。
 // 太字の途中の日付（「…は 11/4 本番済み」のような経緯）は期日でないので読まない。
+// 起きた日（「11/4 見つかった」「11/9 確認済み」＝dueKind since）は約束ではないので null。
 export function todoDueDay(line, today) {
-  const m = String(line).match(/^\s*[-*+]\s+\[ \]\s+\*\*(.*)$/);
-  return m ? dueDayFromHead(m[1], today) : null;
+  const t = parseTodos(String(line), today).todos[0];
+  return t && !t.done && t.readable && t.due && t.dueKind !== 'since' ? t.due : null;
 }
 
-// TODO の本文から、期日が today（YYYY-MM-DD）か過去の未完了の行を返す（行の頭から最大 width 文字）。
-// 今日が期日のものを先に、そのあと過ぎたものを、それぞれファイルの順で。
+// TODO の本文から「期日の来た」未完了の行を返す（行の頭から最大 width 文字）: 締切が today（YYYY-MM-DD）か過ぎたもの（dueState の
+// overdue・today）と、着手日が来たもの（startable。後で確かめる約束は着手日で書くため）。起きた日（noted）・先のもの・いつでもは出さない。
+// 期日が今日のものを先に、そのあと過ぎたものを、それぞれファイルの順で。
 export function dueTodos(text, today, width = 200) {
   const now = [];
   const past = [];
-  for (const line of String(text).split(/\r?\n/)) {
-    const due = todoDueDay(line, today);
-    if (!due || due > today) continue;
-    const t = line.trim();
-    (due === today ? now : past).push(t.length > width ? `${t.slice(0, width)}…` : t);
+  for (const t of parseTodos(String(text), today).todos) {
+    if (t.done || !['overdue', 'today', 'startable'].includes(dueState(t, today))) continue;
+    const line = t.raw.trim();
+    (t.due === today ? now : past).push(line.length > width ? `${line.slice(0, width)}…` : line);
   }
   return [...now, ...past];
 }
@@ -4314,6 +4315,18 @@ function selfTest() {
     assert(order[0].includes('今日') && order[1].includes('古い'), 'todo: 今日が期日のものを先に');
     assert(dueTodos(`- [ ] **11/22: ${'あ'.repeat(300)}**`, '2026-11-22')[0].length === 201, 'todo: 長い行は切る');
     assert(dueTodos('', '2026-11-22').length === 0, 'todo: 空');
+    // 期日の種類（todofile.mjs の dueKind と同じ）: 起きた日は出さない・着手日の来たものは出す・まだ先の着手日は出さない
+    assert(todoDueDay('- [ ] **11/4 見つかった: 表示の崩れ**', '2026-11-22') === null && todoDueDay('- [ ] **11/9 確認済み: 古い通知**', '2026-11-22') === null, 'todo: 起きた日は期日にしない');
+    const kinds = dueTodos([
+      '- [ ] **11/4 見つかった: 表示の崩れ**',
+      '- [ ] **11/6〜 公開後: 様子を見る**',
+      '- [ ] **11/20 以降: 古い設定を消す**',
+      '- [ ] **11/22 以降: 今日から**',
+      '- [ ] **11/25 以降: まだ先**',
+      '- [ ] **11/21 まで: 書類**',
+      '- [ ] **いつでも: 机**',
+    ].join('\n'), '2026-11-22');
+    assert(kinds.join('|') === '- [ ] **11/22 以降: 今日から**|- [ ] **11/6〜 公開後: 様子を見る**|- [ ] **11/20 以降: 古い設定を消す**|- [ ] **11/21 まで: 書類**', `todo: 起きた日・先の着手日・いつでもは出さず、着手日の来たものと締切を過ぎたものを出す ${JSON.stringify(kinds)}`);
     assert(resolveTodoPath('~/m/todo.md', '/r', '/h') === '/h/m/todo.md' && resolveTodoPath('/a/t.md', '/r', '/h') === '/a/t.md'
       && resolveTodoPath('memo/t.md', '/r', '/h') === '/r/memo/t.md', 'todo: パスの解決');
   }
