@@ -499,6 +499,7 @@ function render() {
   $('counts').replaceChildren('要返事 ', h('b', { text: String(c.ask) }), ' ・ 確認 ', h('b', { text: String(c.review) }), ' ・ 読むだけ ', h('b', { text: String(c.tell) }));
   const waiting = c.ask + c.review;
   document.title = `${waiting ? `(${waiting}) ` : ''}CoS 受け箱`;
+  { const fav = $('favicon'); const want = waiting ? 'favicon-alert.svg' : 'favicon.svg'; if (fav && !fav.getAttribute('href').endsWith(want)) fav.setAttribute('href', want); } // 返事待ちがあればタブのアイコンに赤丸
   // アプリ（PWA）のアイコンに、返事待ち（要返事＋確認依頼）の件数を出す。使えないブラウザでは何もしない。
   try {
     if (waiting && navigator.setAppBadge) navigator.setAppBadge(waiting).catch(() => {});
