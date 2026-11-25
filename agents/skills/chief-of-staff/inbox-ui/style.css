@@ -187,23 +187,32 @@ body.view main { display: block; max-width: 1100px; }
 /* CoS の状況と指示（全幅） */
 main > .chiefs { flex: 1 1 100%; }
 main > .chiefs[hidden] { display: none; }
-.chief-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px; }
-.chief-card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 10px; min-width: 0; font-size: 13px; }
+.chief-cards { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.chief-card { flex: 1 1 var(--card-min, 320px); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 7px; min-width: 0; font-size: 13px; }
 .chief-card.picked { border-color: var(--accent); }
-.ch-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ch-head { display: flex; gap: 4px 10px; align-items: center; flex-wrap: wrap; }
 .ch-name { border: 0; background: none; padding: 0; cursor: pointer; font-size: 13.5px; }
-.watch { color: var(--sub); font-size: 12.5px; }
+.watch, .ch-n { color: var(--sub); font-size: 12.5px; }
 .watch::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; background: var(--tell); }
 .watch.on::before { background: var(--ok); }
 .watch.off { color: var(--ask); }
 .watch.off::before { background: var(--ask); }
 .unread-n { background: var(--code); border-radius: 4px; padding: 0 6px; font-size: 12.5px; }
-.workers { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+.cnt { font-size: 12px; font-weight: 600; border-radius: 10px; padding: 0 7px; background: var(--code); }
+.cnt.stale { color: var(--danger); } .cnt.wait { color: var(--ask); } .cnt.work { color: var(--ok); }
+.wchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.wchip { display: inline-flex; align-items: center; gap: 4px; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--code); border-radius: 10px; padding: 0 8px 0 6px; font-size: 12px; cursor: default; }
+.wchip::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--tell); }
+.wchip.stale::before { background: var(--danger); } .wchip.wait::before { background: var(--ask); } .wchip.work::before { background: var(--ok); }
+.wchip small { color: var(--sub); font-size: 11px; }
+.ch-more { margin-top: 4px; }
+.ch-more > summary { cursor: pointer; color: var(--sub); font-size: 12px; }
+.workers { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
 .workers li { overflow-wrap: anywhere; }
-.workers .ws, .workers .wt, .ch-none, .retro { color: var(--sub); }
+.workers .ws, .workers .wt, .retro { color: var(--sub); font-size: 12.5px; }
 .workers li.wait .ws { color: var(--ask); }
 .workers li.stale .ws { color: var(--danger); }
-.ch-none, .retro, .ch-error { margin: 6px 0 0; }
+.ch-error { margin: 6px 0 0; }
 .retro.due, .ch-error { color: var(--danger); }
 .compose-box { margin-top: 10px; }
 .compose { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }

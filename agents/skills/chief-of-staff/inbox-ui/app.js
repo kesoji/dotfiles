@@ -315,32 +315,69 @@ function msgRow(item) {
 const msgSig = (x) => JSON.stringify([x.id, x.body, x.chief.name, repliesOf(x.id).map((r) => [r.id, r.title])]);
 
 const WORKER_STATUS = { working: '作業中', idle: 'ターン終了', done: 'ターン終了', blocked: '承認待ち', gone: 'いない' };
+const workerStatusText = (w) => (w.state !== 'running' ? w.state : (WORKER_STATUS[w.status] || w.status || '?'));
+const staleDays = (w) => (w.staleDone != null ? Math.floor(w.staleDone / 86400000) : null);
+// 作業セッションの種別: stale＝取り込み待ち、wait＝質問・承認待ち、work＝作業中、他は空
+function workerKind(w) {
+  if (w.staleDone != null) return 'stale';
+  if (w.report === '質問' || w.status === 'blocked') return 'wait';
+  if (w.state === 'running' && w.status === 'working') return 'work';
+  return '';
+}
+function workerTitle(w) {
+  const days = staleDays(w);
+  return [`${w.id}${w.label && w.label !== w.id ? `「${w.label}」` : ''}`,
+    `${workerStatusText(w)}・報告「${w.report || 'なし'}」${w.reportUpdated ? `（${ago(w.reportUpdated)}）` : ''}${days != null ? `・取り込み待ち${days ? ` ${days}日` : ''}` : ''}`,
+    w.title || null].filter(Boolean).join('\n');
+}
+// 詳細（縦の一覧）の1行
 function workerLine(w) {
-  const st = w.state !== 'running' ? w.state : (WORKER_STATUS[w.status] || w.status || '?');
-  const days = w.staleDone != null ? Math.floor(w.staleDone / 86400000) : null;
-  return h('li', { class: w.staleDone != null ? 'stale' : (w.report === '質問' || w.status === 'blocked' ? 'wait' : '') },
+  const days = staleDays(w);
+  return h('li', { class: workerKind(w) },
     h('b', { text: w.id }),
     w.label && w.label !== w.id ? `「${w.label}」` : null,
-    h('span', { class: 'ws', text: ` ${st}・報告「${w.report || 'なし'}」${w.reportUpdated ? `（${ago(w.reportUpdated)}）` : ''}${days != null ? `・取り込み待ち${days ? ` ${days}日` : ''}` : ''}` }),
+    h('span', { class: 'ws', text: ` ${workerStatusText(w)}・報告「${w.report || 'なし'}」${w.reportUpdated ? `（${ago(w.reportUpdated)}）` : ''}${days != null ? `・取り込み待ち${days ? ` ${days}日` : ''}` : ''}` }),
     w.title ? h('span', { class: 'wt', text: ` ${w.title}` }) : null);
+}
+// 小さいチップ（サイドバーの名前だけ。詳細は title）
+function workerChip(w) {
+  const days = staleDays(w);
+  return h('span', { class: `wchip ${workerKind(w)}`, title: workerTitle(w) },
+    w.label || w.id,
+    days ? h('small', { text: `${days}日` }) : null);
 }
 function when(iso) {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+const chiefOpen = () => { try { return new Set(JSON.parse(load('cos-inbox-ch-open') || '[]')); } catch { return new Set(); } };
 function chiefCard(c) {
   const picked = state.filter === c.name;
+  const ws = c.workers || [];
   const watch = c.watch && c.watch.alive
     ? h('span', { class: 'watch on', text: '見張り中' })
     : h('span', { class: 'watch off', text: `見張りなし${c.watch && c.watch.lastAt ? `（最後は${ago(c.watch.lastAt)}）` : ''}`, title: '指示は、この CoS が次に cos watch を張ったときに届きます' });
+  const n = (k) => ws.filter((w) => workerKind(w) === k).length;
+  const count = (k, label) => (n(k) ? h('span', { class: `cnt ${k}`, title: label, text: `${label} ${n(k)}` }) : null);
+  const open = chiefOpen();
+  const more = ws.length ? h('details', { class: 'ch-more', open: open.has(c.name), ontoggle: (e) => {
+    const cur = chiefOpen();
+    if (e.target.open) cur.add(c.name); else cur.delete(c.name);
+    save('cos-inbox-ch-open', JSON.stringify([...cur]));
+  } },
+    h('summary', { text: '詳細' }),
+    h('ul', { class: 'workers' }, ws.map(workerLine))) : null;
   return h('article', { class: `chief-card${picked ? ' picked' : ''}` },
     h('div', { class: 'ch-head' },
       h('button', { class: 'ch-name', type: 'button', title: picked ? '絞り込みを外す' : 'この CoS に絞り込んで指示を書く', onclick: () => setFilter(picked ? '' : c.name) }, chiefTag(c.name)),
       watch,
-      c.unread ? h('span', { class: 'unread-n', text: `未読の指示 ${c.unread}` }) : null),
+      h('span', { class: 'ch-n', text: ws.length ? `作業 ${ws.length} 本` : '作業なし' }),
+      count('stale', '取り込み待ち'), count('work', '作業中'), count('wait', '質問'),
+      c.unread ? h('span', { class: 'unread-n', text: `未読の指示 ${c.unread}` }) : null,
+      c.retro ? h('span', { class: `retro${c.retro.due ? ' due' : ''}`, text: c.retro.due ? `振り返り 期限超過（${when(c.retro.dueAt)}）` : `振り返り ${when(c.retro.dueAt)}` }) : null),
     c.error ? h('p', { class: 'ch-error', text: `状況を読めません: ${c.error}` }) : null,
-    c.workers && c.workers.length ? h('ul', { class: 'workers' }, c.workers.map(workerLine)) : (c.error ? null : h('p', { class: 'ch-none', text: '作業セッションなし' })),
-    c.retro ? h('p', { class: `retro${c.retro.due ? ' due' : ''}`, text: c.retro.due ? `振り返り: 期限を過ぎています（${when(c.retro.dueAt)}）` : `振り返り: 次は ${when(c.retro.dueAt)}` }) : null);
+    ws.length ? h('div', { class: 'wchips' }, ws.map(workerChip)) : null,
+    more);
 }
 
 function setFilter(name) {
