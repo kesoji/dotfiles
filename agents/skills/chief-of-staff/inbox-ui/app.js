@@ -3,11 +3,13 @@
 'use strict';
 
 const $ = (id) => document.getElementById(id);
+const KINDS = ['ask', 'review', 'todo', 'tell'];
 const state = {
   items: [],
   counts: { ask: 0, review: 0, todo: 0, tell: 0 },
   staleAskDays: 3,
   filter: load('cos-inbox-filter') || '',
+  kind: KINDS.includes(load('cos-inbox-kind')) ? load('cos-inbox-kind') : '', // 種類の絞り込み（CoS の絞り込みとは独立。両方が効く）
   drafts: new Map(), // id → { choice, text, rejecting }（描き直しても書きかけを失わない）
   kept: new Set(), // この画面で開いて既読にした「読むだけ」（読んでいる最中に消さない）
   openBodies: new Set(), // 長い本文を全部開いている項目の id（描き直しても開閉を保つ）
@@ -470,6 +472,12 @@ function chiefCard(c) {
     more);
 }
 
+function setKind(k) {
+  state.kind = k;
+  save('cos-inbox-kind', k);
+  render();
+}
+
 function setFilter(name) {
   state.filter = name;
   save('cos-inbox-filter', name);
@@ -501,6 +509,16 @@ document.addEventListener('keydown', (e) => {
   if (!chip) return; // 当てはまる絞り込みが無ければブラウザに任せる
   e.preventDefault();
   if (chip.getAttribute('aria-pressed') !== 'true') chip.click();
+});
+
+// ⌥1〜4 で種類の絞り込み（押している種類をもう一度で解除）。⌘数字（CoS の切り替え）とはぶつけない。Mac では ⌥数字が別の文字になるので e.code で見る。
+document.addEventListener('keydown', (e) => {
+  if (e.isComposing || e.keyCode === 229 || e.repeat || !e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  const m = /^Digit([1-4])$/.exec(e.code);
+  if (!m) return;
+  e.preventDefault();
+  const k = KINDS[Number(m[1]) - 1];
+  setKind(state.kind === k ? '' : k);
 });
 
 // 指示の入力欄（1つだけ作って使い回す＝描き直しても書きかけを失わない）
@@ -615,7 +633,21 @@ function render() {
   const c = state.counts;
   // todo は、知らない版のサーバー（counts に無い）でも画面が数える
   const nTodo = c.todo ?? open.filter((x) => x.kind === 'todo').length;
-  $('counts').replaceChildren('要返事 ', h('b', { text: String(c.ask) }), ' ・ 確認 ', h('b', { text: String(c.review) }), ' ・ やること ', h('b', { text: String(nTodo) }), ' ・ 読むだけ ', h('b', { text: String(c.tell) }));
+  // 件数は押せる＝その種類だけを全 CoS ぶん並べる（もう一度押すと外れる）。CoS も選んでいるときは「この CoS では n」を添える
+  const kindN = { ask: c.ask, review: c.review, todo: nTodo, tell: c.tell };
+  const kindLabel = { ask: '要返事', review: '確認', todo: 'やること', tell: '読むだけ' };
+  const hereN = (k) => open.filter((x) => x.kind === k && x.chief.name === state.filter).length;
+  $('counts').replaceChildren(...KINDS.flatMap((k, i) => [
+    i ? ' ・ ' : null,
+    h('button', {
+      class: 'kind', type: 'button', 'aria-pressed': String(state.kind === k), 'data-kind': k,
+      title: state.kind === k ? '種類の絞り込みを外す' : `${kindLabel[k]}だけを、すべての CoS ぶん並べる`,
+      'aria-keyshortcuts': `Alt+${i + 1}`,
+      onclick: () => setKind(state.kind === k ? '' : k),
+    }, `${kindLabel[k]} `, h('b', { text: String(kindN[k]) }),
+    state.kind === k && state.filter ? h('span', { class: 'here', text: `（${state.filter} では ${hereN(k)}）` }) : null,
+    h('kbd', { class: 'key', 'aria-hidden': 'true', text: `${IS_MAC ? '⌥' : 'Alt+'}${i + 1}` })),
+  ]).filter(Boolean));
   const waiting = c.ask + c.review + nTodo; // 返事待ち＝ユーザーが返すまで残るもの
   document.title = `${waiting ? `(${waiting}) ` : ''}CoS 受け箱`;
   { const fav = $('favicon'); const want = waiting ? 'favicon-alert.svg' : 'favicon.svg'; if (fav && !fav.getAttribute('href').endsWith(want)) fav.setAttribute('href', want); } // 返事待ちがあればタブのアイコンに赤丸
@@ -654,12 +686,14 @@ function render() {
   $('sec-chiefs').hidden = !state.chiefs.length && !msgs.length;
   $('compose-box').hidden = !state.chiefs.length;
 
-  const asks = entriesOf(open.filter((x) => x.kind === 'ask' && seen(x) && loose(x)), threadsIn('ask'));
-  const reviews = entriesOf(open.filter((x) => x.kind === 'review' && seen(x) && loose(x)), threadsIn('review'));
-  const todos = entriesOf(open.filter((x) => x.kind === 'todo' && seen(x) && loose(x)), threadsIn('todo'));
+  const kindOk = (k) => !state.kind || state.kind === k; // 種類で絞っているときは、その種類の列だけ
+  const asks = kindOk('ask') ? entriesOf(open.filter((x) => x.kind === 'ask' && seen(x) && loose(x)), threadsIn('ask')) : [];
+  const reviews = kindOk('review') ? entriesOf(open.filter((x) => x.kind === 'review' && seen(x) && loose(x)), threadsIn('review')) : [];
+  const todos = kindOk('todo') ? entriesOf(open.filter((x) => x.kind === 'todo' && seen(x) && loose(x)), threadsIn('todo')) : [];
   const looseTells = all.filter((x) => x.kind === 'tell' && (x.status === 'open' || (state.kept.has(x.id) && x.status === 'read')) && seen(x) && loose(x));
-  const tells = entriesOf(looseTells, threadsIn('tell'));
-  const done = all.filter((x) => x.status !== 'open' && x.kind !== 'message' && !looseTells.includes(x) && seen(x) && loose(x)).slice(0, 30);
+  const tells = kindOk('tell') ? entriesOf(looseTells, threadsIn('tell')) : [];
+  const done = state.kind ? [] : all.filter((x) => x.status !== 'open' && x.kind !== 'message' && !looseTells.includes(x) && seen(x) && loose(x)).slice(0, 30);
+  document.querySelector('main').classList.toggle('by-kind', Boolean(state.kind));
 
   // 列の1件は、つながっていない項目（カードか1行）か、スレッド
   const col = (list, entries, make) => reconcile(list, entries,
@@ -678,6 +712,7 @@ function render() {
   $('sec-done').hidden = !done.length;
   $('done-count').textContent = done.length ? `（直近 ${done.length} 件）` : '';
   $('empty').hidden = Boolean(asks.length || reviews.length || todos.length || tells.length);
+  $('empty').textContent = state.kind ? `${kindLabel[state.kind]}で待っているものはありません。` : 'いま待っているものはありません。';
 
   // 消えた項目の書きかけは捨てる
   for (const id of [...state.drafts.keys()]) if (!open.some((x) => x.id === id)) state.drafts.delete(id);
