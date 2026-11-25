@@ -108,9 +108,42 @@ function connect() {
   };
 }
 
+// ───── CoS ごとの色 ─────
+// 名前のハッシュで色を決め、ほかの CoS とぶつかったら次の色へずらす（開番地法）。
+// 一度決まった色は localStorage に覚えて、CoS が増えても変えない。
+const PALETTE = [
+  ['#e3f0ff', '#1f5fbf'], ['#e6f6ea', '#1d7a3a'], ['#fdeee2', '#b3541e'], ['#f3e8fd', '#7b3fc4'],
+  ['#fde8ef', '#b8326a'], ['#e2f5f5', '#14787a'], ['#fbf3d9', '#8a6a00'], ['#ececf9', '#4447b0'],
+  ['#f9e6e3', '#a8382a'], ['#e9f2df', '#4f7a1c'], ['#e5eef3', '#3d6278'], ['#f6e9df', '#7d5232'],
+];
+function fnv1a(s) {
+  let x = 0x811c9dc5;
+  for (const ch of s) { x ^= ch.codePointAt(0); x = Math.imul(x, 0x01000193) >>> 0; }
+  return x;
+}
+const colors = (() => { try { return JSON.parse(load('cos-inbox-colors') || '{}'); } catch { return {}; } })();
+function colorOf(name) {
+  if (colors[name] === undefined) {
+    const used = new Set(Object.values(colors));
+    let i = fnv1a(name) % PALETTE.length;
+    for (let n = 0; n < PALETTE.length && used.has(i); n++) i = (i + 1) % PALETTE.length; // 全部使い切ったら重なってよい
+    colors[name] = i;
+    save('cos-inbox-colors', JSON.stringify(colors));
+  }
+  return PALETTE[colors[name]];
+}
+// 色は data-chief の CSS で付ける（描き直さずに済む）
+function paintChiefs(names) {
+  const css = [...names].sort().map((n) => { const [bg, fg] = colorOf(n); return `[data-chief="${CSS.escape(n)}"]{--c-bg:${bg};--c-fg:${fg}}`; }).join('\n');
+  let el = document.getElementById('chief-colors');
+  if (!el) { el = h('style', { id: 'chief-colors' }); document.head.append(el); }
+  if (el.textContent !== css) el.textContent = css;
+}
+const chiefTag = (name) => h('span', { class: 'tag', 'data-chief': name, text: name });
+
 // ───── 描く ─────
-function whoOf(item) {
-  return item.worker ? `${item.chief.name} / ${item.worker}` : item.chief.name;
+function whoBlock(item) {
+  return h('span', { class: 'who' }, chiefTag(item.chief.name), item.worker ? ` / ${item.worker}` : null);
 }
 
 function bodyBlock(item) {
@@ -136,7 +169,7 @@ function linksBlock(item) {
 
 function metaBlock(item) {
   return h('div', { class: 'meta' },
-    h('span', { class: 'who', text: whoOf(item) }),
+    whoBlock(item),
     h('span', { text: '・' }),
     h('span', { class: 'age' }),
     h('span', { class: 'badge', text: `${state.staleAskDays}日以上`, hidden: true }));
@@ -205,7 +238,7 @@ function answerSummary(item) {
 function row(item) {
   const el = h('details', { class: 'row' },
     h('summary', {},
-      h('span', { class: 'who', text: whoOf(item) }),
+      whoBlock(item),
       h('span', { class: 't', text: item.title }),
       h('span', { class: 'state' }),
       h('span', { class: 'age' })),
@@ -273,6 +306,7 @@ function render() {
   const chiefs = [...new Set(all.filter((x) => x.status === 'open' || state.kept.has(x.id)).map((x) => x.chief.name))].sort();
   if (state.filter && !chiefs.includes(state.filter)) state.filter = '';
   const seen = (x) => !state.filter || x.chief.name === state.filter;
+  paintChiefs(new Set(all.map((x) => x.chief.name)));
 
   // 見出しの件数（全 CoS）
   const c = state.counts;
@@ -284,7 +318,7 @@ function render() {
   const chip = (name, label, n) => h('button', {
     class: 'chip', type: 'button', 'aria-pressed': String(state.filter === name),
     onclick: () => { state.filter = name; save('cos-inbox-filter', name); render(); },
-  }, label, h('span', { class: 'n', text: String(n) }));
+  }, name ? h('span', { class: 'swatch', 'data-chief': name }) : null, label, h('span', { class: 'n', text: String(n) }));
   $('chips').replaceChildren(chip('', '全部', open.length), ...chiefs.map((n) => chip(n, n, open.filter((x) => x.chief.name === n).length)));
   $('chips').hidden = chiefs.length < 2;
 

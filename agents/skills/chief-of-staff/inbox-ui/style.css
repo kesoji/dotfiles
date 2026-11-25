@@ -177,3 +177,7 @@ main > section[hidden], main > .error[hidden], main > .empty[hidden], main > .do
 body.view main { display: block; max-width: 1100px; }
 .card.doc { padding: 20px 28px; }
 .card.doc .body h3 { font-size: 20px; } .card.doc .body h4 { font-size: 16px; margin-top: 1.4em; } .card.doc .body h5 { font-size: 14px; }
+
+/* CoS ごとの色（app.js の paintChiefs が data-chief に --c-bg / --c-fg を付ける） */
+.tag { background: var(--c-bg, var(--code)); color: var(--c-fg, var(--ink)); border-radius: 4px; padding: 0 6px; font-weight: 600; }
+.chip .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--c-fg, var(--sub)); vertical-align: 0; }
