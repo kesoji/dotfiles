@@ -108,6 +108,9 @@ h2 small { font-weight: normal; color: var(--sub); }
 .body > :last-child { margin-bottom: 0; }
 .body p, .body ul, .body ol, .body pre { margin: .5em 0; }
 .body ul, .body ol { padding-left: 1.4em; }
+.body li > ul, .body li > ol { margin: .2em 0; }
+.body hr { border: 0; border-top: 1px solid var(--line); margin: .9em 0; }
+.body blockquote { margin: .5em 0; padding: 0 0 0 .9em; border-left: 3px solid var(--line); color: var(--sub); }
 .body h3, .body h4, .body h5 { font-size: 14px; margin: .9em 0 .3em; }
 .body code { background: var(--code); border-radius: 4px; padding: .05em .35em; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .body pre { background: var(--code); border-radius: 6px; padding: 8px 10px; overflow-x: auto; }

@@ -83,11 +83,15 @@ function markdown(src, repo = null) {
     mdRepo = null;
   }
 }
+const HR = /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/;
+const LI = /^(\s*)(?:([-*+・])|(\d+)[.)])\s+(.*)$/;
+const indentOf = (line) => line.match(/^[ \t]*/)[0].replace(/\t/g, '    ').length;
 function markdownBody(src) {
   const root = document.createDocumentFragment();
   const lines = String(src || '').replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '').split('\n');
   let para = [];
-  let list = null;
+  // 入れ子のリスト: stack の各段は { indent（記号の字下げ）, el（ul/ol）, parent（el を置いた先） }
+  let stack = [];
   const flushPara = () => {
     if (!para.length) return;
     const p = h('p');
@@ -95,7 +99,8 @@ function markdownBody(src) {
     root.append(p);
     para = [];
   };
-  const flush = () => { flushPara(); list = null; };
+  const flush = () => { flushPara(); stack = []; };
+  const nextNonBlank = (i) => { for (let j = i + 1; j < lines.length; j++) if (lines[j].trim()) return lines[j]; return null; };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const fence = line.match(/^\s*(```|~~~)/);
@@ -113,29 +118,64 @@ function markdownBody(src) {
       root.append(table(buf));
       continue;
     }
-    if (!line.trim()) { flush(); continue; }
+    if (!line.trim()) {
+      flushPara();
+      // 項目のあいだの空行ではリストを続ける（次が項目か字下げした続きのとき）
+      const nx = nextNonBlank(i);
+      if (!(stack.length && nx !== null && (LI.test(nx) || indentOf(nx) > 0))) stack = [];
+      continue;
+    }
+    if (/^\s*>/.test(line)) { // 引用: 続く > の行をまとめ、中身は Markdown として描く
+      flush();
+      const buf = [line.replace(/^\s*>\s?/, '')];
+      while (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])) buf.push(lines[++i].replace(/^\s*>\s?/, ''));
+      root.append(h('blockquote', {}, markdownBody(buf.join('\n'))));
+      continue;
+    }
+    if (HR.test(line)) { flush(); root.append(h('hr')); continue; }
     const head = line.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
     if (head) {
       flush();
       root.append(h(`h${Math.min(5, head[1].length + 2)}`, {}, inline(head[2])));
       continue;
     }
-    const li = line.match(/^\s*(?:([-*+・])|(\d+)[.)])\s+(.*)$/);
+    const li = line.match(LI);
     if (li) {
       flushPara();
-      const tag = li[1] ? 'ul' : 'ol';
-      if (!list || list.tagName.toLowerCase() !== tag) { list = h(tag); root.append(list); }
-      list.append(h('li', {}, inline(li[3])));
+      const indent = indentOf(line);
+      const tag = li[2] ? 'ul' : 'ol';
+      while (stack.length > 1 && stack[stack.length - 1].indent > indent) stack.pop();
+      let top = stack[stack.length - 1];
+      if (top && indent >= top.indent + 2 && top.el.lastChild) { // 前の項目の子
+        const parent = top.el.lastChild;
+        const el = h(tag, tag === 'ol' && Number(li[3]) !== 1 ? { start: Number(li[3]) } : {});
+        parent.append(el);
+        top = { indent, el, parent };
+        stack.push(top);
+      } else if (!top || top.el.tagName.toLowerCase() !== tag) { // 最初の項目、または同じ階層で種類が変わった
+        const parent = top ? top.parent : root;
+        const el = h(tag, tag === 'ol' && Number(li[3]) !== 1 ? { start: Number(li[3]) } : {});
+        parent.append(el);
+        if (top) stack.pop();
+        top = { indent: top ? top.indent : indent, el, parent };
+        stack.push(top);
+      }
+      top.el.append(h('li', {}, inline(li[4])));
       continue;
     }
-    if (list && /^\s+\S/.test(line)) { // 箇条書きの続きの行
-      list.lastChild.append(h('br'), ...inline(line.trim()));
+    if (stack.length && indentOf(line) > 0) { // 項目の続きの行（いちばん近い親の項目に入れる）
+      const ind = indentOf(line);
+      const owner = [...stack].reverse().find((s) => s.indent < ind) || stack[0];
+      const li2 = owner.el.lastChild;
+      const lastTag = li2.lastChild && li2.lastChild.tagName ? li2.lastChild.tagName.toLowerCase() : '';
+      if (lastTag === 'ul' || lastTag === 'ol') li2.append(h('div', {}, inline(line.trim()))); // 子のリストの後ろの続きは別の行に
+      else if (lastTag === 'div') li2.lastChild.append(h('br'), ...inline(line.trim()));
+      else li2.append(h('br'), ...inline(line.trim()));
       continue;
     }
-    list = null;
+    stack = [];
     para.push(line);
   }
   flush();
   return root;
 }
-

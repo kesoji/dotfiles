@@ -1373,6 +1373,32 @@ export function selfTestInbox(assert) {
       const T5 = buildThreads([...listItems(dir).items, orphan]);
       assert(T5.byRoot.get(tm.id).items.length === 2 && T5.byRoot.get(tm.id).column === null && !T5.inThread.has('orphan') && T5.threads.every((t) => t.root.kind === 'message'), 'inbox thread: 取り下げた項目・元の指示が見つからない項目はスレッドに入れない');
       withdrawItem(dir, loose.id);
+
+      // Markdown（inbox-ui/md.js。最小の DOM の代わりを用意して、画面と同じ関数を読んで試す）
+      class FakeEl {
+        constructor(tag) { this.tagName = tag.toUpperCase(); this.kids = []; this.attrs = {}; this.className = ''; this.textContent = ''; }
+        append(...ks) { this.kids.push(...ks); }
+        get lastChild() { return this.kids[this.kids.length - 1] || null; }
+        setAttribute(k, v) { this.attrs[k] = v; }
+        addEventListener() {}
+        html() {
+          const t = this.tagName.toLowerCase();
+          const inner = (this.textContent || '') + this.kids.map((k) => (typeof k === 'string' ? k : k.html())).join('');
+          if (t === '#frag') return inner;
+          const at = Object.entries(this.attrs).map(([k, v]) => ` ${k}="${v}"`).join('');
+          return ['br', 'hr'].includes(t) ? `<${t}>` : `<${t}${at}>${inner}</${t}>`;
+        }
+      }
+      const fakeDoc = { createElement: (t) => new FakeEl(t), createDocumentFragment: () => new FakeEl('#frag') };
+      const mdOf = new Function('document', `${readFileSync(fileURLToPath(new URL('../inbox-ui/md.js', import.meta.url)), 'utf8')}\nreturn (s) => markdown(s).html();`)(fakeDoc);
+      const nested = mdOf('1. **赤**\n   - デプロイは\n   - **決めること:**\n     - どちら\n     - 次\n2. **手段**\n   - 中\n3. **テナント**');
+      assert(nested === '<ol><li><strong>赤</strong><ul><li>デプロイは</li><li><strong>決めること:</strong><ul><li>どちら</li><li>次</li></ul></li></ul></li><li><strong>手段</strong><ul><li>中</li></ul></li><li><strong>テナント</strong></li></ol>', `md: 入れ子のリストで番号が続く ${nested}`);
+      assert(mdOf('3. a\n4. b') === '<ol start="3"><li>a</li><li>b</li></ol>' && mdOf('1. a') === '<ol><li>a</li></ol>', 'md: 番号付きリストは最初の番号を start に入れる');
+      assert(mdOf('- a\n\tb\n\t- c') === '<ul><li>a<br>b<ul><li>c</li></ul></li></ul>', 'md: タブの字下げで入れ子・項目の続きの行はその項目の中');
+      assert(mdOf('- a\n\n- b') === '<ul><li>a</li><li>b</li></ul>' && mdOf('- a\n1. b') === '<ul><li>a</li></ul><ol><li>b</li></ol>', 'md: 項目間の空行ではリストを続ける・同じ階層で種類が変われば別のリスト');
+      assert(['---', '***', '___', '- - -', '  ----'].every((x) => mdOf(`a\n\n${x}\n\nb`) === '<p>a</p><hr><p>b</p>'), 'md: ---・***・___ だけの行は横線');
+      assert(!mdOf('| a | b |\n|---|---|\n| 1 | 2 |').includes('<hr>') && mdOf('| a | b |\n|---|---|\n| 1 | 2 |').includes('<th>'), 'md: 表の区切りの行は横線にしない');
+      assert(mdOf('> 引用\n> 二行目\n\n本文') === '<blockquote><p>引用<br>二行目</p></blockquote><p>本文</p>', 'md: > は引用');
     }
 
     // 画面のファイルは uiDir の中だけ

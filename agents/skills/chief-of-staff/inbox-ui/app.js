@@ -118,7 +118,6 @@ function connect() {
 
 // ───── 複数行の入力欄 ─────
 // Enter で送る・Shift+Enter で改行。⌘Enter（Mac 以外は Ctrl+Enter）でも送る。
-// enterSends: false の欄（差し戻し＝間違えて送ると困る）は、Enter は改行で、⌘Enter／Ctrl+Enter だけが送る。
 // 日本語の変換を確定する Enter（isComposing / keyCode 229）では送らない。
 // 行が増えたら高さを伸ばす（上限は CSS の max-height。超えたらスクロール）。
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -128,14 +127,14 @@ function grow(ta) {
   ta.style.height = 'auto';
   ta.style.height = `${ta.scrollHeight + 2}px`;
 }
-function autoText({ value = '', placeholder = '', label = '', oninput, onsubmit, enterSends = true }) {
+function autoText({ value = '', placeholder = '', label = '', oninput, onsubmit }) {
   const ta = h('textarea', {
     class: 'auto', rows: 1, value, placeholder, 'aria-label': label, autocomplete: 'off',
     oninput: () => { grow(ta); if (oninput) oninput(ta.value); },
     onkeydown: (e) => {
       if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
       const mod = IS_MAC ? e.metaKey : e.ctrlKey;
-      if (!mod && (e.shiftKey || !enterSends)) return; // 改行
+      if (!mod && e.shiftKey) return; // 改行
       e.preventDefault();
       if (onsubmit) onsubmit();
     },
@@ -269,7 +268,7 @@ function askCard(item) {
     h('input', { type: 'radio', name: `opt-${item.id}`, value: o.key, checked: d.choice === o.key, onchange: () => { d.choice = o.key; sync(); } }),
     h('span', {}, h('span', { class: 'label', text: o.label }), o.key === item.recommend ? h('span', { class: 'rec', text: '★ おすすめ' }) : null),
     o.detail ? h('span', { class: 'detail', text: o.detail }) : null))) : null,
-  h('div', { class: 'reply' }, text, send));
+  h('div', { class: 'reply' }, text, send, h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' })));
   sync();
   return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), form);
 }
@@ -284,10 +283,10 @@ function reviewCard(item) {
         h('button', { class: 'btn danger', type: 'button', text: '差し戻し…', onclick: () => { d.rejecting = true; draw(); reply.querySelector('textarea').focus(); } }));
       return;
     }
-    const send = h('button', { class: 'btn danger', type: 'button', text: '差し戻す', title: `${MOD_ENTER} でも送れる`, disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'reject', text: d.text.trim() }); } });
-    const ta = autoText({ value: d.text, placeholder: '差し戻す理由・直してほしい点（必須）', label: '差し戻しのコメント', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click(), enterSends: false });
+    const send = h('button', { class: 'btn danger', type: 'button', text: '差し戻す', title: `Enter か ${MOD_ENTER} でも送れる`, disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'reject', text: d.text.trim() }); } });
+    const ta = autoText({ value: d.text, placeholder: '差し戻す理由・直してほしい点（必須）', label: '差し戻しのコメント', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click() });
     reply.replaceChildren(ta, send, h('button', { class: 'btn', type: 'button', text: 'やめる', onclick: () => { d.rejecting = false; draw(); } }),
-      h('span', { class: 'key-hint', text: `${MOD_ENTER} で送る（Enter は改行）` }));
+      h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' }));
   };
   draw();
   return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
@@ -299,16 +298,17 @@ function todoCard(item) {
   const reply = h('div', { class: 'reply' });
   const draw = () => {
     if (!d.rejecting) {
-      const done = h('button', { class: 'btn primary', type: 'button', text: 'やった', title: `${MOD_ENTER} でも送れる`, onclick: () => { done.disabled = true; act(item.id, 'answer', { choice: 'done', text: d.text.trim() || null }); } });
-      const ta = autoText({ value: d.text, placeholder: '一言（任意・結果など）', label: '一言', oninput: (v) => { d.text = v; }, onsubmit: () => done.click(), enterSends: false });
+      const done = h('button', { class: 'btn primary', type: 'button', text: 'やった', title: `Enter か ${MOD_ENTER} でも送れる`, onclick: () => { done.disabled = true; act(item.id, 'answer', { choice: 'done', text: d.text.trim() || null }); } });
+      const ta = autoText({ value: d.text, placeholder: '一言（任意・結果など）', label: '一言', oninput: (v) => { d.text = v; }, onsubmit: () => done.click() });
       reply.replaceChildren(ta, done,
-        h('button', { class: 'btn danger', type: 'button', text: 'できない…', onclick: () => { d.rejecting = true; draw(); reply.querySelector('textarea').focus(); } }));
+        h('button', { class: 'btn danger', type: 'button', text: 'できない…', onclick: () => { d.rejecting = true; draw(); reply.querySelector('textarea').focus(); } }),
+        h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' }));
       return;
     }
-    const send = h('button', { class: 'btn danger', type: 'button', text: 'できないと返す', title: `${MOD_ENTER} でも送れる`, disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'cannot', text: d.text.trim() }); } });
-    const ta = autoText({ value: d.text, placeholder: 'できない理由・どこで止まったか（必須）', label: 'できない理由', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click(), enterSends: false });
+    const send = h('button', { class: 'btn danger', type: 'button', text: 'できないと返す', title: `Enter か ${MOD_ENTER} でも送れる`, disabled: !d.text.trim(), onclick: () => { send.disabled = true; act(item.id, 'answer', { choice: 'cannot', text: d.text.trim() }); } });
+    const ta = autoText({ value: d.text, placeholder: 'できない理由・どこで止まったか（必須）', label: 'できない理由', oninput: (v) => { d.text = v; send.disabled = !d.text.trim(); }, onsubmit: () => send.click() });
     reply.replaceChildren(ta, send, h('button', { class: 'btn', type: 'button', text: 'やめる', onclick: () => { d.rejecting = false; draw(); } }),
-      h('span', { class: 'key-hint', text: `${MOD_ENTER} で送る（Enter は改行）` }));
+      h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' }));
   };
   draw();
   return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
