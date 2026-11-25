@@ -38,22 +38,52 @@ function table(rows) {
 }
 
 // ───── Markdown（小さな部分集合。HTML は組み立てず、DOM の節だけを作る） ─────
-function inline(text) {
+// GitHub へのリンク: repo（項目の GitHub のリポジトリ owner/name）が分かるときだけ、PR #123・#123・Issue #123 とコミットの SHA をリンクにする。
+// owner/name#123 は repo が無くてもリンクにする。コード（`…`・```）と、すでにリンクの中の文字はリンクにしない。
+const REPO_OK = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/;
+const okRepo = (r) => (typeof r === 'string' && REPO_OK.test(r) ? r : null);
+let mdRepo = null; // markdown() が描いているあいだの repo
+const ext = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer', text });
+// refsOnly: 題などの1行の文字用。Markdown の記法は描かず（元の文字のまま）、GitHub へのリンクだけを作る。
+function inline(text, repo = mdRepo, refsOnly = false) {
   const out = [];
-  const re = /`([^`\n]+)`|\*\*([^*\n]+)\*\*|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"'）」、。]+)/g;
+  repo = okRepo(repo);
+  //          1 code       2 bold               3,4 [text](url)                          5 url
+  const re = /`([^`\n]+)`|\*\*([^*\n]+)\*\*|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"'）」、。]+)|(?<![A-Za-z0-9_.\/#&-])([A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100})#(\d+)(?![A-Za-z0-9_])|(?<![A-Za-z0-9_\/#&])(?:(PR|Issue)\s?)?#(\d+)(?![A-Za-z0-9_])|(?<![A-Za-z0-9_\/.#@-])([0-9a-f]{7,40})(?![A-Za-z0-9_-])/g;
+  //          6,7 owner/name#N   8,9 (PR|Issue)? #N   10 コミットの SHA
   let last = 0;
   for (let m; (m = re.exec(text)); ) {
+    let node = null;
+    if (m[6] !== undefined) node = ext(`https://github.com/${m[6]}/issues/${m[7]}`, m[0]);
+    else if (m[9] !== undefined) node = repo ? ext(`https://github.com/${repo}/${m[8] === 'PR' ? 'pull' : 'issues'}/${m[9]}`, m[0]) : null;
+    // SHA は数字と a-f の両方を含むものだけ（"deadbeef" のような英単語・日付のような数字だけの並びはリンクにしない）
+    else if (m[10] !== undefined) node = repo && /[0-9]/.test(m[10]) && /[a-f]/.test(m[10]) ? ext(`https://github.com/${repo}/commit/${m[10]}`, m[0]) : null;
+    else if (refsOnly) node = null;
+    else if (m[1] !== undefined) node = h('code', { text: m[1] });
+    else if (m[2] !== undefined) node = h('strong', {}, inline(m[2], repo));
+    else if (m[3] !== undefined) node = ext(m[4], m[3]);
+    else node = ext(m[5], m[5]);
+    if (node === null) continue; // リンクにしないものは元の文字のまま（次の文字の塊に含める）
     if (m.index > last) out.push(text.slice(last, m.index));
-    if (m[1] !== undefined) out.push(h('code', { text: m[1] }));
-    else if (m[2] !== undefined) out.push(h('strong', {}, inline(m[2])));
-    else if (m[3] !== undefined) out.push(h('a', { href: m[4], target: '_blank', rel: 'noopener noreferrer', text: m[3] }));
-    else out.push(h('a', { href: m[5], target: '_blank', rel: 'noopener noreferrer', text: m[5] }));
+    out.push(node);
     last = m.index + m[0].length;
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
 }
-function markdown(src) {
+// 題などの1行の文字。GitHub へのリンクだけを作る。
+function refLinks(text, repo) {
+  return inline(String(text ?? ''), repo, true);
+}
+function markdown(src, repo = null) {
+  mdRepo = okRepo(repo);
+  try {
+    return markdownBody(src);
+  } finally {
+    mdRepo = null;
+  }
+}
+function markdownBody(src) {
   const root = document.createDocumentFragment();
   const lines = String(src || '').replace(/\r\n?/g, '\n').replace(/<!--[\s\S]*?-->/g, '').split('\n');
   let para = [];

@@ -180,7 +180,7 @@ function whoBlock(item) {
 
 function bodyBlock(item) {
   if (!item.body || !item.body.trim()) return null;
-  const body = h('div', { class: 'body' }, markdown(item.body));
+  const body = h('div', { class: 'body' }, markdown(item.body, item.repo));
   // 長い本文は折りたたむ（題と選択肢を先に見せる）
   if (item.body.length > 700 || item.body.split('\n').length > 14) {
     return h('details', { class: 'fold' }, h('summary', { text: '本文を開く' }), body);
@@ -189,14 +189,14 @@ function bodyBlock(item) {
 }
 
 // 手元の .md は view.html で Markdown として表示する（元のテキストはそこから開ける）
-function linkHref(l) {
+function linkHref(l, repo) {
   const url = l.url || l.href;
-  if (url.startsWith('/api/') && /\.(md|markdown)$/i.test(l.href)) return `view.html?src=${encodeURIComponent(url)}&name=${encodeURIComponent(l.label)}`;
+  if (url.startsWith('/api/') && /\.(md|markdown)$/i.test(l.href)) return `view.html?src=${encodeURIComponent(url)}&name=${encodeURIComponent(l.label)}${repo ? `&repo=${encodeURIComponent(repo)}` : ''}`;
   return url;
 }
 function linksBlock(item) {
   if (!item.links || !item.links.length) return null;
-  return h('div', { class: 'links' }, item.links.map((l) => h('a', { href: linkHref(l), target: '_blank', rel: 'noopener noreferrer', text: `${l.label} を開く` })));
+  return h('div', { class: 'links' }, item.links.map((l) => h('a', { href: linkHref(l, item.repo), target: '_blank', rel: 'noopener noreferrer', text: `${l.label} を開く` })));
 }
 
 // 指示への返事なら、元の指示を1行で出す
@@ -246,7 +246,7 @@ function askCard(item) {
     o.detail ? h('span', { class: 'detail', text: o.detail }) : null))) : null,
   h('div', { class: 'reply' }, text, send));
   sync();
-  return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title', text: item.title }), bodyBlock(item), linksBlock(item), form);
+  return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), form);
 }
 
 function reviewCard(item) {
@@ -265,7 +265,7 @@ function reviewCard(item) {
       h('span', { class: 'key-hint', text: `${MOD_ENTER} で送る（Enter は改行）` }));
   };
   draw();
-  return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title', text: item.title }), bodyBlock(item), linksBlock(item), reply);
+  return h('article', { class: 'card' }, metaBlock(item), h('h3', { class: 'title' }, refLinks(item.title, item.repo)), bodyBlock(item), linksBlock(item), reply);
 }
 
 function answerSummary(item) {
@@ -281,7 +281,7 @@ function row(item) {
   const el = h('details', { class: 'row' },
     h('summary', {},
       whoBlock(item),
-      h('span', { class: 't', text: item.title }),
+      h('span', { class: 't' }, refLinks(item.title, item.repo)),
       h('span', { class: 'state' }),
       h('span', { class: 'age' })),
     h('div', { class: 'inner' }, item.replyTo ? h('p', { class: 'meta' }, replyOf(item)) : null, bodyBlock(item) || h('p', { class: 'body', text: '（本文なし）' }), linksBlock(item), h('p', { class: 'answer', hidden: true })));
@@ -445,8 +445,8 @@ function reconcile(container, items, make, sigOf) {
   }
 }
 
-const cardSig = (x) => JSON.stringify([x.id, x.title, x.body, x.options, x.recommend, x.freeText, x.links, x.worker, x.chief.name, x.replyTo]);
-const rowSig = (x) => JSON.stringify([x.id, x.title, x.body, x.links, x.worker, x.chief.name, x.replyTo]);
+const cardSig = (x) => JSON.stringify([x.id, x.title, x.body, x.options, x.recommend, x.freeText, x.links, x.worker, x.chief.name, x.replyTo, x.repo]);
+const rowSig = (x) => JSON.stringify([x.id, x.title, x.body, x.links, x.worker, x.chief.name, x.replyTo, x.repo]);
 
 function render() {
   const all = state.items;

@@ -73,7 +73,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, REVIEW_LABEL, SERVICE_LABEL, STALE_ASK_DAYS,
   ackItem, answerItem, answeredEvent, answeredFor, chiefsDir, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
-  messageEvent, messagesFor, nodeOnPath, noteChief, notifyNew, openCounts, overLimit, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
+  messageEvent, messagesFor, nodeOnPath, noteChief, notifyNew, openCounts, overLimit, githubRepoFromUrl, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
   servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo,
 } from './inbox.mjs';
 
@@ -3142,13 +3142,23 @@ function chiefStatusFor(c) {
   return { workers, retro: { dueAt: new Date(dueAt).toISOString(), due, intervalDays: days } };
 }
 
+// 受け箱の項目に持たせる GitHub のリポジトリ（owner/name）。作業セッションの件ならその対象のリポジトリ（--repo で立てたなら対象側）、
+// CoS 自身の件なら CoS のリポジトリ。git の origin が github.com のときだけ。取れなければ null。
+function githubRepoFor(ctx, w = null) {
+  try {
+    return githubRepoFromUrl(git(['remote', 'get-url', 'origin'], w ? gitDirOf(ctx, w) : ctx.top));
+  } catch {
+    return null;
+  }
+}
+
 function inboxUrlHint(dir) {
   const sv = serverInfo(dir);
   return sv ? `画面: ${sv.url}` : '画面は起動していません（cos inbox service install で常駐させる。確かめるのは cos inbox service status）';
 }
 
 function cmdInboxCreate(kind, argv) {
-  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--reply-to ID]`;
+  const usage = `cos ${kind} --title T (--body-file F | --body TEXT)${kind === 'ask' ? ' [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text]' : ''} [--link 名前=URL ...] [--worker ID] [--supersedes ID] [--reply-to ID] [--repo owner/name]`;
   const { multi, rest } = takeMulti(argv, ['option', 'link']);
   const { pos, opt } = parseArgs(rest, ['no-free-text']);
   if (pos.length || !opt.title) throw new UsageError(usage);
@@ -3178,6 +3188,7 @@ function cmdInboxCreate(kind, argv) {
       links: multi.link.map((l) => parseLink(l, process.cwd())),
       supersedes: opt.supersedes ?? null,
       replyTo: opt['reply-to'] ?? null,
+      repo: opt.repo ?? githubRepoFor(ctx, opt.worker ? readLedger(ctx).workers[opt.worker] ?? null : null),
     });
     noteChiefSession(ctx, chiefSessionFromEnv(), kind);
     registerChief(ctx, kind);
@@ -3497,6 +3508,7 @@ function autoStaleReviews(ctx, led) {
         ...(summary ? ['', '### 報告書の要約', '', summary.split('\n').slice(0, 40).join('\n')] : []),
       ].join('\n'),
       links: existsSync(w.report ?? '') ? [{ label: '報告書', href: pathToFileURL(w.report).href }] : [],
+      repo: githubRepoFor(ctx, w),
     });
     notifyNew(item);
     out.push(item);
@@ -4170,6 +4182,7 @@ const HELP = `cos — chief of staff の作業セッション管理（herdr）
   cos tell --title T (--body-file F | --body TEXT) [--link ...] [--worker ID] [--supersedes ID] [--reply-to ID]
                                             受け箱に「読むだけ」を出す（開いたら既読・見張りは起こさない）
                                             --reply-to: ユーザーからの指示（画面で書かれた message）への返事。元の指示が未読なら既読にする
+                                            --repo owner/name: その件の GitHub のリポジトリ（画面が #123・コミットをリンクにする宛先）。付けなければ git の origin から入れる（--worker の件はその対象のリポジトリ）
   cos inbox [--all] [--mine] [--json]       受け箱の一覧（全 CoS。★＝この CoS の項目）
   cos inbox show <id> | read <id>           項目の JSON を出す／読むだけの項目を既読にする
   cos inbox ack <id> [--force]              ユーザーからの指示（cos watch の message）を読んだ印を付ける（この CoS 宛てだけ。画面に「CoS が読んだ」と出る）

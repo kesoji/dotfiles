@@ -57,6 +57,7 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 | `supersededBy` | 置き換えられた項目に、新しい項目の `id` |
 | `deliveredAt` | `cos watch` が `answered`（`message` の項目なら `message`）の出来事として CoS に渡した時刻（同じ答え・同じ指示で二度起こさない印） |
 | `replyTo` | ユーザーからの指示への返事として出した項目に、元の指示（`message`）の `id`（`--reply-to`） |
+| `repo` | その件の GitHub のリポジトリ（`owner/name`）。画面が `#123` やコミットをリンクにする宛先。分からなければ持たない（前からある項目にも無い） |
 | `tag` | 機械が出した項目の重複よけの鍵（例 `stale-done:<作業セッションの ID>`） |
 
 決まり:
@@ -64,6 +65,7 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 - 済んだ項目（`open` でない）には返事・既読・取り下げ・置き換えができない（API は 409）。
 - 置き換え（`supersedes`）は、同じ CoS の `open` の項目にだけできる。前の項目は `withdrawn` になり、`supersededBy` が付く。
 - `cos watch` の `answered` は、`chief.dir` が自分で、`status` が `answered`、`deliveredAt` が無い項目で起きる。
+- `repo` は `cos ask` / `review` / `tell` が入れる。`--repo owner/name` があればそれ。無ければ git の origin の URL から引く（github.com のときだけ）。`--worker` の件はその作業セッションの対象のリポジトリ（`--repo` で立てたなら対象側）、それ以外は CoS のリポジトリ。取れなければ持たない。取り込み待ちの自動の確認依頼も同じ。`repo` も足しただけなので `v` は 1 のまま。
 
 ### ユーザーからの指示（kind: "message"）
 
@@ -137,6 +139,10 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 
 画面は `inbox-ui/`（`index.html`・`style.css`・`app.js`・`md.js`、報告書の表示の `view.html`・`view.js`、PWA の `manifest.webmanifest`・`icon.svg`・`icon-192.png`・`icon-512.png`。ビルド不要）。上の API だけを使っている。
 
+- GitHub へのリンクは画面（`md.js` の `inline`）が作る。題・本文・報告書の表示（`view.html?src=…&repo=owner/name`）で同じ決まり:
+  - 項目に `repo` があるときだけ: `PR #123`・`PR#123` → `/pull/123`、`#123`・`Issue #123` → `/issues/123`（PR なら GitHub が転送する）、コミットの SHA（7〜40 桁の16進で、数字と a-f の両方を含むもの）→ `/commit/<sha>`。
+  - `owner/name#123` は、項目の `repo` と関係なくいつもリンクにする。
+  - コード（`` `…` ``・```` ``` ````）の中と、すでにリンクになっている文字はリンクにしない。`repo` が無い項目では `owner/name#123` のほかは何もリンクにしない。
 - PWA として入れられるように、`index.html` が `manifest.webmanifest`（`display: standalone`・`id` と `start_url` は `/`）を指している。service worker は置いていない（Chrome は無くても入れられる。サーバーが常に動いているので、オフライン用のキャッシュは要らない）。アイコンを変えるなら `icon.svg` を直して PNG を作り直す（`qlmanage -t -s 512 -o <出力先> icon.svg` → `sips -z 192 192`）。
 - アプリのアイコンのバッジ（`navigator.setAppBadge`）には、返事待ち（`counts.ask + counts.review`）を出している。
 

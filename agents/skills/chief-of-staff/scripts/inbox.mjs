@@ -34,6 +34,8 @@ export const REVIEW_LABEL = { approve: '承認', reject: '差し戻し' };
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
 const KEY_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const LINK_SCHEMES = new Set(['http:', 'https:', 'file:']);
+// GitHub のリポジトリ（owner/name）。項目の repo と、画面が作るリンクの宛先に使う。
+const REPO_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
 const MAX_BODY = 1 << 20; // API に送れる本文（1MB）
 const MAX_LINK_FILE = 5 << 20; // リンクのファイルを画面に出す上限（5MB）
 
@@ -94,6 +96,15 @@ export function parseLink(s, cwd) {
   }
   const label = hasLabel ? str.slice(0, i).trim() : href.startsWith('file:') ? basename(fileURLToPath(href)) : href;
   return { label, href };
+}
+
+// git のリモートの URL → GitHub の owner/name（github.com のときだけ。それ以外・読めなければ null）。
+//   https://github.com/o/n(.git)・git@github.com:o/n(.git)・ssh://git@github.com/o/n(.git)
+export function githubRepoFromUrl(url) {
+  const m = /^(?:https?:\/\/(?:[^@/\s]+@)?github\.com\/|(?:ssh:\/\/)?git@github\.com[:/]|git:\/\/github\.com\/)([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i.exec(String(url ?? '').trim());
+  if (!m) return null;
+  const repo = `${m[1]}/${m[2]}`;
+  return REPO_RE.test(repo) ? repo : null;
 }
 
 // CoS の名前 → id に入れる短い名前（英小文字と数字。先頭の cos- は落とす。日本語だけなら cos）。
@@ -158,6 +169,11 @@ export function buildItem(input, { nowMs = Date.now(), rand = Math.random } = {}
   };
   if (input.tag) item.tag = String(input.tag);
   if (input.replyTo) item.replyTo = String(input.replyTo);
+  // その件の GitHub のリポジトリ（画面が #123 やコミットをリンクにする宛先）。分からなければ持たない。
+  if (input.repo) {
+    if (!REPO_RE.test(String(input.repo))) throw new InboxError(400, `--repo は GitHub の owner/name の形です: ${input.repo}`);
+    item.repo = String(input.repo);
+  }
   return item;
 }
 
@@ -1005,6 +1021,12 @@ export function selfTestInbox(assert) {
   assert(answeredFor([m1, k1], '/r/main').length === 0 && JSON.stringify(openCounts([m1, ask])) === JSON.stringify({ ask: 1, review: 0, tell: 0 }) && overLimit([m1, m2], 1).n === 0, 'inbox: 指示は answered・ユーザーの未対応の件数に入らない');
   assert(sortInbox([m1, tell, ask]).map((x) => x.kind).join() === 'ask,tell,message', 'inbox: 指示は並びの最後');
   assert(buildItem({ kind: 'tell', chief: A, title: 'x', replyTo: 'm' }).replyTo === 'm' && !('replyTo' in tell), 'inbox: replyTo は付けたときだけ');
+
+  // GitHub のリポジトリ（項目の repo）
+  assert(githubRepoFromUrl('https://github.com/o-1/n.x.git') === 'o-1/n.x' && githubRepoFromUrl('git@github.com:o/n.git') === 'o/n' && githubRepoFromUrl('ssh://git@github.com/o/n') === 'o/n' && githubRepoFromUrl('https://user@github.com/o/n/') === 'o/n', 'inbox: origin の URL から owner/name');
+  assert(githubRepoFromUrl('https://gitlab.com/o/n.git') === null && githubRepoFromUrl('git@example.com:o/n.git') === null && githubRepoFromUrl('https://github.com/o') === null && githubRepoFromUrl('https://github.com/o/n/x') === null && githubRepoFromUrl('') === null && githubRepoFromUrl(null) === null && githubRepoFromUrl('/local/path') === null, 'inbox: github.com 以外・読めない URL は null');
+  assert(buildItem({ kind: 'tell', chief: A, title: 'x', repo: 'o/n' }).repo === 'o/n' && !('repo' in tell) && !('repo' in buildItem({ kind: 'tell', chief: A, title: 'x', repo: null })), 'inbox: repo は分かるときだけ持つ');
+  assert(throws(() => buildItem({ kind: 'tell', chief: A, title: 'x', repo: 'o/n/x' }), 400) && throws(() => buildItem({ kind: 'tell', chief: A, title: 'x', repo: 'https://github.com/o/n' }), 400) && throws(() => buildItem({ kind: 'tell', chief: A, title: 'x', repo: 'o' }), 400), 'inbox: owner/name でない repo は断る');
 
   // CoS の記録と見張りの印
   const nowMs = Date.parse('2026-11-25T08:00:00Z');

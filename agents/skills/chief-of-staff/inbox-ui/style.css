@@ -218,3 +218,8 @@ main > .chiefs[hidden] { display: none; }
 .replies { margin: 8px 0 0; padding-left: 1.3em; color: var(--sub); font-size: 13px; }
 .reply-to { color: var(--sub); }
 .key-hint { flex: 1 1 100%; color: var(--sub); font-size: 12px; margin-top: -2px; }
+
+/* 1行の項目（読むだけ・済んだもの・送った指示）: 1段目に CoS のタグ／作業セッションと時刻、2段目に題を全幅で（カードと同じ並び） */
+.row > summary .who { flex: 1 1 auto; min-width: 0; white-space: normal; }
+.row > summary .t { order: 5; flex: 1 1 100%; min-width: 0; }
+.title a, .row > summary .t a { color: var(--accent); }

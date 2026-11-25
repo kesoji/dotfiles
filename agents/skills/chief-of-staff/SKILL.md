@@ -233,6 +233,7 @@ CoS の働き方（依頼書の書き方・聞く／聞かないの判断・自�
 | `cos ask --title T (--body-file F \| --body TEXT) [--option key:ラベル[:説明] ...] [--recommend key] [--no-free-text] [--link 名前=URL ...] [--worker ID] [--supersedes ID]` | 受け箱に「要返事」を出す。標準出力に項目の id だけを出す（案内は標準エラー）。`--no-free-text` は文章だけの返事を受け付けない（選択肢が要る）。`--link` の値は URL か手元のファイルのパス。新しい項目は herdr と macOS の通知を出す |
 | `cos review --title T (--body-file F \| --body TEXT) [--link ...] [--worker ID] [--supersedes ID]` | 受け箱に「確認依頼」を出す（ユーザーは承認か、コメント付きの差し戻し） |
 | `cos tell --title T (--body-file F \| --body TEXT) [--link ...] [--worker ID] [--supersedes ID]` | 受け箱に「読むだけ」を出す（開いたら既読。通知は出さず、見張りも起こさない） |
+| `cos ask` / `cos review` / `cos tell` の `--repo owner/name` | その件の GitHub のリポジトリ。画面は、項目のリポジトリが分かるときだけ、題・本文・報告書の `PR #123`・`#123`・コミットの SHA を GitHub へのリンクにする（`owner/name#123` はいつもリンクになる）。付けなければ git の origin から入る（`--worker` の件はその作業セッションの対象のリポジトリ・それ以外は CoS のリポジトリ）。**CoS のリポジトリでも作業セッションの対象でもないリポジトリの件を出すときだけ付ける**（ハブの CoS が、作業セッションを立てずに別のリポジトリの PR の話をするときなど） |
 | `cos ask` / `cos review` / `cos tell` の `--reply-to <指示の id>` | ユーザーからの指示への返事として出す（この CoS 宛ての指示だけ）。画面で元の指示とつながり、元の指示が未読なら既読になる |
 | `cos inbox [--all] [--mine] [--json]` | 受け箱の一覧（全 CoS の未対応。★＝この CoS の項目）。`--all` は済んだものも（返事の中身・取り下げ・置き換えが出る）。git の外でも動く |
 | `cos inbox show <id>` / `cos inbox read <id>` | 項目の JSON を出す／読むだけの項目を CLI で既読にする |
