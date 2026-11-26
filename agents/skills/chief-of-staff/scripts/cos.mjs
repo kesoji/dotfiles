@@ -76,7 +76,7 @@ import {
   INBOX_DEFAULT_PORT, InboxError, KIND_LABEL, SERVICE_LABEL, STALE_ASK_DAYS,
   ackItem, answerItem, answerLabel, duplicateOpen, replyTarget, threadHint, isStaleItem, tellMisuse, answeredEvent, answeredFor, chiefsDir, clearServerInfo, createItem, getItem, inboxDir, inboxStamp, listItems, markDelivered,
   messageEvent, messagesFor, nodeOnPath, noteChief, notifyNew, openCounts, overLimit, githubRepoFromUrl, parseLink, parseOption, readItem, sameDir, selfTestInbox, serveInbox, serverInfo, sortInbox,
-  servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo, closeTodoLine, todoLineRef, selfTestTodoApi,
+  servicePlist, staleReviewTargets, unackedFor, withdrawItem, writeServerInfo, closeTodoLine, todoLineRef, selfTestTodoApi, WAITING_KINDS,
 } from './inbox.mjs';
 import {
   TodoError, addTodoToFile, dueState, findTodo, parseTodos, readTodoFile, resolveTodoPath, setTodoDoneInFile, selfTestTodoFile, sortTodos, todoFilesOf,
@@ -2755,7 +2755,11 @@ function lastTurnAssistantTexts(lines) {
 // - 動いている裏のコマンドの ID（b＋英数字8文字。tasks/<ID>.output があり、終わっても止められてもいない）
 // - 台帳にある、閉じていない作業セッションの ID
 // - #番号（PR / Issue。CI 待ちなどは GitHub と見張りが動いているので、ここまでは確かめない）
-// - ほかの人が動いている印（「ユーザーが」「〇〇さんから」「…の返事」「…待ち」）。名前が出るだけでは通さない
+// - ユーザー以外のほかの人が動いている印（「〇〇さんから」「〇〇さんの返事」「〇〇さん待ち」）。名前が出るだけでは通さない
+// - 受け箱にまだ未対応で出ている項目（要返事・確認依頼・やること）の id（20261126-1332-main-a3f の形）
+// ユーザーの番の項目（ユーザーの操作・返事・判断を待っている）は、ほかの印があっても止める。受け箱が「あなたの番は無い」と
+// 言うのに、会話の「進めているもの」が「あなたを待っている」と言うと、ユーザーはどちらを信じればよいか分からない。
+// ユーザーの番は受け箱（cos todo / cos ask）に出して、「進めているもの」からは消す。
 // 報告の見出しの行（「## 〇〇」「**〇〇**」「**〇〇：**」「### 📌 〇〇」「〇〇（2件）：」など）。見出しでない行の中の語は読まない。
 const headingRe = (word) => new RegExp(`^\\s*(?:#{1,6}\\s*|\\*\\*)?(?:\\p{Extended_Pictographic}\\uFE0F?\\s*)?${word}(?:[（(][^）)]*[）)])?\\s*[:：]?\\s*(?:\\*\\*)?\\s*[:：]?\\s*$`, 'u');
 const PROGRESS_HEADING = headingRe('進めているもの');
@@ -2765,7 +2769,26 @@ const REPORT_HEADINGS = [PROGRESS_HEADING, PENDING_HEADING, ANSWER_HEADING];
 const PROGRESS_BULLET = /^(?:[-*+・]|\d+[.)])\s+/;
 const BG_ID_RE = /(?<![0-9A-Za-z])(b[0-9a-z]{8})(?![0-9A-Za-z])/g;
 const ISSUE_RE = /(?<![0-9A-Za-z&])#\d+(?![0-9A-Za-z])/;
-const PERSON_RE = /(?:ユーザー|ご自身|[\u3005\u3007\u4e00-\u9fa5\u30a1-\u30f6\u30fc]{1,8}さん)(?:が|から|の返事|の作業|の確認|待ち)/;
+const PERSON_RE = /([々〇一-龥ァ-ヶー]{1,8})さん(?:が|から|の返事|の作業|の確認|待ち|に[^。\n]{0,30}?(?:もら|いただ|頼|お願い))/g;
+const INBOX_ID_RE = /(?<![0-9A-Za-z-])(\d{8}-\d{4}-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{3})(?![0-9A-Za-z-])/g;
+// ユーザー本人を名指しして待つ言い回し（ほかの人の名前があっても止める）。
+const USER_TURN_RES = [
+  /(?:ユーザー|ご自身|ご本人)(?:さん|様)?(?:が|から)[^。\n]{0,40}?(?:待|たら|れば|次第|しだい)/,
+  /(?:ユーザー|ご自身|ご本人)(?:さん|様)?に[^。\n]{0,40}?(?:もら|いただ|頼|お願い)/,
+  /(?:ユーザー|ご自身|ご本人)(?:さん|様)?の(?:返事|返答|回答|判断|確認|操作|作業|承認|了承|許可|OK|ok|入力|実行|手|決定|指示|選択|ログイン|解錠)[^。\n]{0,10}?(?:待|次第|しだい)/,
+  /あなた(?:が|の|に|から|を)/,
+  /(?:^|[^0-9A-Za-z])`?[!！]`?\s*(?:で|から)\s*(?:実行|打|叩|流|走)/,
+  /`[!！]\s*[^`\n]+`\s*(?:で|を|と)/,
+];
+// 誰かに頼む言い回し。頼む相手が書いていなければユーザーとみなす（「〇〇さんに」「先方に」があれば通す）。
+const ASK_TURN_RES = [
+  /[てで](?:もらう|いただく)(?:の|こと)?(?:を|が)?待/,
+  /[てで](?:もらえ|いただけ)(?:れば|たら|次第|しだい)/,
+  /[てで](?:もら|いただ)い?次第/,
+  /ご(?:返事|返答|回答|判断|確認|承認|対応)(?:を|が)?(?:待|いただ|ください|お願い)/,
+  /[てで]ください|お願いします/,
+];
+const OTHER_PARTY_RE = /先方|相手方|レビュアー|チーム|担当者|ほかの人|他の人/;
 
 // 「進めているもの」の見出しの下の箇条書きを、子の行も含めて1項目ずつ返す。
 // 次の見出しか、箇条書きでない段落で終わる。続けて別の「進めているもの」があれば読み直す。
@@ -2792,25 +2815,76 @@ export function progressItems(text) {
   return items.map((i) => i.join('\n'));
 }
 
+// ユーザー以外の人（「〇〇さん」。「ユーザーさん」は除く・先方・チームなど）が書いてあるか。
+function otherPartyIn(item) {
+  if (OTHER_PARTY_RE.test(item)) return true;
+  return [...item.matchAll(/([\u3005\u3007\u4e00-\u9fa5\u30a1-\u30f6\u30fc]{1,8})さん/g)].some((m) => !m[1].endsWith('ユーザー'));
+}
+
+// 項目がユーザーの番（ユーザーの操作・返事・判断を待っている）と読めたら、当たった言い回しを返す。読めなければ null。
+export function userTurnPhrase(item) {
+  for (const re of USER_TURN_RES) {
+    const m = item.match(re);
+    if (m) return m[0].trim();
+  }
+  if (otherPartyIn(item)) return null;
+  for (const re of ASK_TURN_RES) {
+    const m = item.match(re);
+    if (m) return m[0];
+  }
+  return null;
+}
+
 // 項目に印があるか。isLiveBg(ID) は裏のコマンドがまだ動いているか、workers は閉じていない作業セッションの ID。
 export function hasProgressAnchor(item, isLiveBg, workers) {
-  if (ISSUE_RE.test(item) || PERSON_RE.test(item)) return true;
+  if (ISSUE_RE.test(item)) return true;
+  if ([...item.matchAll(PERSON_RE)].some((m) => !m[1].endsWith('ユーザー'))) return true;
   for (const m of item.matchAll(BG_ID_RE)) if (isLiveBg(m[1])) return true;
   return workers.some((w) => w && idMentioned(item, w));
 }
 
+// 項目の判定。{ kind: 'user'（ユーザーの番）| 'none'（印が無い）, phrase, stale（未対応で見つからない受け箱の id） } か、通すなら null。
+// 受け箱に未対応で出ている項目の id があれば通す（ユーザーには受け箱で見えている＝食い違わない）。
+// isOpenInbox(id) は、この CoS の受け箱に未対応の要返事・確認依頼・やることとしてあるか。
+export function progressItemProblem(item, isLiveBg, workers, isOpenInbox = () => false) {
+  const ids = [...new Set([...item.matchAll(INBOX_ID_RE)].map((m) => m[1]))];
+  if (ids.some((id) => isOpenInbox(id))) return null;
+  const phrase = userTurnPhrase(item);
+  if (phrase) return { kind: 'user', phrase, stale: ids };
+  if (!hasProgressAnchor(item, isLiveBg, workers)) return { kind: 'none', phrase: null, stale: ids };
+  return null;
+}
+
 // 判定だけの純関数。止めるなら理由の文、通すなら null。
-export function progressHookDecision(text, isLiveBg, workers) {
-  const bad = progressItems(text).filter((i) => !hasProgressAnchor(i, isLiveBg, workers));
-  if (bad.length === 0) return null;
-  return [
-    '「進めているもの」に、実際に動いているものの印が無い項目があります。',
-    ...bad.map((i) => `- 「${i.split('\n')[0].slice(0, 200)}」`),
-    '各項目は、実際に始めて裏のコマンドの ID を書く・作業セッションを立てる・返事を待っているものに移す・消す、のどれかにしてください。'
-      + '印として認めるのは、動いている裏のコマンドの ID（b＋英数字8文字）・台帳にある閉じていない作業セッションの ID・#番号・'
-      + '「ユーザーが」「〇〇さんから」のようにほかの人が動いている書き方です。',
-    'なぜ駄目か: 書き写しているだけで誰も動いていない項目を、ユーザーが進んでいると誤解します（一度も始めていない確認を、3時間載せ続けたことがある）。',
-  ].join('\n');
+export function progressHookDecision(text, isLiveBg, workers, isOpenInbox = () => false) {
+  const probs = progressItems(text).map((i) => [i, progressItemProblem(i, isLiveBg, workers, isOpenInbox)]).filter(([, p]) => p);
+  if (probs.length === 0) return null;
+  const quote = (i, p) => `- 「${i.split('\n')[0].slice(0, 200)}」${p.phrase ? `（「${p.phrase}」がユーザーの番に読めます）` : ''}`
+    + (p.stale.length ? `（受け箱の ${p.stale.join('・')} は、未対応の項目として見つかりません）` : '');
+  const out = [];
+  const user = probs.filter(([, p]) => p.kind === 'user');
+  const none = probs.filter(([, p]) => p.kind === 'none');
+  if (user.length) {
+    out.push(
+      '「進めているもの」に、ユーザーの番の項目（ユーザーの操作・返事・判断を待っているもの）があります。',
+      ...user.map(([i, p]) => quote(i, p)),
+      'ユーザーにしてほしい作業は `cos todo`、決めてほしいことは `cos ask` で受け箱に出し、「進めているもの」からは消してください'
+        + '（同じ項目に動いている裏のコマンドや作業セッションがあれば、その部分だけ残す）。受け箱にもう出しているなら、その id（例 20261126-1332-main-a3f）を書けば通します。',
+      'なぜ駄目か: 受け箱は「あなたの番は無い」と言い、会話は「あなたを待っている」と言うことになり、ユーザーはどちらを信じればよいか分かりません。',
+    );
+  }
+  if (none.length) {
+    if (out.length) out.push('');
+    out.push(
+      '「進めているもの」に、実際に動いているものの印が無い項目があります。',
+      ...none.map(([i, p]) => quote(i, p)),
+      '各項目は、実際に始めて裏のコマンドの ID を書く・作業セッションを立てる・ユーザーの番なら受け箱に出す（cos todo / cos ask）・消す、のどれかにしてください。'
+        + '印として認めるのは、動いている裏のコマンドの ID（b＋英数字8文字）・台帳にある閉じていない作業セッションの ID・#番号・'
+        + '「〇〇さんから」のようにユーザー以外のほかの人が動いている書き方・受け箱に未対応で出ている項目の id です。',
+      'なぜ駄目か: 書き写しているだけで誰も動いていない項目を、ユーザーが進んでいると誤解します（一度も始めていない確認を、3時間載せ続けたことがある）。',
+    );
+  }
+  return out.join('\n');
 }
 
 // ---- 未確認の回答は「読んでほしい回答」に並べる（cos answer hook）----
@@ -2919,11 +2993,12 @@ export function progressCheckApplies(env) {
 // texts はターンの assistant の文を記録ごとに並べたもの。未確認の回答はターン全体の文から、「進めているもの」
 // 「返事を待っているもの」は最後の文から探す。pending・isLiveBg・workers・moving は読めなかったら null（その検査だけ飛ばす）。
 // workers は閉じていない作業セッション、moving はそのうち作業中のもの（movingWorkerIds）。
-export function stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving }) {
+// isOpenInbox はこの CoS の受け箱に未対応で出ている項目か（読めなかったら null＝受け箱の id では通さない）。
+export function stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving, isOpenInbox = null }) {
   if (input.stop_hook_active) return null; // このフックで止めた続きの Stop＝1ターンに1回まで
   const answerReason = pending?.length ? answerHookDecision(texts, pending) : null;
   const progressReason = progressCheckApplies(env) && texts.length && isLiveBg && workers
-    ? progressHookDecision(texts[texts.length - 1], isLiveBg, workers)
+    ? progressHookDecision(texts[texts.length - 1], isLiveBg, workers, isOpenInbox ?? (() => false))
     : null;
   const pendingReason = progressCheckApplies(env) && texts.length && isLiveBg && moving
     ? pendingHookDecision(texts[texts.length - 1], isLiveBg, moving)
@@ -3068,12 +3143,19 @@ function answerHook() {
     let isLiveBg = null;
     let workers = null;
     let moving = null;
+    let isOpenInbox = null;
     if (progressCheckApplies(env)) {
       try { isLiveBg = liveBgIn(bgTasksDirs(input.transcript_path, input.session_id || 'unknown', env), claudeStartMs()); } catch { /* 印の検査だけ飛ばす */ }
       try { workers = openWorkerIds(readLedger(ctx)); } catch { workers = []; }
       try { moving = movingWorkerIds(readLedger(ctx), (w) => readReport(w).state); } catch { moving = null; }
+      try {
+        const dir = chiefOf(ctx).dir;
+        const open = new Set(listItems(inboxDir()).items
+          .filter((x) => x.status === 'open' && WAITING_KINDS.includes(x.kind) && sameDir(x.chief?.dir, dir)).map((x) => x.id));
+        isOpenInbox = (id) => open.has(id);
+      } catch { isOpenInbox = null; }
     }
-    const reason = stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving });
+    const reason = stopHookDecision({ env, input, texts, pending, isLiveBg, workers, moving, isOpenInbox });
     if (reason) process.stdout.write(JSON.stringify({ decision: 'block', reason }));
   } catch {
     // 壊れていても CoS を止めない
@@ -4156,13 +4238,12 @@ function selfTest() {
     const D = (t) => progressHookDecision(t, isLive, W);
     const failed = '- **app@2026-01-01.1:** 一覧画面の表示を、これから確かめます。';
     const r = D(`PR をマージしました。\n\n## 進めているもの\n\n${failed}\n- **PR #123:** CI が走っています。\n\n## 返事を待っているもの\n\n**86. 設計**`);
-    assert(r && r.includes('一覧画面') && !r.includes('PR #123') && r.includes('返事を待っているものに移す') && r.includes('誤解'), `progress: 印の無い項目だけを引用し、直し方と理由を書く: ${r}`);
+    assert(r && r.includes('一覧画面') && !r.includes('PR #123') && r.includes('受け箱に出す') && r.includes('誤解'), `progress: 印の無い項目だけを引用し、直し方と理由を書く: ${r}`);
     for (const good of [
       '- **端末の見守り:** 5分ごとに確認しています（bd20j5n0z）。',
       '- **Dependabot（dep-fix）:** 作業セッションが直しています。',
       '- **dep-fix**: 作業セッションが直しています。',
       '- **PR #123:** CI が走っています。',
-      '- **nightly-job:** ユーザーが流すのを待っています。',
       '- **先方への依頼:** 〇〇さんから先方に頼んでいただいています。',
       '- **確認:** 甲々さんの返事を待っています。',
     ]) assert(D(`## 進めているもの\n\n${good}`) === null, `progress: 印があれば通る: ${good}`);
@@ -4181,6 +4262,44 @@ function selfTest() {
     assert(D('PR をマージしました。一覧画面はこれから確かめます。') === null, 'progress: 見出しが無ければ通る');
     assert(D('1. 進めているもの は下のとおり') === null, 'progress: 見出しでない行の「進めているもの」は読まない');
     assert(progressItems('### 進めているもの：\n1. a #1\n2) b').length === 2, 'progress: 番号付きの箇条書きと「：」付きの見出し');
+    // ユーザーの番の項目は、ほかの印があっても止めて、受け箱へ案内する（例は架空）
+    for (const bad of [
+      '- **nightly-job:** ユーザーが流すのを待っています。',
+      '- **PR #123 の本番 apply:** ユーザーが ! で実行するか、会話で「apply して」と書いてもらうのを待っています',
+      '- **見張り:** cos watch（bd20j5n0z）は動いています。通知の見張りは、パスワード管理を開いてもらえれば張り直します。',
+      '- **設定の切り替え（dep-fix）:** ユーザーの判断待ち',
+      '- **鍵の更新:** ログインしてもらえたら続けます。',
+      '- **移行:** `! make migrate` で実行してください（bd20j5n0z）',
+      '- **公開:** あなたが OK を出したら進めます。',
+      '- **画面の確認:** ユーザーに見てもらってから #123 をマージします',
+      '- **料金の確認:** ご判断をいただき次第、進めます。',
+    ]) {
+      const r2 = D(`## 進めているもの\n\n${bad}`);
+      assert(r2 && r2.includes('ユーザーの番') && r2.includes('cos todo') && r2.includes('cos ask') && r2.includes('消して') && !r2.includes('印が無い'), `progress: ユーザーの番は止めて受け箱へ案内する: ${bad} → ${r2}`);
+    }
+    for (const good of [
+      '- **先方への依頼:** 〇〇さんに見てもらうのを待っています。',
+      '- **契約:** 先方のご確認をいただき次第、進めます（#123）。',
+      '- **レビュー:** 甲々さんから返事待ち。',
+      '- **不具合（dep-fix）:** ユーザーが報告した不具合を作業セッションが直しています。',
+      '- **通知（bd20j5n0z）:** ユーザー向けの通知を送る準備をしています。',
+      '- **PR #123:** CI が走っています。',
+    ]) assert(D(`## 進めているもの\n\n${good}`) === null, `progress: ユーザー以外を待つ項目・ユーザーの語が出るだけの項目は通す: ${good}`);
+    assert(userTurnPhrase('ユーザーさんが流すのを待っています') && !hasProgressAnchor('ユーザーさんから返事待ち', () => false, []), 'progress: 「ユーザーさん」はユーザー本人');
+    // 受け箱に未対応で出ている項目の id があれば通す。無い・済んだ id なら止める
+    {
+      const open = new Set(['20261126-1332-main-a3f']);
+      const DI = (t) => progressHookDecision(t, isLive, W, (id) => open.has(id));
+      assert(DI('## 進めているもの\n- **本番 apply:** 受け箱 20261126-1332-main-a3f の返事待ち') === null, 'progress: 受け箱の未対応の項目の id は通す');
+      assert(DI('## 進めているもの\n- **本番 apply:** ユーザーが実行するのを待っています（受け箱 20261126-1332-main-a3f）') === null, 'progress: 受け箱にあるユーザーの番は通す');
+      const r3 = DI('## 進めているもの\n- **本番 apply:** ユーザーが実行するのを待っています（受け箱 20261126-1200-main-0bc）');
+      assert(r3 && r3.includes('ユーザーの番') && r3.includes('20261126-1200-main-0bc は、未対応の項目として見つかりません'), `progress: 受け箱に無い id では通さない: ${r3}`);
+      const r4 = DI('## 進めているもの\n- **本番 apply:** 受け箱 20261126-1200-main-0bc の返事待ち');
+      assert(r4 && r4.includes('印が無い') && r4.includes('見つかりません'), `progress: 済んだ受け箱の id だけでは印にならない: ${r4}`);
+      assert(D('## 進めているもの\n- **本番 apply:** 受け箱 20261126-1332-main-a3f の返事待ち') !== null, 'progress: 受け箱が読めなければ id では通さない');
+      const both2 = DI('## 進めているもの\n- **鍵:** 開いてもらえれば張り直します。\n- **一覧:** これから確かめます。');
+      assert(both2 && both2.includes('ユーザーの番') && both2.includes('印が無い') && both2.indexOf('開いてもらえれば') < both2.indexOf('一覧'), `progress: 2種類の理由を分けて書く: ${both2}`);
+    }
     // 裏のコマンドの出力の読み方（動いている／終わった／止めた／無い）
     const tmp = join(homedir(), '.cache', `cos-selftest-${process.pid}`);
     try {
@@ -4247,6 +4366,8 @@ function selfTest() {
       assert(S({ input: { stop_hook_active: true } }) === null, 'stop: stop_hook_active なら止めない');
       assert(S({ texts: ['## 進めているもの\n- **確認:** これから。', '最後の報告（一覧なし）'] }) === null, 'stop: 印の検査は最後の文だけ');
       assert(S({ isLiveBg: null }) === null && S({ workers: null }) === null, 'stop: 材料が読めなければ印の検査は飛ばす');
+      const UT = ['## 進めているもの\n- **apply:** ユーザーが実行するのを待っています（20261126-1332-main-a3f）'];
+      assert(S({ texts: UT })?.includes('ユーザーの番') && S({ texts: UT, isOpenInbox: (id) => id === '20261126-1332-main-a3f' }) === null, 'stop: 受け箱の id を確かめる関数を渡す');
       const P = [{ id: 'A1', question: 'q1' }];
       const both = S({ texts: ['[A1] 本文で触れた', '## 進めているもの\n- **確認:** これから。\n\n## 返事を待っているもの\n- なし'], pending: P });
       assert(both && both.includes('[A1] q1') && both.includes('印が無い') && both.split('1回だけ止めます').length === 2, `stop: 2つの理由は1つにまとめる ${both}`);
