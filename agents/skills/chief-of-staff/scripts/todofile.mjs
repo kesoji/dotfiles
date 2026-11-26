@@ -79,6 +79,33 @@ function idSource(line) {
   return `${m[1].trim()} ${m[3].trim()} ${m[4].replace(DONE_MARK_RE, '').trim()}`;
 }
 
+// 太字に「期日: やること」の区切りが無い行（`**11/21(金) 以降** 支払いを戻す`・`**10/18 20:29 本番リリース**（補足）`）を、
+// 期日の部分（dueText）と題（title）に分ける。画面の期日の欄と題に同じ日付が二度出ないようにするため（ファイルの書式も id も変えない）。
+//   期日の部分: 頭から続く 日付・曜日・時刻・以降・まで・から・〜・頃・朝 など、と起きた日の語（見つかった・済 など）
+//   題: 太字の残りの語。残りが無ければ、補足の頭（最初の（ か 。の手前）を題にして、その後ろを補足に残す
+//   残りが助詞で始まる（`11/30 以降に再開`）なら太字ぜんぶを期日の部分にする（語の途中で切らない）
+//   題にする語が何も無ければ、題は今までどおり太字ぜんぶ（CLI の表示や済にしたときのコミットの文が空にならないように。画面は dueText と同じ題を出さない）
+// 期日の種類（dueKind）は今までどおり太字ぜんぶから決める（呼ぶ側）。
+const DUE_HEAD_RE = new RegExp(
+  '^(?:\\s*(?:\\d{4}-\\d{1,2}-\\d{1,2}|\\d{1,2}\\/\\d{1,2}(?![\\d/])|[（(][月火水木金土日][）)]|\\d{1,2}:\\d{2}|[〜~]|' +
+    '(?:以降|以後|までに|まで|から|頃|ごろ|午前|午後|朝|昼|夕方|夜|見つかった|見つけた|判明|発覚|発生|起きた|済)(?![一-龠々ァ-ヶー])))+',
+);
+function splitUnseparated(bold, note) {
+  const m = bold.match(DUE_HEAD_RE);
+  const head = m ? m[0].trim() : bold;
+  let title = bold.slice(m ? m[0].length : bold.length).trim();
+  const out = { dueText: head };
+  if (/^[にのはをがでとへやも、,]/.test(title)) {
+    out.dueText = bold;
+    title = '';
+  }
+  if (title) return { ...out, title };
+  const cut = note.search(/[（(。]/);
+  const lead = (cut < 0 ? note : note.slice(0, cut)).trim();
+  if (!lead) return { ...out, title: note || bold, note: '' };
+  return { ...out, title: lead, note: note.slice(lead.length).replace(/^\s*。\s*/, '').trim() };
+}
+
 // TODO の本文を読む。返すのはチェックボックスの行だけ（見出しや説明の行は todos に入らない）。
 //   { id, n, line, done, readable, anytime, due, dueText, title, note, doneOn, doneNote, raw }
 //   id       行の中身のハッシュ（8桁）。同じ中身の行が複数あれば、2つ目から -2・-3 を付ける（ファイルの順）
@@ -89,6 +116,7 @@ function idSource(line) {
 //   dueKind  期日の種類（dueKindOf: after＝着手日・deadline＝締切・since＝起きた日）。いつでも・読めない行は null
 //   dueText  書かれている期日の文字（「11/22 16:30 以降」など）
 //   note     太字の後ろの文字（補足。済の印は除く）
+//   太字に「期日: やること」の区切りが無い行は、期日の部分と題を splitUnseparated で分ける（dueText に題を入れない）
 export function parseTodos(text, today) {
   const lines = String(text).split(/\r?\n/);
   const todos = [];
@@ -124,6 +152,7 @@ export function parseTodos(text, today) {
         t.dueKind = anytime ? null : dueKindOf(t.dueText);
         t.title = sep < 0 ? (anytime ? bold.slice(ANYTIME.length).trim() || bold : bold) : bold.slice(sep + 1).trim();
         t.note = b[2].replace(/^\s*[:：]\s*/, '').trim();
+        if (sep < 0 && !anytime) Object.assign(t, splitUnseparated(bold, t.note));
       }
     }
     todos.push(t);
@@ -494,6 +523,23 @@ export function selfTestTodoFile(assert) {
     '- [ ] **いつでも: 机を片付ける**',
   ].join('\n'), D).todos;
   assert(K.map((t) => t.dueKind ?? '-').join() === 'after,after,after,deadline,deadline,deadline,deadline,deadline,since,since,after,-', `todofile: 期日の種類（以降・〜は着手日、まで・日付だけ・期間は締切、見つかった・済は起きた日） ${K.map((t) => t.dueKind)}`);
+  // 区切りの無い太字: 期日の部分と題を分ける（期日の欄と題に同じ日付が二度出ないように）
+  const U = parseTodos([
+    '- [ ] **11/21(金) 以降** 支払いを戻す（コンソールで）',
+    '- [ ] **10/18 20:29 本番リリース** （補足）',
+    '- [ ] **12/3** 机を片付ける',
+    '- [ ] **11/30 以降に再開**',
+    '- [ ] **12/1(月)〜 毎月の締め**',
+    '- [ ] **11/4 見つかった** 表示の崩れ',
+    '- [ ] **11/28 朝会の準備**',
+    '- [ ] **11/28**（補足だけ）',
+    '- [ ] **11/20: 区切りあり 11/21**',
+  ].join('\n'), D).todos.map((t) => [t.dueText, t.title, t.note, t.dueKind].join('|'));
+  const UW = ['11/21(金) 以降|支払いを戻す|（コンソールで）|after', '10/18 20:29|本番リリース|（補足）|deadline', '12/3|机を片付ける||deadline', '11/30 以降に再開|11/30 以降に再開||after',
+    '12/1(月)〜|毎月の締め||after', '11/4 見つかった|表示の崩れ||since', '11/28|朝会の準備||deadline', '11/28|（補足だけ）||deadline', '11/20|区切りあり 11/21||deadline'];
+  assert(U.join('\n') === UW.join('\n'), `todofile: 区切りの無い太字は期日の部分と題に分ける ${JSON.stringify(U)}`);
+  const idsBefore = parseTodos('- [ ] **12/3** 机を片付ける\n', D).todos[0].id;
+  assert(idsBefore === createHash('sha1').update('- [ ] **12/3** 机を片付ける').digest('hex').slice(0, 8), 'todofile: 分けても id は行の中身のハッシュのまま');
   assert(dueKindOf('11/6 〜') === 'after' && dueKindOf('11/6~11/8') === 'deadline' && dueKindOf('2026-12-01〜') === 'after' && dueKindOf('11/30 以降に再開') === 'after' && dueKindOf('12/1 から 12/5 まで') === 'deadline', 'todofile: 〜の後に日付が無ければ着手日・あれば期間');
   // D は 2026-11-25。着手日は当日から startable（赤くしない）、締切は過ぎたら overdue、起きた日は noted
   const KS = K.map((t) => dueState(t, D));

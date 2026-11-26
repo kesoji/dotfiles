@@ -2,7 +2,7 @@
   --page-width: min(2200px, 98vw);
   --col-min: 440px; /* 要返事・確認依頼の列の最小幅 */
   --col-min-narrow: 300px; /* 読むだけ・TODO の列の最小幅 */
-  --col-empty: 170px; /* 広い画面で、空の列が「なし」と出して残る幅 */
+  --col-empty: 104px; /* 広い画面で、空の列が「なし」と出して残る幅（見出し「● 確認依頼」が収まるだけ） */
   --bg: #f6f5f1;
   --card: #ffffff;
   --ink: #1d1d1b;
@@ -63,7 +63,6 @@ h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
 .counts .kind:hover { border-color: var(--line); }
 .counts .kind[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .counts .kind[aria-pressed="true"] b { color: inherit; }
-.counts .kind .here { margin-left: 4px; opacity: .75; }
 .counts .kind .key { margin-left: 6px; font: 10px/1 ui-sans-serif, system-ui, sans-serif; color: var(--sub); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; vertical-align: 1px; }
 .counts .kind[aria-pressed="true"] .key { color: inherit; border-color: currentColor; opacity: .6; }
 .conn { font-size: 12px; color: var(--sub); }
@@ -203,6 +202,8 @@ main > section, main > .cols { flex: 1 1 100%; min-width: 0; }
 main.by-kind .cols > .col { flex: 1 1 100%; } /* 種類で絞っているときは、その列を全幅で */
 main > .error, main > .empty, main > .done { flex: 1 1 100%; }
 main > section[hidden], .cols > .col[hidden], main > .error[hidden], main > .empty[hidden], main > .done[hidden] { display: none; }
+/* 空の一覧は出さない（.rows は枠線を持つので、中身が無いと見出しの下に灰色の太い線として見える） */
+.cols .list:empty { display: none; }
 .col-none { display: none; margin: 0; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--sub); font-size: 13px; }
 @media (max-width: 1099.98px) {
   .cols > .col.is-empty:not(#sec-tfile) { display: none; }
@@ -210,7 +211,7 @@ main > section[hidden], .cols > .col[hidden], main > .error[hidden], main > .emp
 @media (min-width: 1100px) {
   .cols { flex-wrap: nowrap; }
   .cols > .col { min-width: 180px; } /* 中身が多い列が並んでも、ここより細くしない（5列で 980px） */
-  .cols > .col.is-empty { flex-grow: 0; flex-basis: var(--col-empty); min-width: 120px; }
+  .cols > .col.is-empty { flex-grow: 0; flex-basis: var(--col-empty); min-width: var(--col-empty); }
   .cols > .col.is-empty .col-none { display: block; }
   .cols > .col.is-empty h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cols > .col.is-empty h2 small { display: none; } /* 細い列では見出しの添え書きを出さない */
@@ -333,7 +334,7 @@ main > .chiefs[hidden] { display: none; }
 .tf-box { grid-column: 1; grid-row: 1; align-self: stretch; display: flex; align-items: flex-start; padding: 3px 4px 0 8px; cursor: pointer; }
 .tf-box input { width: 17px; height: 17px; margin: 0; accent-color: var(--ok); cursor: pointer; }
 .tf-due { grid-column: 2; grid-row: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; color: var(--sub); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.tf-due b { display: block; font-weight: 600; }
+.tf-due b { display: block; font-weight: 600; white-space: nowrap; }
 .tf-main { grid-column: 3; grid-row: 1; min-width: 0; overflow-wrap: anywhere; }
 .tf-title a, .tf-note a { color: var(--accent); }
 .tf-title code, .tf-note code { background: var(--code); border-radius: 4px; padding: .05em .35em; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }

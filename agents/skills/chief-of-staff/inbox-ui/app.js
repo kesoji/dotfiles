@@ -634,7 +634,8 @@ function todoRow(r) {
     h('label', { class: 'tf-box' }, box),
     due,
     h('span', { class: 'tf-main' },
-      h('span', { class: 'tf-title' }, inline(t.title, null)),
+      // 題が期日の文字と同じ（太字が期日だけで、題にする語が無い行）なら、期日の欄に出ているので出さない
+      t.title && t.title !== t.dueText ? h('span', { class: 'tf-title' }, inline(t.title, null)) : null,
       t.note ? h('span', { class: 'tf-note' }, inline(t.note, null)) : null,
       t.done && t.doneOn ? h('span', { class: 'tf-note', text: `済 ${t.doneOn}${t.doneNote ? `: ${t.doneNote}` : ''}` }) : null,
       linked.length ? h('button', { class: 'jump', type: 'button', text: 'やることに出ている ↓', title: 'この行から CoS が出した「やること」へ移る', onclick: () => jumpToItem(linked[0]) }) : null),
@@ -717,29 +718,29 @@ function render() {
   const seen = (x) => !state.filter || x.chief.name === state.filter;
   paintChiefs(new Set([...all.map((x) => x.chief.name), ...chiefs]));
 
-  // 見出しの件数（全 CoS）
+  // 見出しの件数（CoS で絞っているときは、その CoS の件数。アプリのバッジとタブの題は全 CoS の返事待ちのまま）
   const c = state.counts;
   // todo は、知らない版のサーバー（counts に無い）でも画面が数える
   const nTodo = c.todo ?? open.filter((x) => x.kind === 'todo').length;
-  // 件数は押せる＝その種類だけを全 CoS ぶん並べる（もう一度押すと外れる）。CoS も選んでいるときは「この CoS では n」を添える
+  // 件数は押せる＝その種類だけを並べる（もう一度押すと外れる）
   // TODO（TODO ファイルの未完了の行。受け箱の項目ではないので、返事待ちには数えない）
   if (state.kind === 'tfile' && state.todosLoaded && !state.todos.length) state.kind = '';
   const tfAll = todoRows(state.todos);
   const tfOpenN = (name) => tfAll.filter((r) => !r.t.done && (!name || r.chief === name)).length;
-  const tfDueN = tfAll.filter((r) => r.t.state === 'overdue' || r.t.state === 'today').length;
-  const kindN = { ask: c.ask, review: c.review, todo: nTodo, tell: c.tell, tfile: tfOpenN('') };
+  const tfDueN = tfAll.filter((r) => (r.t.state === 'overdue' || r.t.state === 'today') && (!state.filter || r.chief === state.filter)).length;
+  const allN = { ask: c.ask, review: c.review, todo: nTodo, tell: c.tell, tfile: tfOpenN('') };
   const kindLabel = { ask: '要返事', review: '確認', todo: 'やること', tell: '読むだけ', tfile: 'TODO' };
   const hereN = (k) => (k === 'tfile' ? tfOpenN(state.filter) : open.filter((x) => x.kind === k && x.chief.name === state.filter).length);
+  const kindN = Object.fromEntries(Object.entries(allN).map(([k, n]) => [k, state.filter ? hereN(k) : n]));
   $('counts').replaceChildren(...FILTER_KINDS.filter((k) => k !== 'tfile' || state.todos.length).flatMap((k, i) => [
     i ? ' ・ ' : null,
     h('button', {
       class: 'kind', type: 'button', 'aria-pressed': String(state.kind === k), 'data-kind': k,
-      title: state.kind === k ? '種類の絞り込みを外す' : `${kindLabel[k]}だけを、すべての CoS ぶん並べる`,
+      title: state.kind === k ? '種類の絞り込みを外す' : state.filter ? `${state.filter} の${kindLabel[k]}だけを並べる（全 CoS では ${allN[k]}）` : `${kindLabel[k]}だけを、すべての CoS ぶん並べる`,
       'aria-keyshortcuts': `Alt+${i + 1}`,
       onclick: () => setKind(state.kind === k ? '' : k),
     }, `${kindLabel[k]} `, h('b', { text: String(kindN[k]) }),
     k === 'tfile' && tfDueN ? h('span', { class: 'due-n', title: '期日が今日か、過ぎている TODO', text: `期日 ${tfDueN}` }) : null,
-    state.kind === k && state.filter ? h('span', { class: 'here', text: `（${state.filter} では ${hereN(k)}）` }) : null,
     h('kbd', { class: 'key', 'aria-hidden': 'true', text: `${IS_MAC ? '⌥' : 'Alt+'}${i + 1}` })),
   ]).filter(Boolean));
   const waiting = c.ask + c.review + nTodo; // 返事待ち＝ユーザーが返すまで残るもの
