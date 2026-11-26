@@ -799,10 +799,15 @@ function render() {
   col($('list-todo'), todos, todoCard);
   col($('list-tell'), tells, row);
   reconcile($('list-done'), done, row, rowSig);
-  $('sec-ask').hidden = !asks.length;
-  $('sec-review').hidden = !reviews.length;
-  $('sec-todo').hidden = !todos.length;
-  $('sec-tell').hidden = !tells.length;
+  // 列は種類で絞っているときだけ隠す。空の列は is-empty（広い画面では最低限の幅で「なし」と出して場所を残す・狭い画面では隠す。style.css の段組み）
+  const colState = (id, kind, n) => {
+    $(id).hidden = Boolean(state.kind) && state.kind !== kind;
+    $(id).classList.toggle('is-empty', !n);
+  };
+  colState('sec-ask', 'ask', asks.length);
+  colState('sec-review', 'review', reviews.length);
+  colState('sec-todo', 'todo', todos.length);
+  colState('sec-tell', 'tell', tells.length);
   $('sec-done').hidden = !done.length;
   $('done-count').textContent = done.length ? `（直近 ${done.length} 件）` : '';
 
@@ -816,7 +821,9 @@ function render() {
   reconcile($('list-tfile-done'), tfDone, todoRow, todoSig, noTouch);
   if (!$('tfile-add-slot').firstChild) $('tfile-add-slot').append(todoAdd.form);
   todoAdd.update();
-  $('sec-tfile').hidden = !boards.length;
+  // TODO の列は、TODO ファイルを持つ CoS がいる限り残す（絞り込んだ CoS に無ければ「未完了の TODO はありません」）
+  colState('sec-tfile', 'tfile', tfOpen.length);
+  if (!state.todos.length) $('sec-tfile').hidden = true;
   $('list-tfile').hidden = !tfOpen.length;
   $('tfile-empty').hidden = Boolean(tfOpen.length);
   $('tfile-done').hidden = !tfDone.length;

@@ -35,27 +35,33 @@
     <div class="list rows" id="list-msg" hidden></div>
   </section>
 
-  <section id="sec-ask" hidden>
+  <!-- 列（要返事・確認依頼・やること・読むだけ・TODO）。広い画面では横1行で、空の列も「なし」で場所を残す（style.css の段組み） -->
+  <div class="cols" id="cols">
+  <section id="sec-ask" class="col" hidden>
     <h2><span class="dot dot-ask"></span>要返事</h2>
     <div class="list" id="list-ask"></div>
+    <p class="col-none">なし</p>
   </section>
 
-  <section id="sec-review" hidden>
+  <section id="sec-review" class="col" hidden>
     <h2><span class="dot dot-review"></span>確認依頼</h2>
     <div class="list" id="list-review"></div>
+    <p class="col-none">なし</p>
   </section>
 
-  <section id="sec-todo" hidden>
+  <section id="sec-todo" class="col" hidden>
     <h2><span class="dot dot-todo"></span>やること <small>やったら「やった」を押す</small></h2>
     <div class="list" id="list-todo"></div>
+    <p class="col-none">なし</p>
   </section>
 
-  <section id="sec-tell" hidden>
+  <section id="sec-tell" class="col narrow" hidden>
     <h2><span class="dot dot-tell"></span>読むだけ <small>開いたら既読</small></h2>
     <div class="list rows" id="list-tell"></div>
+    <p class="col-none">なし</p>
   </section>
 
-  <section id="sec-tfile" hidden>
+  <section id="sec-tfile" class="col narrow" hidden>
     <h2><span class="dot dot-tfile"></span>TODO <small id="tfile-sub"></small></h2>
     <div id="tfile-add-slot"></div>
     <p class="hint warn" id="tfile-error" hidden></p>
@@ -66,6 +72,7 @@
       <div class="list rows" id="list-tfile-done"></div>
     </details>
   </section>
+  </div>
 
   <p class="empty" id="empty" hidden>いま待っているものはありません。</p>
 

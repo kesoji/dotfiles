@@ -1,7 +1,8 @@
 :root {
   --page-width: min(2200px, 98vw);
   --col-min: 440px; /* 要返事・確認依頼の列の最小幅 */
-  --col-min-narrow: 300px; /* 読むだけの列の最小幅 */
+  --col-min-narrow: 300px; /* 読むだけ・TODO の列の最小幅 */
+  --col-empty: 170px; /* 広い画面で、空の列が「なし」と出して残る幅 */
   --bg: #f6f5f1;
   --card: #ffffff;
   --ink: #1d1d1b;
@@ -189,14 +190,36 @@ textarea.auto, .reply textarea.auto { min-height: 0; max-height: 14em; resize: n
   .card, .row { transition: border-color .15s; }
 }
 
-/* 段組み: 要返事・確認依頼・やることを広く、読むだけを細く横に並べる（空の群は詰める・狭い画面では縦に積む）。エラー・空・済んだものは全幅 */
+/* 段組み: CoS の状況・エラー・空・済んだものは全幅。列（.cols の中の .col: 要返事・確認依頼・やること・読むだけ・TODO）は横に並べる。
+   広い画面（1100px 以上）: 列は横1行（折り返さない）。空の列も消さず、最低限の幅（--col-empty）で「なし」と出す。
+     中身のある列は最低限の幅（要返事・確認依頼・やること --col-min・読むだけ・TODO --col-min-narrow）から、残りを 2:1 で分けて伸び縮みする。
+     幅の変わり目は 200ms で動かす（prefers-reduced-motion では動かさない）。
+   それより狭い画面: 前と同じ（列は折り返し、空の列は隠す。いちばん狭いと縦に積む） */
 main { display: flex; flex-wrap: wrap; column-gap: 20px; align-items: flex-start; }
-main > section { flex: 2 1 var(--col-min); min-width: 0; }
-
-main > #sec-tell, main > #sec-tfile { flex: 1 1 var(--col-min-narrow); }
-main.by-kind > section:not(.chiefs), main.by-kind > #sec-tell { flex: 1 1 100%; } /* 種類で絞っているときは、その列を全幅で */
+main > section, main > .cols { flex: 1 1 100%; min-width: 0; }
+.cols { display: flex; flex-wrap: wrap; column-gap: 20px; align-items: flex-start; }
+.cols > .col { flex: 2 1 var(--col-min); min-width: 0; }
+.cols > .col.narrow { flex: 1 1 var(--col-min-narrow); }
+main.by-kind .cols > .col { flex: 1 1 100%; } /* 種類で絞っているときは、その列を全幅で */
 main > .error, main > .empty, main > .done { flex: 1 1 100%; }
-main > section[hidden], main > .error[hidden], main > .empty[hidden], main > .done[hidden] { display: none; }
+main > section[hidden], .cols > .col[hidden], main > .error[hidden], main > .empty[hidden], main > .done[hidden] { display: none; }
+.col-none { display: none; margin: 0; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--sub); font-size: 13px; }
+@media (max-width: 1099.98px) {
+  .cols > .col.is-empty:not(#sec-tfile) { display: none; }
+}
+@media (min-width: 1100px) {
+  .cols { flex-wrap: nowrap; }
+  .cols > .col { min-width: 180px; } /* 中身が多い列が並んでも、ここより細くしない（5列で 980px） */
+  .cols > .col.is-empty { flex-grow: 0; flex-basis: var(--col-empty); min-width: 120px; }
+  .cols > .col.is-empty .col-none { display: block; }
+  .cols > .col.is-empty h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cols > .col.is-empty h2 small { display: none; } /* 細い列では見出しの添え書きを出さない */
+  main.by-kind .cols > .col { flex: 1 1 100%; }
+  main > .empty { display: none; } /* 空の列が「なし」と出ている */
+}
+@media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
+  .cols > .col { transition: flex-grow .2s ease-out, flex-basis .2s ease-out; }
+}
 
 /* 表（本文と報告書） */
 .table-wrap { overflow-x: auto; margin: .5em 0; }
@@ -330,8 +353,10 @@ main > .chiefs[hidden] { display: none; }
 .tf-done { margin-top: 8px; }
 .tf-done > summary { cursor: pointer; color: var(--sub); font-size: 13px; margin-bottom: 6px; }
 .card.flash { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* 狭い画面: 期日を本文の上に1行で出す（チェックの右の列に、期日 → 本文の順） */
-@media (max-width: 520px) {
+/* TODO の列が細いとき（狭い画面か、広い画面で列が並んで細くなったとき）: 期日を本文の上に1行で出す（チェックの右の列に、期日 → 本文の順）。
+   画面の幅ではなく TODO の列の幅で決める（container query） */
+#sec-tfile { container: tfile / inline-size; }
+@container tfile (max-width: 460px) {
   .tf-row { grid-template-columns: auto minmax(0, 1fr) auto; }
   .tf-box { grid-row: 1 / span 2; }
   .tf-due { grid-column: 2; grid-row: 1; }
