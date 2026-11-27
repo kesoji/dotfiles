@@ -64,6 +64,7 @@ const LINK_SCHEMES = new Set(['http:', 'https:', 'file:']);
 // GitHub のリポジトリ（owner/name）。項目の repo と、画面が作るリンクの宛先に使う。
 const REPO_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
 const MAX_BODY = 1 << 20; // API に送れる本文（1MB）
+const LINK_IMAGE_TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
 const MAX_LINK_FILE = 5 << 20; // リンクのファイルを画面に出す上限（5MB）
 // 手元の HTML のリンクを HTML として出すときに付ける CSP。allow-same-origin を付けない＝その文書のオリジンは受け箱と別（null）になり、
 // 図のための JS は動くが、受け箱の API は読めず（別オリジンの応答は読めない）、POST も Origin の検査で断られる。
@@ -746,7 +747,7 @@ function closedAt(x) {
 // API の1回の呼び出し。返すのは { status, json } か { status, text, type, headers? }。ネットワークを通さず試せるように http から切り離してある。
 //   GET  /api/items[?status=open]         全部（未対応を並び順で先に、済んだものは新しい順）
 //   GET  /api/items/:id
-//   GET  /api/items/:id/links/:n          項目のリンクが指す手元のファイルの中身（項目に書かれたファイルだけ。.html は sandbox 付きの HTML、ほかはテキスト）
+//   GET  /api/items/:id/links/:n          項目のリンクが指す手元のファイルの中身（項目に書かれたファイルだけ。.html は sandbox 付きの HTML、写真は画像、ほかはテキスト）
 //   POST /api/items/:id/answer  { choice, text }   ask は選択肢の key、review は approve / reject、todo は done / cannot
 //   POST /api/items/:id/read
 //   GET  /api/chiefs                      記録されている CoS と今の状況（作業セッション・見張り・振り返りの期限・未読の指示）
@@ -843,6 +844,9 @@ export function handleApi(dir, method, pathname, {
       if (st.size > MAX_LINK_FILE) throw new InboxError(400, `大きすぎて出せません（${st.size} バイト）: ${file}`);
       // .html / .htm は HTML として出す（sandbox 付き＝受け箱のオリジンでは動かさない）。ほかはテキスト。
       if (/\.html?$/i.test(file)) return { status: 200, text: readFileSync(file, 'utf8'), type: 'text/html; charset=utf-8', headers: { 'Content-Security-Policy': LINK_HTML_CSP } };
+      // 写真（.png / .jpg / .jpeg / .gif / .webp）は画像のまま出す（テキストにすると文字化けしたバイナリが出る）。.svg はスクリプトを持てるのでテキストのまま。
+      const imageType = LINK_IMAGE_TYPES[extname(file).toLowerCase()];
+      if (imageType) return { status: 200, text: readFileSync(file), type: imageType };
       return { status: 200, text: readFileSync(file, 'utf8'), type: 'text/plain; charset=utf-8' };
     }
     if (seg.length === 4 && method === 'POST' && seg[3] === 'answer') {
@@ -1329,11 +1333,15 @@ export function selfTestInbox(assert) {
     const ot = createItem(dir, { kind: 'ask', chief: B, title: '他の CoS の問い' });
     writeFileSync(join(dir, 'memo.txt'), 'メモの中身');
     writeFileSync(join(dir, 'fig.HTML'), '<!doctype html><p>図</p>');
-    const hv = createItem(dir, { kind: 'tell', chief: B, title: 'H1', links: [{ label: '説明', href: pathToFileURL(join(dir, 'fig.HTML')).href }, { label: 'メモ', href: pathToFileURL(join(dir, 'memo.txt')).href }] });
+    const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x80, 0xfe]);
+    writeFileSync(join(dir, 'shot.JPG'), jpg);
+    const hv = createItem(dir, { kind: 'tell', chief: B, title: 'H1', links: [{ label: '説明', href: pathToFileURL(join(dir, 'fig.HTML')).href }, { label: 'メモ', href: pathToFileURL(join(dir, 'memo.txt')).href }, { label: '写真', href: pathToFileURL(join(dir, 'shot.JPG')).href }] });
     const hr = handleApi(dir, 'GET', `/api/items/${hv.id}/links/0`);
     const hp = handleApi(dir, 'GET', `/api/items/${hv.id}/links/1`);
     assert(hr.status === 200 && hr.type.startsWith('text/html') && hr.text.includes('<p>図</p>') && hr.headers['Content-Security-Policy'] === LINK_HTML_CSP && /^sandbox /.test(LINK_HTML_CSP) && LINK_HTML_CSP.includes('allow-scripts') && !LINK_HTML_CSP.includes('allow-same-origin'), 'inbox API: 手元の .html は sandbox 付きの HTML で出す（受け箱のオリジンでは動かさない）');
     assert(hp.type.startsWith('text/plain') && hp.headers === undefined, 'inbox API: .html 以外のファイルはテキストのまま');
+    const ir = handleApi(dir, 'GET', `/api/items/${hv.id}/links/2`);
+    assert(ir.status === 200 && ir.type === 'image/jpeg' && Buffer.isBuffer(ir.text) && ir.text.equals(jpg), 'inbox API: 手元の写真はバイナリのまま画像として出す');
     withdrawItem(dir, hv.id);
     writeFileSync(join(dir, 'broken.json'), '{');
     writeFileSync(join(dir, 'future.json'), JSON.stringify({ v: 99, id: 'future' }));

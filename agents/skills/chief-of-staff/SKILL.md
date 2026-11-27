@@ -149,7 +149,7 @@ macOS では、動いている作業セッションがいるあいだ `cos watch
 - 画面（`http://127.0.0.1:7788/`）は、macOS の launchd が常に動かす（`cos inbox service install` で1回入れる。ログイン時に起動し、落ちても起こし直す。全 CoS で1つ）。動いているかは `cos ask` などの出力と `cos status` の「受け箱」の行に出る。動いていなければ `cos inbox service status` で理由を見て（ログは `~/Library/Logs/cos-inbox.log`）、入っていなければ `cos inbox service install`。CoS が `cos inbox serve` を裏で起動して代わりにしない（会話が終わると止まり、launchd のサービスとポートを取り合う）。
 - スキル（dotfiles）を更新したら `cos inbox service install` を打ち直す（入れ直し＝新しい版で起動し直す）。
 - `cos watch` は、報告書が「完了」のまま `staleDoneReviewDays` 日（既定 3）たっても片付いていない作業セッションに、確認依頼を自動で1回出す（承認＝取り込んで片付ける／差し戻し＝コメントに「捨てる」か直す点）。答えは `answered` で届く。
-- 項目の `--link` に付けた手元のファイルは画面から開ける。`.md` は Markdown として、`.html`／`.htm` は HTML として表示する（図のための JS は動くが、受け箱の画面とは別の扱い＝sandbox で開くので、受け箱の API は使えない。画像や CSS を相対パスで読む HTML は崩れるので、1ファイルで完結する HTML を付ける）。手元のファイルのリンクは、アプリ（PWA）の窓ではなくブラウザの別タブで開く。
+- 項目の `--link` に付けた手元のファイルは画面から開ける。`.md` は Markdown として、`.html`／`.htm` は HTML として、写真（`.png`／`.jpg`／`.jpeg`／`.gif`／`.webp`）は画像として表示する（図のための JS は動くが、受け箱の画面とは別の扱い＝sandbox で開くので、受け箱の API は使えない。画像や CSS を相対パスで読む HTML は崩れるので、1ファイルで完結する HTML を付ける）。手元のファイルのリンクは、アプリ（PWA）の窓ではなくブラウザの別タブで開く。
 - 全 CoS の返事待ち（未対応の要返事＋確認依頼＋やること）が `inboxMaxOpen` 件（既定 10）を超えていると、`cos spawn` が注意を出す。そのときは、依頼を立てたことと返事待ちが溜まっていることをユーザーに一言伝える。件数は `cos status` にも出る。
 - 作業セッションは受け箱に出せない（コマンドが断る）。作業セッションの質問は、報告書を読んだ CoS が受け箱に出す。
 
