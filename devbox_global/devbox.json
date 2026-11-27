@@ -74,7 +74,8 @@
     "stylua@latest",
     "shfmt@latest",
     "php84Packages.php-cs-fixer@latest",
-    "exiftool@latest"
+    "exiftool@latest",
+    "mysql@latest"
   ],
   "shell": {
     "init_hook": [

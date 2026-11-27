@@ -1914,6 +1914,13 @@
         }
       }
     },
+    "mysql@latest": {
+      "last_modified": "2023-02-24T09:01:09Z",
+      "plugin_version": "0.0.5",
+      "resolved": "github:NixOS/nixpkgs/7d0ed7f2e5aea07ab22ccb338d27fbe347ed2f11#mysql",
+      "source": "devbox-search",
+      "version": "10.6.12"
+    },
     "neovim@latest": {
       "last_modified": "2026-11-19T13:46:25Z",
       "resolved": "github:NixOS/nixpkgs/19cfded70b91ca0981373973c5b1efffdd4d6647#neovim",
