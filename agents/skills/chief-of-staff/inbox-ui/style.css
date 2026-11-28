@@ -98,6 +98,20 @@ h2 small { font-weight: normal; color: var(--sub); }
   padding: 12px 14px 14px; min-width: 0;
 }
 .card.stale { border-color: var(--danger); box-shadow: inset 3px 0 0 var(--danger); }
+/* 作業セッションの質問（CoS がまだ受け箱に出していないもの）。破線の枠で、CoS が出した項目と見分ける。答えを送ったら薄くする（CoS の番） */
+.card.wq { border-style: dashed; border-color: var(--ask); }
+.card.wq.answered { border-color: var(--line); }
+.card.wq.answered > .body, .card.wq.answered > .fold { opacity: .7; }
+.wq-mark { color: var(--ask); border: 1px solid currentColor; border-radius: 4px; padding: 0 6px; font-weight: 600; }
+.card.wq.answered .wq-mark { color: var(--sub); }
+.wq-note { color: var(--sub); font-size: 12.5px; margin: 4px 0 8px; }
+.wq-answers { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.wq-answers:empty { display: none; }
+.wq-answers li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.wq-answers .wa-t { flex: 1 1 12em; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wq-answers .state { color: var(--ok); white-space: nowrap; }
+.wq-answers li.pending .state { color: var(--ask); }
+.wq-answers .age { color: var(--sub); white-space: nowrap; }
 .meta { color: var(--sub); font-size: 12.5px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .meta .who { color: var(--ink); font-weight: 600; }
 .badge { background: var(--danger-bg); color: var(--danger); border-radius: 4px; padding: 0 6px; font-weight: 600; }

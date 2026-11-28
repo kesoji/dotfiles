@@ -222,8 +222,13 @@ export function messageTitle(text, max = 60) {
 }
 
 // ユーザーから CoS への指示（kind: "message"）。chief は宛先の CoS。書き込まない。
-export function buildMessage({ chief, text, id = null }, { nowMs = Date.now(), rand = Math.random } = {}) {
+// worker を付けると、その作業セッションの質問への答え（画面の自動の質問カードから送ったもの）。本文の先頭に「作業セッション <ID> の質問への答え: 」を付ける
+// （CoS が cos send <ID> で渡せばよいと分かるように。cos watch の動きは変えない）。
+export const workerAnswerPrefix = (worker) => `作業セッション ${worker} の質問への答え: `;
+export function buildMessage({ chief, text, worker = null, id = null }, { nowMs = Date.now(), rand = Math.random } = {}) {
   if (!chief?.dir || !chief?.name) throw new InboxError(400, '宛先の CoS（chief.name・chief.dir）がありません');
+  if (worker != null && !/^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$/.test(String(worker))) throw new InboxError(400, `作業セッションの ID が不正です: ${worker}`);
+  if (worker != null && String(text ?? '').trim()) text = `${workerAnswerPrefix(worker)}${String(text).trim()}`;
   const body = String(text ?? '').trim();
   if (!body) throw new InboxError(400, '指示が空です');
   if ([...body].length > MAX_MESSAGE_CHARS) throw new InboxError(400, `指示が長すぎます（${MAX_MESSAGE_CHARS} 字まで。長いやり取りは herdr のペインで）`);
@@ -232,7 +237,7 @@ export function buildMessage({ chief, text, id = null }, { nowMs = Date.now(), r
     id: id ?? makeId(nowMs, chief.name, rand),
     kind: 'message',
     chief: { name: String(chief.name), dir: String(chief.dir), session: null },
-    worker: null,
+    worker: worker != null ? String(worker) : null,
     title: messageTitle(body),
     body,
     options: null,
@@ -570,12 +575,12 @@ export function createItem(dir, input, opts = {}) {
 }
 
 // 指示を作る（画面の API から）。chief は宛先の CoS（listChiefs の1件）。
-export function createMessage(dir, { chief, text }, opts = {}) {
+export function createMessage(dir, { chief, text, worker = null }, opts = {}) {
   return withInboxLock(dir, () => {
-    let item = buildMessage({ chief, text }, opts);
+    let item = buildMessage({ chief, text, worker }, opts);
     for (let i = 0; existsSync(join(dir, `${item.id}.json`)); i++) {
       if (i > 20) throw new InboxError(409, `受け箱に ${item.id} がもうあります`);
-      item = buildMessage({ chief, text }, { ...opts, rand: Math.random });
+      item = buildMessage({ chief, text, worker }, { ...opts, rand: Math.random });
     }
     writeItem(dir, item);
     return item;
@@ -751,7 +756,7 @@ function closedAt(x) {
 //   POST /api/items/:id/answer  { choice, text }   ask は選択肢の key、review は approve / reject、todo は done / cannot
 //   POST /api/items/:id/read
 //   GET  /api/chiefs                      記録されている CoS と今の状況（作業セッション・見張り・振り返りの期限・未読の指示）
-//   POST /api/messages  { to, text }      CoS 宛ての指示を作る（to は GET /api/chiefs の dir）
+//   POST /api/messages  { to, text, worker? }   CoS 宛ての指示を作る（to は GET /api/chiefs の dir。worker は作業セッションの質問への答えのとき）
 //   GET  /api/todos                       TODO ファイル（cos.json の todoFiles）を持つ CoS と、その行（未完了は期日の近い順・済は最後）
 //   POST /api/todos  { to, text, due?, note?, file? }      TODO に1行足す（to は GET /api/chiefs の dir。期日は due か、text の文頭から拾う）
 //   POST /api/todos/done  { to, file, id, done, note? }    行を済にする（done: true）・未完了に戻す（false）
@@ -806,7 +811,7 @@ export function handleApi(dir, method, pathname, {
       if (method !== 'POST') throw new InboxError(405, 'そういう API はありません');
       const chief = chiefs().find((c) => sameDir(c.dir, body?.to));
       if (!chief) throw new InboxError(400, `宛先の CoS が見つかりません（to は GET /api/chiefs の dir）: ${body?.to ?? '(なし)'}`);
-      return { status: 200, json: publicItem(createMessage(dir, { chief, text: body?.text })) };
+      return { status: 200, json: publicItem(createMessage(dir, { chief, text: body?.text, worker: body?.worker || null })) };
     }
     if (seg[0] !== 'api' || seg[1] !== 'items') throw new InboxError(404, 'そういう API はありません');
     if (seg.length === 2 && method === 'GET') {
@@ -1432,6 +1437,36 @@ export function selfTestInbox(assert) {
     const pm2 = capi('POST', '/api/messages', { body: { to: dA, text: '未読のまま返事される指示' } }).json;
     createItem(dir, { kind: 'ask', chief: { name: 'cos-a', dir: dA }, title: '聞き返し', replyTo: pm2.id });
     assert(getItem(dir, pm2.id).status === 'read', 'inbox: 返事を出したら元の指示は既読になる');
+
+    // 作業セッションの質問のカード（inbox-ui/wq.js。画面と同じ関数を読んで試す）: 出る → 答えを送る → CoS が ask を出したら消える
+    {
+      const workerQuestions = new Function(`${readFileSync(fileURLToPath(new URL('../inbox-ui/wq.js', import.meta.url)), 'utf8')}\nreturn workerQuestions;`)();
+      const t0 = new Date(Date.now() - 60000).toISOString();
+      const [rA, rB] = ['cos-a', 'cos-b'].map((n) => listChiefs(cdir).find((c) => c.name === n).dir); // GET /api/chiefs と同じ dir（項目の chief.dir もこれ）
+      const chs = (since = t0) => [
+        { name: 'cos-a', dir: `${rA}/`, workers: [{ id: 'wq1', label: '色決め', report: '質問', reportUpdated: since, question: '青か緑か（推奨 青）' }, { id: 'wq2', report: '進行中' }, { id: 'wq3', report: '完了' }] },
+        { name: 'cos-b', dir: rB, workers: [{ id: 'wq1', report: '質問', reportUpdated: since, question: null }] },
+      ];
+      const wqOf = (since) => workerQuestions(chs(since), listItems(dir).items);
+      let q = wqOf();
+      assert(q.map((x) => `${x.chief.name}/${x.worker.id}`).join() === 'cos-a/wq1,cos-b/wq1' && q[0].question === '青か緑か（推奨 青）' && q[0].since === t0 && !q[0].answered && q[0].answers.length === 0 && q[0].id !== q[1].id, `inbox wq: 報告書が「質問」で、CoS が受け箱に出していなければカードを出す ${JSON.stringify(q.map((x) => x.id))}`);
+      assert(capi('POST', '/api/messages', { body: { to: dA, text: '青で', worker: '../x' } }).status === 400, 'inbox wq: 作業セッションの ID が不正なら断る');
+      const ans = capi('POST', '/api/messages', { body: { to: dA, text: ' 青で \n理由は見やすさ', worker: 'wq1' } });
+      assert(ans.status === 200 && ans.json.kind === 'message' && ans.json.worker === 'wq1' && ans.json.body === '作業セッション wq1 の質問への答え: 青で \n理由は見やすさ' && ans.json.title.startsWith('作業セッション wq1 の質問への答え: 青で') && messagesFor(listItems(dir).items, dA).some((x) => x.id === ans.json.id), `inbox wq: 答えは worker 付きの指示（本文の先頭に誰の質問への答えか）として CoS に届く ${JSON.stringify(ans.json)}`);
+      q = wqOf();
+      assert(q[0].answered && q[0].answers.map((x) => x.id).join() === ans.json.id && q[0].answers[0].status === 'open' && !q[1].answered, 'inbox wq: 答えを送ったら、その CoS のカードだけ「送った」（別の CoS の同じ ID は別）');
+      ackItem(dir, ans.json.id, { chiefDir: dA });
+      assert(wqOf()[0].answers[0].status === 'read', 'inbox wq: CoS が読んだら answers の状態が read');
+      assert(!wqOf(new Date(Date.now() + 60000).toISOString())[0].answered, 'inbox wq: 前の質問（止まった時刻より前）への答えは数えない');
+      createItem(dir, { kind: 'tell', chief: { name: 'cos-a', dir: rA }, worker: 'wq1', title: '進めています' });
+      assert(wqOf().length === 2, 'inbox wq: 読むだけの項目では消えない');
+      const ca = createItem(dir, { kind: 'ask', chief: { name: 'cos-a', dir: rA }, worker: 'wq1', title: '色は青か緑か', options: [{ key: 'b', label: '青' }, { key: 'g', label: '緑' }] });
+      q = wqOf();
+      assert(q.map((x) => `${x.chief.name}/${x.worker.id}`).join() === 'cos-b/wq1', 'inbox wq: CoS が cos ask --worker で出したら、自動のカードは消える（二重にしない）');
+      answerItem(dir, ca.id, { choice: 'b', text: null });
+      assert(wqOf().length === 1 && wqOf(new Date(Date.now() + 60000).toISOString()).length === 2, 'inbox wq: CoS の要返事に答えた後も、同じ質問のカードは戻らない（次の質問では出る）');
+      assert(workerQuestions([{ name: 'cos-a', dir: rA, workers: [{ id: 'wq9', report: '質問' }] }], []).length === 1 && workerQuestions(null, null).length === 0, 'inbox wq: 止まった時刻が無くても出す・状況が無ければ空');
+    }
 
     // スレッド: 指示 → tell（開始）→ 作業セッションの件として ask。前の tell は既読になり、画面の組み立てで1つにまとまる
     {

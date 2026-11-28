@@ -116,6 +116,15 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 - 列に出ているスレッドの項目は、ほかの列・「済んだもの」には出さない（二重に出さない）。見出しの件数（`counts`）は項目の数のまま。
 - 「送った指示」の行には、列に出ているスレッドへ移るボタンが出る。
 
+### 作業セッションの質問のカード（CoS がまだ受け箱に出していない質問）
+
+項目ではなく、画面が `GET /api/chiefs` と `GET /api/items` から作るカード（`inbox-ui/wq.js` の `workerQuestions`。DOM に触らない関数で、`cos self-test` も同じファイルを読んで試す）。項目の形は変えていない（`message` の `worker` を使うだけなので `v` は 1 のまま）。
+
+- 出すのは、`workers[].report` が「質問」の作業セッションのうち、同じ CoS（`chief.dir`）・同じ `worker` の項目で、未対応の `ask`・`review`・`todo`、または止まった時刻（`reportUpdated`）より後に出して取り下げていない `ask`・`review`・`todo` が無いもの。CoS が `cos ask --worker <ID>` などで出せば、カードは消えてそちらが出る（二重にしない）。CoS の項目に答えた後も、同じ質問のカードは戻らない。
+- 要返事の列に、ほかの要返事と止まった時刻の順で並ぶ。本文は `workers[].question`（長ければ畳む）。
+- 答えは `POST /api/messages` に `worker` を付けて送る（CoS 宛ての指示になる）。止まった時刻より後に送った、同じ CoS・同じ `worker` の `message` を、カードの中に「送った（CoS は未読）」→「CoS が読んだ」で並べる。
+- 件数: 答えをまだ送っていないカードを、要返事の件数（見出し・CoS の絞り込みのボタン）と返事待ち（タイトルの `(n)`・favicon・アプリのバッジ）に足す。送ったら CoS の番なので数えない（カードは薄くして残す）。サーバーの `counts` には入らない。
+
 ### `v` の扱い
 
 - **`v` を上げるのは、前からある項目の読み方が変わるときだけ**（項目の意味を変える・必須の項目を足す・消す）。上げると、古い版のコマンド・見張り・サーバーは新しい項目をすべて読み飛ばす（一覧から外して件数だけ知らせる）。全 CoS が同じ受け箱を別々の版で読むので、上げるのは全部を入れ替えられるときだけにする。上げたら `upgradeItem` に古い形 → 新しい形の直し方を書く。
@@ -193,8 +202,8 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 | `GET /api/items/:id/links/:n` | `links[n]` が手元のファイル（`file:`）のとき、その中身を返す。項目に書かれたファイルしか読めない。`.html`／`.htm` は `text/html` で、`Content-Security-Policy: sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox` を付けて返す（下の「手元のファイルのリンク」）。ほかは `text/plain` |
 | `POST /api/items/:id/answer` | 本文 `{ "choice": …, "text": … }`。返事を付けて、項目を返す。`choice` は ask なら選択肢の `key`、review なら `approve`／`reject`、todo なら `done`／`cannot` |
 | `POST /api/items/:id/read` | `tell` を既読にして、項目を返す（もう既読なら何も変えない） |
-| `GET /api/chiefs` | `{ v, now, chiefs: [{ name, dir, seenAt, watch: { alive, since, lastAt }, unread, workers: [...], retro, error }] }`。記録されている CoS（名前順）と今の状況。`watch.alive` は見張りが動いているか、`since` は動いている見張りの開始、`lastAt` は最後に見張りが動いていた時刻。`unread` はその CoS 宛ての未読の指示の件数。`workers` は閉じていない作業セッション `{ id, label, title, state, status, statusAt, report, reportUpdated, createdAt, staleDone? }`（`state` は台帳の状態、`status` は見張りが最後に見た herdr の状態＝`working`／`idle`／`done`／`blocked`／`gone`、`report` は報告書の「状態」、`staleDone` は取り込み待ちの経過ミリ秒）。`retro` は `{ dueAt, due, intervalDays }`。その CoS の台帳が読めないときは `error` に理由（ほかの CoS は出す） |
-| `POST /api/messages` | 本文 `{ "to": CoS の dir, "text": 指示 }`。`to` は `GET /api/chiefs` の `dir`。指示（`kind: "message"`）を作って、項目を返す。宛先が記録に無い・空・長すぎる（4000 字超）は 400 |
+| `GET /api/chiefs` | `{ v, now, chiefs: [{ name, dir, seenAt, watch: { alive, since, lastAt }, unread, workers: [...], retro, error }] }`。記録されている CoS（名前順）と今の状況。`watch.alive` は見張りが動いているか、`since` は動いている見張りの開始、`lastAt` は最後に見張りが動いていた時刻。`unread` はその CoS 宛ての未読の指示の件数。`workers` は閉じていない作業セッション `{ id, label, title, state, status, statusAt, report, reportUpdated, createdAt, staleDone?, question? }`（`state` は台帳の状態、`status` は見張りが最後に見た herdr の状態＝`working`／`idle`／`done`／`blocked`／`gone`、`report` は報告書の「状態」、`staleDone` は取り込み待ちの経過ミリ秒、`question` は `report` が「質問」のときだけ、報告書の「## 質問」か「## 聞きたいこと」の節（無ければ頭の数行・2000 字まで。無ければ `null`））。`retro` は `{ dueAt, due, intervalDays }`。その CoS の台帳が読めないときは `error` に理由（ほかの CoS は出す） |
+| `POST /api/messages` | 本文 `{ "to": CoS の dir, "text": 指示, "worker"?: 作業セッションの ID }`。`to` は `GET /api/chiefs` の `dir`。指示（`kind: "message"`）を作って、項目を返す。`worker` を付けると、その作業セッションの質問への答え（画面の「作業セッションの質問」のカードから送ったもの）として、項目の `worker` に入り、本文の先頭に「作業セッション <ID> の質問への答え: 」が付く。宛先が記録に無い・空・長すぎる（4000 字超）・`worker` が ID の形でないは 400 |
 | `GET /api/todos` | `{ v, now, today, chiefs: [{ name, dir, files: [{ path, label, error, todos: [...] }] }] }`。TODO ファイルを持つ CoS だけ（記録されている CoS の `dir` の `.claude/cos.json` の `todoFiles`）。`today` はサーバーのローカルの今日。`label` は CoS のディレクトリからの相対パス。読めないファイルは `error` に理由が入り `todos` は空。行は `{ id, n, done, state, due, dueKind, dueText, title, note, doneOn, doneNote, items }`。`state` は `overdue`（締切を過ぎた）・`today`（締切が今日）・`startable`（着手日が来た）・`future`・`noted`（起きた日だけ）・`anytime`・`unreadable`（読めない行。`title` は行の中身そのまま）・`done`。`due` は `YYYY-MM-DD`（無ければ `null`）、`dueText` は書かれている期日の文字（太字に「期日: やること」の区切りが無い行は、頭の日付・時刻・曜日・以降・まで・〜 などの部分だけ。残りの語が `title`、残りが無ければ補足の頭が `title`。何も無ければ `title` は太字ぜんぶで、画面は `dueText` と同じ `title` を出さない）、`items` はその行から出た未対応の受け箱の項目の id。並びは上の「並び」 |
 | `POST /api/todos` | 本文 `{ "to": CoS の dir, "text": やること, "due"?: 期日, "note"?: 補足, "file"?: path }`。1行足して `{ file, changed, commit, todo }` を返す。`due` が無ければ `text` の文頭の期日（`11/28 …`・`2026-12-01: …`・`今日`・`明日`・`あさって`）を拾い、無ければ `いつでも`。`file` が無ければその CoS の最初の TODO ファイル。`commit` は `{ committed, sha }` か `{ committed: false, reason }`（`reason` が `null` ならコミットするものが無い） |
 | `POST /api/todos/done` | 本文 `{ "to": CoS の dir, "file": path, "id": 行の id, "done": true \| false, "note"?: 一言 }`。済にする・未完了に戻す。返すものは上と同じ。もうその状態なら `changed: false` |
@@ -212,7 +221,7 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 
 ## 画面を作り直すとき
 
-画面は `inbox-ui/`（`index.html`・`style.css`・`app.js`・`md.js`・`thread.js`＝スレッドの組み立て、報告書の表示の `view.html`・`view.js`、PWA の `manifest.webmanifest`・`icon.svg`・`icon-192.png`・`icon-512.png`。ビルド不要）。上の API だけを使っている。
+画面は `inbox-ui/`（`index.html`・`style.css`・`app.js`・`md.js`・`thread.js`＝スレッドの組み立て、`wq.js`＝作業セッションの質問のカード、報告書の表示の `view.html`・`view.js`、PWA の `manifest.webmanifest`・`icon.svg`・`icon-192.png`・`icon-512.png`。ビルド不要）。上の API だけを使っている。
 
 - GitHub へのリンクは画面（`md.js` の `inline`）が作る。題・本文・報告書の表示（`view.html?src=…&repo=owner/name`）で同じ決まり:
   - 項目に `repo` があるときだけ: `PR #123`・`PR#123` → `/pull/123`、`#123`・`Issue #123` → `/issues/123`（PR なら GitHub が転送する）、コミットの SHA（7〜40 桁の16進で、数字と a-f の両方を含むもの）→ `/commit/<sha>`。
@@ -221,7 +230,7 @@ CoS の受け箱の項目の形は、このファイルだけに書く。形を�
 - 長い本文（700 字か 14 行を超える）は、カードでは最初の約2行だけを出し、2行目の途中から下へ透明にする（CSS の `mask-image`。背景色を重ねないので、ライト・ダークのどちらでもカードの色のまま薄くなる）。「本文を開く」か薄くなった本文を押すと全部が開き、「閉じる」で戻る。開閉は項目ごとに画面が覚え、描き直しても保つ（再読み込みで戻る）。1行の項目（読むだけ・済んだもの・スレッドの中の小さい行）は、行を開いた時点で本文を全部出す。
 - PWA として入れられるように、`index.html` が `manifest.webmanifest`（`display: standalone`・`id` と `start_url` は `/`）を指している。service worker は置いていない（Chrome は無くても入れられる。サーバーが常に動いているので、オフライン用のキャッシュは要らない）。アイコンを変えるなら `icon.svg` を直して PNG を作り直す（`qlmanage -t -s 512 -o <出力先> icon.svg` → `sips -z 192 192`）。
 - TODO の欄（`#sec-tfile`）は `GET /api/todos` から描く。CoS の絞り込み（⌘1〜9）に合わせ、種類の絞り込みでは5番目（⌥5・`tfile`）。見出しの「TODO n」は全 CoS の未完了の行の数、「期日 n」は `overdue`＋`today` の数（返事待ちには数えない＝タイトルの `(n)` やバッジには入れない）。入力欄は、CoS を選んでいて、その CoS に TODO ファイルがあるときだけ出す（選んでいなくても、TODO ファイルを持つ CoS が1つだけならその CoS 宛てに出す）。1行の入力で、Enter で足す。期日の読み取りはサーバーがする（画面は `text` をそのまま送る）。`/api/todos` の無い前の版のサーバーでは、欄を出さない。
-- 返事待ち（`counts.ask + counts.review + counts.todo`）を、タイトルの `(n)`・favicon の赤丸・アプリのアイコンのバッジ（`navigator.setAppBadge`）に出している。`counts.todo` を返さない前の版のサーバーでは、画面が未対応の `todo` を自分で数える。
+- 返事待ち（`counts.ask + counts.review + counts.todo` に、答えを送っていない作業セッションの質問のカードを足したもの）を、タイトルの `(n)`・favicon の赤丸・アプリのアイコンのバッジ（`navigator.setAppBadge`）に出している。`counts.todo` を返さない前の版のサーバーでは、画面が未対応の `todo` を自分で数える。
 
 - 見た目や操作を変えるなら `inbox-ui/` のファイルを直す。サーバーは静的ファイルを毎回読むので、再読み込みで反映される。
 - まるごと作り直すなら、別のディレクトリに `index.html` を置いて `cos inbox serve --ui-dir <ディレクトリ>` で指す。良ければ `inbox-ui/` と差し替える。

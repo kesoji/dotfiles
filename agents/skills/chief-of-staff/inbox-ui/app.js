@@ -355,6 +355,59 @@ function row(item, compact = false) {
 // ───── スレッド（1つの指示から続く項目のまとまり） ─────
 // 元の指示を見出しにし、前の「読むだけ」や済んだ項目は小さい行で上に、手が要る項目（要返事・確認依頼・やること）はカードで下に出す。
 const CARD_OF = { ask: askCard, review: reviewCard, todo: todoCard };
+
+// ───── 作業セッションの質問（CoS がまだ受け箱に出していないもの。wq.js の workerQuestions） ─────
+// 要返事の列にカードで出す。答えは、その CoS 宛ての指示（POST /api/messages の worker 付き）として送り、CoS が cos send で作業セッションに渡す。
+// 送った答えは、カードの中に指示と同じ印（送った（CoS は未読）→ CoS が読んだ）で並べる。
+const msgState = (m) => (m.status === 'open' ? '送った（CoS は未読）' : m.status === 'read' ? `CoS が読んだ（${ago(m.readAt || m.createdAt)}）` : '取り下げ');
+function wqCard(q) {
+  const d = draftOf(q.id);
+  const w = q.worker;
+  const send = h('button', { class: 'btn primary', type: 'submit', text: 'CoS に送る', title: `Enter か ${MOD_ENTER} でも送れる` });
+  const sync = () => { send.disabled = d.sending || !d.text.trim(); };
+  const text = autoText({
+    value: d.text,
+    placeholder: q.answered ? '付け足す（CoS に指示として届きます）' : '答えを書く（CoS に指示として届き、CoS が作業セッションに渡します）',
+    label: `作業セッション ${w.id} の質問への答え`,
+    oninput: (v) => { d.text = v; sync(); },
+    onsubmit: () => form.requestSubmit(),
+  });
+  const form = h('form', {
+    onsubmit: async (e) => {
+      e.preventDefault();
+      if (send.disabled) return;
+      d.sending = true; sync();
+      try {
+        await api('POST', '/api/messages', { to: q.chief.dir, text: d.text.trim(), worker: w.id });
+        d.text = ''; text.value = ''; grow(text);
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        d.sending = false; sync(); refresh();
+      }
+    },
+  }, h('div', { class: 'reply' }, text, send, h('span', { class: 'key-hint', text: 'Enter で送る・Shift+Enter で改行' })));
+  sync();
+  const body = q.question ? bodyBlock({ id: q.id, body: q.question, repo: null }) : h('p', { class: 'body plain', text: '（報告書に質問の節が見つかりません。作業セッションのペインか報告書を見てください）' });
+  return h('article', { class: 'card wq', id: `item-${q.id}` },
+    h('div', { class: 'meta' },
+      h('span', { class: 'wq-mark', text: '作業セッションの質問' }),
+      h('span', { class: 'who' }, chiefTag(q.chief.name), ` / ${w.id}${w.label && w.label !== w.id ? `「${w.label}」` : ''}`),
+      h('span', { class: 'age' })),
+    h('p', { class: 'wq-note', text: 'CoS はまだ受け箱に出していません。答えは CoS への指示として届きます。' }),
+    body,
+    h('ul', { class: 'wq-answers' }),
+    form);
+}
+function wqTouch(el, q) {
+  el.querySelector('.age').textContent = q.since ? `${ago(q.since)}から止まっている` : '';
+  el.classList.toggle('answered', q.answered);
+  el.querySelector('.wq-answers').replaceChildren(...q.answers.map((m) => h('li', { class: m.status === 'open' ? 'pending' : '' },
+    h('span', { class: 'wa-t', text: `答え: ${m.body.startsWith(`作業セッション ${q.worker.id} の質問への答え: `) ? m.body.slice(`作業セッション ${q.worker.id} の質問への答え: `.length) : m.body}` }),
+    h('span', { class: 'state', text: msgState(m) }),
+    h('span', { class: 'age', text: ago(m.createdAt) }))));
+}
+const wqSig = (q) => JSON.stringify([q.id, q.chief.name, q.worker.id, q.worker.label, q.question, q.answered]);
 function threadCard(t) {
   const parts = []; // [要素, 項目の id]（touchThread が経過・既読の印を進める）
   const part = (el, x) => { parts.push([el, x.id]); return el; };
@@ -661,7 +714,7 @@ function touch(el, item) {
   if (item.kind === 'message') {
     el.querySelector('.age').textContent = ago(item.createdAt);
     el.classList.toggle('pending', item.status === 'open');
-    el.querySelector('.state').textContent = item.status === 'open' ? '送った（CoS は未読）' : item.status === 'read' ? `CoS が読んだ（${ago(item.readAt || item.createdAt)}）` : '取り下げ';
+    el.querySelector('.state').textContent = msgState(item);
     return;
   }
   const age = el.querySelector('.age');
@@ -720,6 +773,10 @@ function render() {
 
   // 見出しの件数（CoS で絞っているときは、その CoS の件数。アプリのバッジとタブの題は全 CoS の返事待ちのまま）
   const c = state.counts;
+  // 作業セッションの質問（CoS が受け箱に出していないもの）。答えを送っていないものは要返事に数える（送ったら CoS の番）
+  const wqAll = workerQuestions(state.chiefs, all);
+  const wqWait = wqAll.filter((q) => !q.answered);
+  const wqN = (name) => wqWait.filter((q) => !name || q.chief.name === name).length;
   // todo は、知らない版のサーバー（counts に無い）でも画面が数える
   const nTodo = c.todo ?? open.filter((x) => x.kind === 'todo').length;
   // 件数は押せる＝その種類だけを並べる（もう一度押すと外れる）
@@ -728,9 +785,9 @@ function render() {
   const tfAll = todoRows(state.todos);
   const tfOpenN = (name) => tfAll.filter((r) => !r.t.done && (!name || r.chief === name)).length;
   const tfDueN = tfAll.filter((r) => (r.t.state === 'overdue' || r.t.state === 'today') && (!state.filter || r.chief === state.filter)).length;
-  const allN = { ask: c.ask, review: c.review, todo: nTodo, tell: c.tell, tfile: tfOpenN('') };
+  const allN = { ask: c.ask + wqN(''), review: c.review, todo: nTodo, tell: c.tell, tfile: tfOpenN('') };
   const kindLabel = { ask: '要返事', review: '確認', todo: 'やること', tell: '読むだけ', tfile: 'TODO' };
-  const hereN = (k) => (k === 'tfile' ? tfOpenN(state.filter) : open.filter((x) => x.kind === k && x.chief.name === state.filter).length);
+  const hereN = (k) => (k === 'tfile' ? tfOpenN(state.filter) : open.filter((x) => x.kind === k && x.chief.name === state.filter).length + (k === 'ask' ? wqN(state.filter) : 0));
   const kindN = Object.fromEntries(Object.entries(allN).map(([k, n]) => [k, state.filter ? hereN(k) : n]));
   $('counts').replaceChildren(...FILTER_KINDS.filter((k) => k !== 'tfile' || state.todos.length).flatMap((k, i) => [
     i ? ' ・ ' : null,
@@ -743,7 +800,7 @@ function render() {
     k === 'tfile' && tfDueN ? h('span', { class: 'due-n', title: '期日が今日か、過ぎている TODO', text: `期日 ${tfDueN}` }) : null,
     h('kbd', { class: 'key', 'aria-hidden': 'true', text: `${IS_MAC ? '⌥' : 'Alt+'}${i + 1}` })),
   ]).filter(Boolean));
-  const waiting = c.ask + c.review + nTodo; // 返事待ち＝ユーザーが返すまで残るもの
+  const waiting = c.ask + wqN('') + c.review + nTodo; // 返事待ち＝ユーザーが返すまで残るもの
   document.title = `${waiting ? `(${waiting}) ` : ''}CoS 受け箱`;
   { const fav = $('favicon'); const want = waiting ? 'favicon-alert.svg' : 'favicon.svg'; if (fav && !fav.getAttribute('href').endsWith(want)) fav.setAttribute('href', want); } // 返事待ちがあればタブのアイコンに赤丸
   // アプリ（PWA）のアイコンに、返事待ち（要返事＋確認依頼＋やること）の件数を出す。使えないブラウザでは何もしない。
@@ -760,7 +817,7 @@ function render() {
   }, name ? h('span', { class: 'swatch', 'data-chief': name }) : null, label, h('span', { class: 'n', text: String(n) }),
   keyHint(i) ? h('kbd', { class: 'key', 'aria-hidden': 'true', text: keyHint(i) }) : null);
   const mine = open.filter((x) => x.kind !== 'message'); // 件数はユーザーの番のものだけ
-  $('chips').replaceChildren(chip('', '全部', mine.length, 0), ...chiefs.map((n, i) => chip(n, n, mine.filter((x) => x.chief.name === n).length, i + 1)));
+  $('chips').replaceChildren(chip('', '全部', mine.length + wqN(''), 0), ...chiefs.map((n, i) => chip(n, n, mine.filter((x) => x.chief.name === n).length + wqN(n), i + 1)));
   $('chips').hidden = chiefs.length < (state.chiefs.length ? 1 : 2);
 
   // スレッド: 指示（message）に replyTo でつながる項目をまとめる。列に出ているスレッドの項目は、列にそのままは出さない。
@@ -782,7 +839,8 @@ function render() {
   $('compose-box').hidden = !state.chiefs.length;
 
   const kindOk = (k) => !state.kind || state.kind === k; // 種類で絞っているときは、その種類の列だけ
-  const asks = kindOk('ask') ? entriesOf(open.filter((x) => x.kind === 'ask' && seen(x) && loose(x)), threadsIn('ask')) : [];
+  const wqs = wqAll.filter((q) => seen(q)).map((q) => ({ id: q.id, at: q.since || '', wq: q }));
+  const asks = kindOk('ask') ? [...wqs, ...entriesOf(open.filter((x) => x.kind === 'ask' && seen(x) && loose(x)), threadsIn('ask'))].sort((a, b) => String(a.at).localeCompare(String(b.at))) : [];
   const reviews = kindOk('review') ? entriesOf(open.filter((x) => x.kind === 'review' && seen(x) && loose(x)), threadsIn('review')) : [];
   const todos = kindOk('todo') ? entriesOf(open.filter((x) => x.kind === 'todo' && seen(x) && loose(x)), threadsIn('todo')) : [];
   const looseTells = all.filter((x) => x.kind === 'tell' && (x.status === 'open' || (state.kept.has(x.id) && x.status === 'read')) && seen(x) && loose(x));
@@ -792,9 +850,9 @@ function render() {
 
   // 列の1件は、つながっていない項目（カードか1行）か、スレッド
   const col = (list, entries, make) => reconcile(list, entries,
-    (e) => (e.thread ? threadCard(e.thread) : make(e.item)),
-    (e) => (e.thread ? threadSig(e.thread) : (make === row ? rowSig : cardSig)(e.item)),
-    (el, e) => (e.thread ? touchThread(el, e.thread) : touch(el, e.item)));
+    (e) => (e.wq ? wqCard(e.wq) : e.thread ? threadCard(e.thread) : make(e.item)),
+    (e) => (e.wq ? wqSig(e.wq) : e.thread ? threadSig(e.thread) : (make === row ? rowSig : cardSig)(e.item)),
+    (el, e) => (e.wq ? wqTouch(el, e.wq) : e.thread ? touchThread(el, e.thread) : touch(el, e.item)));
   col($('list-ask'), asks, askCard);
   col($('list-review'), reviews, reviewCard);
   col($('list-todo'), todos, todoCard);
@@ -838,8 +896,8 @@ function render() {
   $('empty').textContent = state.kind ? `${kindLabel[state.kind]}で待っているものはありません。` : 'いま待っているものはありません。';
 
   // 消えた項目の書きかけは捨てる
-  for (const id of [...state.drafts.keys()]) if (!open.some((x) => x.id === id)) state.drafts.delete(id);
-  for (const id of [...state.openBodies]) if (!all.some((x) => x.id === id)) state.openBodies.delete(id);
+  for (const id of [...state.drafts.keys()]) if (!open.some((x) => x.id === id) && !wqAll.some((q) => q.id === id)) state.drafts.delete(id);
+  for (const id of [...state.openBodies]) if (!all.some((x) => x.id === id) && !wqAll.some((q) => q.id === id)) state.openBodies.delete(id);
 }
 
 connect();

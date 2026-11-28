@@ -191,6 +191,31 @@ export function reportState(text) {
   return m ? m[1] : null;
 }
 
+// 報告書の質問の部分（画面の自動の質問カード用。GET /api/chiefs の workers[].question）。
+// 「## 質問」か「## 聞きたいこと」の節（次の同じ深さか浅い見出しまで）。見つからない・空なら、題と「状態:」の行を除いた頭の数行。
+// HTML のコメントは除く。max 字を超えたら切って「…」を付ける。何も無ければ null。
+export function reportQuestion(text, { max = 2000, headLines = 12 } = {}) {
+  if (!text) return null;
+  const lines = text.replace(/<!--[\s\S]*?-->/g, '').split('\n');
+  let out = '';
+  const at = lines.findIndex((l) => /^#{1,6}\s*(質問|聞きたいこと)\s*$/.test(l.trim()));
+  if (at >= 0) {
+    const depth = lines[at].trim().match(/^#+/)[0].length;
+    const body = [];
+    for (const l of lines.slice(at + 1)) {
+      const m = l.match(/^(#{1,6})\s/);
+      if (m && m[1].length <= depth) break;
+      body.push(l);
+    }
+    out = body.join('\n').trim();
+  }
+  if (!out) {
+    out = lines.filter((l) => !/^#\s/.test(l) && !/^状態:/.test(l)).join('\n').trim().split('\n').slice(0, headLines).join('\n').trim();
+  }
+  if (!out) return null;
+  return [...out].length > max ? `${[...out].slice(0, max).join('').trimEnd()}…` : out;
+}
+
 // 台帳の作業セッションと herdr のエージェント一覧から「CoS が対応すべき出来事」を拾う。
 // 出来事 = ターンが終わった（idle/done）・承認や質問の画面で止まった（blocked）・エージェントがいなくなった（gone）。
 // 同じ状態（status と state_change_seq）は二度出さない。working への変化は記録するだけ。
@@ -3218,6 +3243,7 @@ function chiefStatusFor(c) {
         id: w.id, label: w.label ?? null, title: w.title && w.title !== w.id ? w.title : null, state: w.state,
         status: w.lastSeen?.status ?? null, statusAt: w.lastSeenAt ?? null, report: rep.state, reportUpdated: rep.mtime, createdAt: w.createdAt ?? null,
       };
+      if (rep.state === '質問') row.question = reportQuestion(rep.text); // 画面が、CoS が受け箱に出していない質問をカードで出す
       if (rep.state === '完了') {
         const doneMs = doneSinceMs({ id: w.id, createdAt: w.createdAt, events, reportMtimeMs: rep.mtime ? Date.parse(rep.mtime) : null });
         const ms = staleDoneMs({ report: rep.state, doneMs, nowMs, hours: DEFAULT_CFG.staleDoneHours });
@@ -3925,6 +3951,14 @@ function selfTest() {
   assert(agentName('', 'a'.repeat(40)).length === 32, 'agentName 長さ');
   assert(reportState('# x\n\n状態: 完了\n') === '完了', 'reportState');
   assert(reportState('# x\n') === null, 'reportState 無し');
+  {
+    const q = reportQuestion('# 報告書 w1\n\n状態: 質問\n<!-- 説明 -->\n\n## 要約\n\n途中\n\n## 質問\n\n- A にする？B にする？（推奨 A）\n### 補足\n細かい話\n\n## 進捗\n\n- 1\n');
+    assert(q === '- A にする？B にする？（推奨 A）\n### 補足\n細かい話', 'reportQuestion: 「## 質問」の節（深い見出しは含め、同じ深さの見出しで止める）');
+    assert(reportQuestion('# 報告書\n状態: 質問\n\n## 聞きたいこと\nどっち？\n') === 'どっち？', 'reportQuestion: 「聞きたいこと」の節');
+    assert(reportQuestion('# 報告書\n状態: 質問\n\n## 質問\n\n## 要約\n色を決めたい\n') === '## 質問\n\n## 要約\n色を決めたい', 'reportQuestion: 節が空なら頭の数行（題と状態の行を除く）');
+    assert(reportQuestion(`## 質問\n${'あ'.repeat(30)}`, { max: 10 }) === `${'あ'.repeat(10)}…`, 'reportQuestion: 長ければ切る');
+    assert(reportQuestion('') === null && reportQuestion('# 報告書\n状態: 質問\n') === null, 'reportQuestion: 何も無ければ null');
+  }
   let threw = false;
   try {
     checkId('../x');
